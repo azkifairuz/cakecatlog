@@ -1,0 +1,138 @@
+export const load = async ({ locals: { supabase } }) => {
+	const { data: products, error } = await supabase
+		.from('products')
+		.select(`
+			*,
+			category:categories (
+				name,
+				slug
+			),
+			product_images (
+				id,
+				image_url,
+				is_primary
+			)
+		`)
+		.order('created_at', { ascending: false });
+
+	const { data: categories } = await supabase.from('categories').select('*').order('name');
+
+	return {
+		products: products ?? [],
+		categories: categories ?? []
+	};
+};
+
+export const actions = {
+	createProduct: async ({ request, locals: { supabase } }) => {
+		const formData = await request.formData();
+		const name = formData.get('name');
+		const description = formData.get('description');
+		const base_price = formData.get('base_price');
+		const is_available = formData.get('is_available') === 'on';
+		const category_id = formData.get('category_id');
+		const images = formData.getAll('images');
+
+		if (!name || !base_price) {
+			return { success: false, error: 'Name and Base Price are required' };
+		}
+
+		// Insert product
+		const { data: product, error: productError } = await supabase
+			.from('products')
+			.insert({
+				name,
+				description,
+				base_price: parseFloat(base_price),
+				is_available,
+				category_id: category_id || null
+			})
+			.select()
+			.single();
+
+		if (productError) {
+			return { success: false, error: productError.message };
+		}
+
+		// Handle images
+		if (images && images.length > 0 && images[0].size > 0) {
+			const imageInserts = [];
+			
+			for (let i = 0; i < images.length; i++) {
+				const file = images[i];
+				const fileExt = file.name.split('.').pop();
+				const fileName = `${product.id}-${Math.random()}.${fileExt}`;
+				const filePath = `product/${fileName}`; // Changed to bucket 'products', folder 'product'
+
+				const { error: uploadError } = await supabase.storage
+					.from('products')
+					.upload(filePath, file);
+
+				if (!uploadError) {
+					const { data: publicUrlData } = supabase.storage
+						.from('products')
+						.getPublicUrl(filePath);
+
+					imageInserts.push({
+						product_id: product.id,
+						image_url: publicUrlData.publicUrl,
+						is_primary: i === 0 // First image is primary
+					});
+				}
+			}
+
+			if (imageInserts.length > 0) {
+				await supabase.from('product_images').insert(imageInserts);
+			}
+		}
+
+		return { success: true };
+	},
+	deleteProduct: async ({ request, locals: { supabase } }) => {
+		const formData = await request.formData();
+		const id = formData.get('id');
+
+		if (!id) return { success: false, error: 'Missing ID' };
+
+		// Fetch images to delete from storage
+		const { data: images } = await supabase
+			.from('product_images')
+			.select('image_url')
+			.eq('product_id', id);
+		
+		if (images && images.length > 0) {
+			const paths = images.map(img => {
+				const url = new URL(img.image_url);
+				const parts = url.pathname.split('/');
+				// /storage/v1/object/public/products/product/filename.jpg
+				// Extract 'product/filename.jpg'
+				const pathIndex = parts.indexOf('products');
+				return parts.slice(pathIndex + 1).join('/');
+			});
+			
+			if (paths.length > 0) {
+				await supabase.storage.from('products').remove(paths);
+			}
+		}
+
+		const { error } = await supabase.from('products').delete().eq('id', id);
+
+		if (error) return { success: false, error: error.message };
+		return { success: true };
+	},
+	toggleAvailability: async ({ request, locals: { supabase } }) => {
+		const formData = await request.formData();
+		const id = formData.get('id');
+		const is_available = formData.get('is_available') === 'true';
+
+		if (!id) return { success: false, error: 'Missing ID' };
+
+		const { error } = await supabase
+			.from('products')
+			.update({ is_available: !is_available })
+			.eq('id', id);
+			
+		if (error) return { success: false, error: error.message };
+		return { success: true };
+	}
+};
