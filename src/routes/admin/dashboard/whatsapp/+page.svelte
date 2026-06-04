@@ -124,7 +124,6 @@
 	<div class="bg-amber-50 border border-amber-200 rounded-2xl p-5 text-sm text-amber-800">
 		<p class="font-bold mb-1">⚠️ Penting</p>
 		<ul class="list-disc pl-5 space-y-1 text-amber-700">
-			<li>Pastikan server WhatsApp Gateway sudah berjalan di VPS Anda.</li>
 			<li>Hanya 1 perangkat yang bisa terhubung ke WhatsApp Web pada saat bersamaan.</li>
 			<li>Jika koneksi terputus, halaman ini akan otomatis menampilkan QR baru.</li>
 		</ul>
