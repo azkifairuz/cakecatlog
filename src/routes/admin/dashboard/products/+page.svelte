@@ -189,7 +189,7 @@
 						{/if}
 					</Table.Cell>
 					<Table.Cell>
-						<div class="font-medium text-slate-800">{product.name}</div>
+						<div class="font-medium text-[#4A3B32]">{product.name}</div>
 						{#if product.category}
 							<Badge variant="outline" class="mt-1 text-[10px] bg-slate-50">{product.category.name}</Badge>
 						{/if}

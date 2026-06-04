@@ -1,13 +1,33 @@
 <script>
 	import { page } from '$app/stores';
 	import { Button } from '$lib/components/ui/button';
-	import { LogOut, Package, ShoppingCart, Tags } from 'lucide-svelte';
+	import { ChartBar, LogOut, MessageCircle, Package, ShoppingCart, Tags } from 'lucide-svelte';
 
 	let { children } = $props();
 </script>
 
-<div class="flex min-h-screen w-full flex-col bg-muted/40 pb-16 sm:pb-0">
-	<aside class="fixed inset-y-0 left-0 z-10 hidden w-64 flex-col border-r bg-background xl:flex">
+<div class="flex min-h-screen w-full flex-col bg-slate-50 pb-16 sm:pb-0 font-sans text-[#4A3B32]">
+	<header class="sticky top-0 z-30 flex h-16 items-center gap-6 border-b border-[#8C5A35]/10 bg-white px-6 shadow-sm">
+		<div class="flex items-center gap-2 font-bold text-[#8C5A35] font-['Playfair_Display'] text-xl">
+			<ShoppingCart class="h-6 w-6" />
+			<span>desertbyfir Admin</span>
+		</div>
+
+		<nav class="hidden lg:flex items-center gap-2 text-sm font-semibold ml-6">
+			<a href="/admin/dashboard" class="px-4 py-2.5 rounded-full transition-all {$page.url.pathname === '/admin/dashboard' ? 'bg-[#8C5A35]/10 text-[#8C5A35]' : 'text-[#4A3B32]/70 hover:text-[#8C5A35] hover:bg-[#8C5A35]/5'}">Analytics</a>
+			<a href="/admin/dashboard/orders" class="px-4 py-2.5 rounded-full transition-all {$page.url.pathname === '/admin/dashboard/orders' ? 'bg-[#8C5A35]/10 text-[#8C5A35]' : 'text-[#4A3B32]/70 hover:text-[#8C5A35] hover:bg-[#8C5A35]/5'}">Orders</a>
+			<a href="/admin/dashboard/products" class="px-4 py-2.5 rounded-full transition-all {$page.url.pathname === '/admin/dashboard/products' ? 'bg-[#8C5A35]/10 text-[#8C5A35]' : 'text-[#4A3B32]/70 hover:text-[#8C5A35] hover:bg-[#8C5A35]/5'}">Products</a>
+			<a href="/admin/dashboard/categories" class="px-4 py-2.5 rounded-full transition-all {$page.url.pathname === '/admin/dashboard/categories' ? 'bg-[#8C5A35]/10 text-[#8C5A35]' : 'text-[#4A3B32]/70 hover:text-[#8C5A35] hover:bg-[#8C5A35]/5'}">Categories</a>
+			<a href="/admin/dashboard/whatsapp" class="px-4 py-2.5 rounded-full transition-all {$page.url.pathname === '/admin/dashboard/whatsapp' ? 'bg-[#8C5A35]/10 text-[#8C5A35]' : 'text-[#4A3B32]/70 hover:text-[#8C5A35] hover:bg-[#8C5A35]/5'}">WhatsApp</a>
+		</nav>
+
+		<div class="ml-auto hidden lg:block">
+			<form action="/admin/logout" method="POST">
+				<Button type="submit" variant="outline" size="sm" class="rounded-full border-[#8C5A35]/20 text-[#8C5A35] hover:bg-[#8C5A35]/10 hover:text-[#8C5A35]">Logout</Button>
+			</form>
+		</div>
+	</header>
+	<!-- <aside class="fixed inset-y-0 left-0 z-10 hidden w-64 flex-col border-r bg-background xl:flex">
 		<div class="flex h-14 items-center border-b px-4 xl:h-[60px] xl:px-6">
 			<a href="/admin/dashboard" class="flex items-center gap-2 font-semibold">
 				<ShoppingCart class="h-6 w-6" />
@@ -19,6 +39,13 @@
 				<a
 					href="/admin/dashboard"
 					class="flex items-center gap-4 rounded-xl px-4 py-4 transition-all hover:text-primary hover:bg-muted/50 { $page.url.pathname === '/admin/dashboard' ? 'bg-muted text-primary shadow-sm' : 'text-muted-foreground' }"
+				>
+					<ChartBar class="h-5 w-5" />
+					Analytics
+				</a>
+				<a
+					href="/admin/dashboard/orders"
+					class="flex items-center gap-4 rounded-xl px-4 py-4 transition-all hover:text-primary hover:bg-muted/50 { $page.url.pathname === '/admin/dashboard/orders' ? 'bg-muted text-primary shadow-sm' : 'text-muted-foreground' }"
 				>
 					<ShoppingCart class="h-5 w-5" />
 					Orders
@@ -47,16 +74,16 @@
 				</Button>
 			</form>
 		</div>
-	</aside>
+	</aside> -->
 
-	<div class="flex flex-col xl:gap-4 xl:py-4 xl:pl-64">
-		<header class="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 xl:static xl:h-auto xl:border-0 xl:bg-transparent xl:px-6">
-			<div class="flex xl:hidden">
-				<span class="font-semibold">Cake Admin</span>
+	<div class="flex flex-col xl:gap-4 xl:py-4 xl:justify-center ">
+		<header class="sticky top-0 z-30 flex h-14 items-center gap-4 border-b border-[#8C5A35]/10 bg-white px-4 xl:static xl:h-auto xl:border-0 xl:bg-transparent xl:px-6 shadow-sm xl:shadow-none">
+			<div class="flex xl:hidden font-bold text-[#8C5A35] font-['Playfair_Display'] text-lg">
+				<span>desertbyfir Admin</span>
 			</div>
 			<div class="ml-auto xl:hidden">
 				<form action="/admin/logout" method="POST">
-					<Button type="submit" variant="ghost" size="icon">
+					<Button type="submit" variant="ghost" size="icon" class="text-[#8C5A35] hover:bg-[#8C5A35]/10">
 						<LogOut class="h-5 w-5" />
 					</Button>
 				</form>
@@ -68,18 +95,26 @@
 	</div>
 
 	<!-- Mobile & Tablet Bottom Nav -->
-	<div class="fixed bottom-0 left-0 z-40 w-full h-[72px] bg-background border-t xl:hidden flex items-center px-1 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
-		<a href="/admin/dashboard" class="flex flex-col items-center justify-center gap-1.5 flex-1 h-[85%] mx-0.5 rounded-xl active:scale-95 transition-all { $page.url.pathname === '/admin/dashboard' ? 'text-primary bg-primary/5' : 'text-muted-foreground hover:bg-muted/50' }">
+	<div class="fixed bottom-0 left-0 z-40 w-full h-[72px] bg-white border-t border-[#8C5A35]/10 xl:hidden flex items-center px-1 pb-safe shadow-[0_-4px_20px_rgba(140,90,53,0.05)]">
+		<a href="/admin/dashboard" class="flex flex-col items-center justify-center gap-1.5 flex-1 h-[85%] mx-0.5 rounded-2xl active:scale-95 transition-all { $page.url.pathname === '/admin/dashboard' ? 'text-[#8C5A35] bg-[#8C5A35]/10' : 'text-[#4A3B32]/50 hover:bg-[#8C5A35]/5 hover:text-[#8C5A35]' }">
+			<ChartBar class="h-[22px] w-[22px]" />
+			<span class="text-[11px] font-bold">Analytics</span>
+		</a>
+		<a href="/admin/dashboard/orders" class="flex flex-col items-center justify-center gap-1.5 flex-1 h-[85%] mx-0.5 rounded-2xl active:scale-95 transition-all { $page.url.pathname === '/admin/dashboard/orders' ? 'text-[#8C5A35] bg-[#8C5A35]/10' : 'text-[#4A3B32]/50 hover:bg-[#8C5A35]/5 hover:text-[#8C5A35]' }">
 			<ShoppingCart class="h-[22px] w-[22px]" />
-			<span class="text-[11px] font-semibold">Orders</span>
+			<span class="text-[11px] font-bold">Orders</span>
 		</a>
-		<a href="/admin/dashboard/products" class="flex flex-col items-center justify-center gap-1.5 flex-1 h-[85%] mx-0.5 rounded-xl active:scale-95 transition-all { $page.url.pathname === '/admin/dashboard/products' ? 'text-primary bg-primary/5' : 'text-muted-foreground hover:bg-muted/50' }">
+		<a href="/admin/dashboard/products" class="flex flex-col items-center justify-center gap-1.5 flex-1 h-[85%] mx-0.5 rounded-2xl active:scale-95 transition-all { $page.url.pathname === '/admin/dashboard/products' ? 'text-[#8C5A35] bg-[#8C5A35]/10' : 'text-[#4A3B32]/50 hover:bg-[#8C5A35]/5 hover:text-[#8C5A35]' }">
 			<Package class="h-[22px] w-[22px]" />
-			<span class="text-[11px] font-semibold">Products</span>
+			<span class="text-[11px] font-bold">Products</span>
 		</a>
-		<a href="/admin/dashboard/categories" class="flex flex-col items-center justify-center gap-1.5 flex-1 h-[85%] mx-0.5 rounded-xl active:scale-95 transition-all { $page.url.pathname === '/admin/dashboard/categories' ? 'text-primary bg-primary/5' : 'text-muted-foreground hover:bg-muted/50' }">
+		<a href="/admin/dashboard/categories" class="flex flex-col items-center justify-center gap-1.5 flex-1 h-[85%] mx-0.5 rounded-2xl active:scale-95 transition-all { $page.url.pathname === '/admin/dashboard/categories' ? 'text-[#8C5A35] bg-[#8C5A35]/10' : 'text-[#4A3B32]/50 hover:bg-[#8C5A35]/5 hover:text-[#8C5A35]' }">
 			<Tags class="h-[22px] w-[22px]" />
-			<span class="text-[11px] font-semibold">Categories</span>
+			<span class="text-[11px] font-bold">Categories</span>
+		</a>
+		<a href="/admin/dashboard/whatsapp" class="flex flex-col items-center justify-center gap-1.5 flex-1 h-[85%] mx-0.5 rounded-2xl active:scale-95 transition-all { $page.url.pathname === '/admin/dashboard/whatsapp' ? 'text-[#8C5A35] bg-[#8C5A35]/10' : 'text-[#4A3B32]/50 hover:bg-[#8C5A35]/5 hover:text-[#8C5A35]' }">
+			<MessageCircle class="h-[22px] w-[22px]" />
+			<span class="text-[11px] font-bold">WhatsApp</span>
 		</a>
 	</div>
 </div>
