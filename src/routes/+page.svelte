@@ -159,7 +159,10 @@
 						<p class="text-[13px] text-[#4A3B32]/50 line-clamp-2 mb-6 flex-1 leading-relaxed">{product.description}</p>
 						
 						<div class="flex items-center justify-between mt-auto pointer-events-auto">
-							<span class="font-bold text-[#4A3B32] text-lg">{formatCurrency(product.base_price)}</span>
+							<div class="flex flex-col">
+								<span class="text-[10px] uppercase font-bold tracking-wider text-[#4A3B32]/50 mb-0.5">Start from</span>
+								<span class="font-bold text-[#4A3B32] text-lg leading-none">{formatCurrency(product.base_price)}</span>
+							</div>
 							<a href={`/order/${product.id}`} class="px-5 py-2.5 bg-[#8C5A35] text-white text-[13px] font-semibold rounded-full hover:bg-[#724828] transition-colors shadow-md shadow-[#8C5A35]/20 relative z-20">Pesan</a>
 						</div>
 					</div>

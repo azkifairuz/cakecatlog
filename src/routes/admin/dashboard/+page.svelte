@@ -286,7 +286,7 @@
 					<h3 class="text-xl font-bold text-[#4A3B32] mb-1">Kelola Pesanan</h3>
 					<p class="text-sm font-medium text-[#4A3B32]/70">#{selectedOrder.order_number} • {selectedOrder.customer_name}</p>
 				</div>
-				<button onclick={closeDrawer} class="p-2 -mr-2 text-[#4A3B32]/50 hover:text-[#4A3B32]/80 bg-slate-50 hover:bg-slate-50 rounded-full transition-colors">
+				<button onclick={closeDrawer} aria-label="Close modal" class="p-2 -mr-2 text-[#4A3B32]/50 hover:text-[#4A3B32]/80 bg-slate-50 hover:bg-slate-50 rounded-full transition-colors">
 					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
 				</button>
 			</div>

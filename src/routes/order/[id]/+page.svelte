@@ -1,8 +1,20 @@
 <script>
 	import { supabase } from '$lib/supabase';
 
+
 	let { data } = $props();
 	let product = $derived(data.product);
+
+	function parseOptions(str) {
+		if (!str) return [];
+		return str.split(',').map(s => s.trim()).filter(Boolean);
+	}
+
+	let sizes = $derived(parseOptions(product.sizes));
+	let colors = $derived(parseOptions(product.colors));
+	let flavors = $derived(parseOptions(product.flavors));
+	let crowns = $derived(parseOptions(product.crown_options));
+	let glitters = $derived(parseOptions(product.edible_glitter));
 
 	let loading = $state(false);
 	let errorMsg = $state('');
@@ -49,9 +61,10 @@
 				email: null,
 				cake_size: formData.get('cake_size'),
 				quantity: parseInt(formData.get('quantity')),
-				cake_flavor: 'Standard', // Default since it's removed from UI
-				cake_color: null,
-				add_edible_glitter: formData.get('add_edible_glitter'),
+				cake_flavor: formData.get('cake_flavor') || 'Standard',
+				cake_color: formData.get('cake_color') || null,
+				crown_option: formData.get('crown_option') || null,
+				add_edible_glitter: formData.get('add_edible_glitter') || null,
 				delivery_date: formData.get('delivery_date') || null,
 				delivery_time: formData.get('delivery_time') || null,
 				cake_text: formData.get('add_on'),
@@ -134,7 +147,7 @@ Mohon info total harga dan instruksi pembayaran. Terima kasih!`;
 					</div>
 					<div>
 						<label for="phone_number" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">No. WhatsApp <span class="text-red-400">*</span></label>
-						<input type="tel" id="phone_number" name="phone_number" required placeholder="Contoh: 08123456789" class="w-full px-4 py-3.5 bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl text-[15px] placeholder-slate-400 focus:outline-none focus:border-slate-800 transition-all" />
+						<input type="tel" inputmode="numeric" pattern="[0-9]*" oninput={(e) => { e.currentTarget.value = e.currentTarget.value.replace(/[^0-9]/g, ''); }} id="phone_number" name="phone_number" required placeholder="Contoh: 08123456789" class="w-full px-4 py-3.5 bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl text-[15px] placeholder-slate-400 focus:outline-none focus:border-slate-800 transition-all" />
 					</div>
 				</div>
 			</div>
@@ -150,7 +163,7 @@ Mohon info total harga dan instruksi pembayaran. Terima kasih!`;
 				
 				<div class="space-y-4">
 					<div>
-						<label class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Kue Pilihan</label>
+						<div class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Kue Pilihan</div>
 						<div class="w-full px-4 py-3.5 bg-slate-100/50 rounded-xl text-[15px] text-slate-700 font-medium border-2 border-transparent">
 							{product.name}
 						</div>
@@ -162,22 +175,28 @@ Mohon info total harga dan instruksi pembayaran. Terima kasih!`;
 							<div class="relative">
 								<select id="cake_size" name="cake_size" required class="w-full px-4 py-3.5 bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl text-[15px] appearance-none focus:outline-none focus:border-slate-800 transition-all text-slate-700">
 									<option value="" disabled selected>Pilih...</option>
-									<option value="8cm">8 cm</option>
-									<option value="10cm">10 cm</option>
-									<option value="12cm">12 cm</option>
-									<option value="14cm">14 cm</option>
-									<option value="16cm">16 cm</option>
-									<option value="18cm">18 cm</option>
-									<option value="20cm">20 cm</option>
-									<option value="24cm">24 cm</option>
-									<option value="26cm">26 cm</option>
-									<option value="30cm">30 cm</option>
-									<option value="40cm">40 cm</option>
-									<option value="60cm">60 cm</option>
-									<option value="80cm">80 cm</option>
-									<option value="90cm">90 cm</option>
-									<option value="100cm">100 cm</option>
-									<option value="Custom">Custom</option>
+									{#if sizes.length > 0}
+										{#each sizes as size}
+											<option value={size}>{size}</option>
+										{/each}
+									{:else}
+										<option value="8cm">8 cm</option>
+										<option value="10cm">10 cm</option>
+										<option value="12cm">12 cm</option>
+										<option value="14cm">14 cm</option>
+										<option value="16cm">16 cm</option>
+										<option value="18cm">18 cm</option>
+										<option value="20cm">20 cm</option>
+										<option value="24cm">24 cm</option>
+										<option value="26cm">26 cm</option>
+										<option value="30cm">30 cm</option>
+										<option value="40cm">40 cm</option>
+										<option value="60cm">60 cm</option>
+										<option value="80cm">80 cm</option>
+										<option value="90cm">90 cm</option>
+										<option value="100cm">100 cm</option>
+										<option value="Custom">Custom</option>
+									{/if}
 								</select>
 								<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
 									<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -219,13 +238,82 @@ Mohon info total harga dan instruksi pembayaran. Terima kasih!`;
 				</div>
 				
 				<div class="space-y-4">
+					{#if flavors.length > 0}
+						<div>
+							<label for="cake_flavor" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Pilihan Rasa</label>
+							<div class="relative">
+								<select id="cake_flavor" name="cake_flavor" class="w-full px-4 py-3.5 bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl text-[15px] appearance-none focus:outline-none focus:border-slate-800 transition-all text-slate-700">
+									<option value="" selected>Pilih Rasa...</option>
+									{#each flavors as flavor}
+										<option value={flavor}>{flavor}</option>
+									{/each}
+								</select>
+								<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
+									<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+								</div>
+							</div>
+						</div>
+					{/if}
+
+					{#if colors.length > 0}
+						<div>
+							<label for="cake_color" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Pilihan Warna</label>
+							<div class="relative">
+								<select id="cake_color" name="cake_color" class="w-full px-4 py-3.5 bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl text-[15px] appearance-none focus:outline-none focus:border-slate-800 transition-all text-slate-700">
+									<option value="" selected>Pilih Warna...</option>
+									{#each colors as color}
+										<option value={color}>{color}</option>
+									{/each}
+								</select>
+								<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
+									<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+								</div>
+							</div>
+						</div>
+					{/if}
+
+					{#if crowns.length > 0}
+						<div>
+							<label for="crown_option" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Pilihan Mahkota</label>
+							<div class="relative">
+								<select id="crown_option" name="crown_option" class="w-full px-4 py-3.5 bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl text-[15px] appearance-none focus:outline-none focus:border-slate-800 transition-all text-slate-700">
+									<option value="" selected>Pilih Mahkota...</option>
+									{#each crowns as crown}
+										<option value={crown}>{crown}</option>
+									{/each}
+								</select>
+								<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
+									<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+								</div>
+							</div>
+						</div>
+					{/if}
+
+					{#if glitters.length > 0}
+						<div>
+							<label for="add_edible_glitter" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Edible Glitter</label>
+							<div class="relative">
+								<select id="add_edible_glitter" name="add_edible_glitter" class="w-full px-4 py-3.5 bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl text-[15px] appearance-none focus:outline-none focus:border-slate-800 transition-all text-slate-700">
+									<option value="" selected>Pilih Glitter...</option>
+									{#each glitters as glitter}
+										<option value={glitter}>{glitter}</option>
+									{/each}
+								</select>
+								<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
+									<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+								</div>
+							</div>
+						</div>
+					{:else}
+						<div>
+							<label for="add_edible_glitter" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Glitter Tambahan</label>
+							<input type="text" id="add_edible_glitter" name="add_edible_glitter" placeholder="Contoh: Ya, warna gold" class="w-full px-4 py-3.5 bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl text-[15px] placeholder-slate-400 focus:outline-none focus:border-slate-800 transition-all" />
+						</div>
+					{/if}
+
 					<div>
 						<label for="gift_card_text" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Tulisan Giftcard</label>
 						<input type="text" id="gift_card_text" name="gift_card_text" placeholder="Kosongkan jika tidak ada" class="w-full px-4 py-3.5 bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl text-[15px] placeholder-slate-400 focus:outline-none focus:border-slate-800 transition-all" />
-					</div>
-					<div>
-						<label for="add_edible_glitter" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Glitter Tambahan</label>
-						<input type="text" id="add_edible_glitter" name="add_edible_glitter" placeholder="Contoh: Ya, warna gold" class="w-full px-4 py-3.5 bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl text-[15px] placeholder-slate-400 focus:outline-none focus:border-slate-800 transition-all" />
 					</div>
 					<div>
 						<label for="add_on" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Request Tambahan</label>
@@ -247,11 +335,11 @@ Mohon info total harga dan instruksi pembayaran. Terima kasih!`;
 					<div class="grid grid-cols-2 gap-4">
 						<div>
 							<label for="delivery_date" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Tanggal</label>
-							<input type="date" id="delivery_date" name="delivery_date" class="w-full px-4 py-3.5 bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl text-[15px] text-slate-700 focus:outline-none focus:border-slate-800 transition-all" />
+							<input type="date" id="delivery_date" name="delivery_date" class="w-full px-4 py-[13.5px] bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl text-[15px] text-slate-700 focus:outline-none focus:border-slate-800 transition-all cursor-pointer" />
 						</div>
 						<div>
 							<label for="delivery_time" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Waktu</label>
-							<input type="text" id="delivery_time" name="delivery_time" placeholder="Misal: 14:00" class="w-full px-4 py-3.5 bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl text-[15px] placeholder-slate-400 focus:outline-none focus:border-slate-800 transition-all" />
+							<input type="time" id="delivery_time" name="delivery_time" class="w-full px-4 py-[13.5px] bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl text-[15px] text-slate-700 focus:outline-none focus:border-slate-800 transition-all cursor-pointer appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none" />
 						</div>
 					</div>
 					<div>

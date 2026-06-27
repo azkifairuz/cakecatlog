@@ -85,6 +85,10 @@
 			'No HP': order.phone_number,
 			'Produk': order.products?.name ?? '-',
 			'Ukuran': order.cake_size ?? '-',
+			'Warna': order.cake_color ?? '-',
+			'Rasa': order.cake_flavor ?? '-',
+			'Mahkota': order.crown_option ?? '-',
+			'Glitter': order.add_edible_glitter ?? '-',
 			'Qty': order.quantity,
 			'Tanggal Kirim': order.delivery_date ?? '-',
 			'Waktu Kirim': order.delivery_time ?? '-',
@@ -248,7 +252,7 @@
 					<h3 class="text-xl font-bold text-slate-800 mb-1">Kelola Pesanan</h3>
 					<p class="text-sm font-medium text-slate-500">#{selectedOrder.order_number} &bull; {selectedOrder.customer_name}</p>
 				</div>
-				<button onclick={closeDrawer} class="p-2 -mr-2 text-slate-400 hover:text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-full transition-colors">
+				<button onclick={closeDrawer} aria-label="Close modal" class="p-2 -mr-2 text-slate-400 hover:text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-full transition-colors">
 					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
 				</button>
 			</div>
