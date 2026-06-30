@@ -1,4 +1,5 @@
 <script>
+	import HeroCarousel from '$lib/components/HeroCarousel.svelte';
 	let { data } = $props();
 
 	let selectedCategory = $state('All');
@@ -14,35 +15,7 @@
 	}
 </script>
 
-<!-- HERO SECTION -->
-<section class="relative pt-12 pb-24 lg:pt-20 lg:pb-32 overflow-hidden bg-white">
-	<!-- Decorative Background Element -->
-	<div class="absolute right-0 top-0 w-3/4 md:w-1/2 h-full bg-[#FFFBF7] rounded-bl-[100px] md:rounded-bl-[200px] -z-10"></div>
-	
-	<div class="container mx-auto px-6 lg:px-12 flex flex-col md:flex-row items-center gap-12">
-		<div class="md:w-1/2 md:pr-8 text-center md:text-left z-10">
-			<p class="text-[#8C5A35] text-xs font-bold uppercase tracking-[0.2em] mb-4">Artisan Bakery & Cake Shop</p>
-			<h1 class="text-6xl md:text-7xl lg:text-8xl font-serif italic text-[#4A3B32] mb-6 font-['Playfair_Display'] leading-[1.1]">
-				desertbyfir
-			</h1>
-			<p class="text-[#4A3B32]/70 leading-relaxed max-w-md mx-auto md:mx-0 mb-10 text-[15px]">
-				Kami mempersembahkan kue dan pastry premium yang dibuat dengan cinta dan bahan-bahan berkualitas tinggi untuk momen spesial Anda.
-			</p>
-			<div class="flex flex-col sm:flex-row items-center gap-4 justify-center md:justify-start">
-				<a href="#catalog" class="w-full sm:w-auto px-8 py-3.5 bg-[#8C5A35] text-white rounded-full text-sm font-semibold hover:bg-[#724828] transition-all shadow-lg shadow-[#8C5A35]/20">Lihat Katalog</a>
-				<a href="#about" class="w-full sm:w-auto px-8 py-3.5 border border-[#8C5A35] text-[#8C5A35] rounded-full text-sm font-semibold hover:bg-[#8C5A35]/5 transition-all">Pelajari Lebih Lanjut</a>
-			</div>
-		</div>
-		<div class="md:w-1/2 relative flex justify-center w-full z-10">
-			<!-- Decorative concentric lines behind image -->
-			<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] sm:w-[450px] sm:h-[450px] border-[1px] border-[#8C5A35]/20 rounded-full"></div>
-			<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] sm:w-[550px] sm:h-[550px] border-[1px] border-[#8C5A35]/10 rounded-full"></div>
-			
-			<!-- Dummy Hero Image -->
-			<img src="https://images.unsplash.com/photo-1578985545062-69928b1d9587?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="Chocolate Cake" class="relative z-10 w-64 h-64 sm:w-80 sm:h-80 lg:w-96 lg:h-96 object-cover rounded-full shadow-[0_20px_50px_-12px_rgba(140,90,53,0.3)] ring-8 ring-white" />
-		</div>
-	</div>
-</section>
+<HeroCarousel banners={data.banners} />
 
 <!-- ABOUT SECTION -->
 <section id="about" class="py-24 bg-white relative overflow-hidden">
@@ -134,36 +107,37 @@
 		</div>
 	</div>
 
-	<div class="container mx-auto px-6 max-w-7xl">
-		<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-12">
+	<div class="container mx-auto px-4 sm:px-6 max-w-7xl">
+		<div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-6 sm:gap-x-6 sm:gap-y-12">
 			{#each filteredProducts as product}
 				{@const primaryImg = product.product_images?.find(img => img.is_primary) || product.product_images?.[0]}
-				<div class="bg-white rounded-[2rem] p-4 border border-slate-100 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_30px_-10px_rgba(140,90,53,0.15)] hover:-translate-y-1 transition-all duration-300 group flex flex-col h-full relative">
+				<div class="bg-white rounded-3xl p-3 sm:p-4 border border-slate-100 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_30px_-10px_rgba(140,90,53,0.15)] hover:-translate-y-1 transition-all duration-300 group flex flex-col h-full relative">
 					<!-- Card Link Cover (Makes the whole top part clickable) -->
 					<a href={`/product/${product.id}`} class="absolute inset-0 z-0" aria-label={`Lihat detail ${product.name}`}></a>
 					
-					<div class="aspect-square w-full rounded-[1.5rem] overflow-hidden bg-[#FFFBF7] mb-5 relative flex items-center justify-center p-2 z-10 pointer-events-none">
+					<div class="aspect-square w-full rounded-[1.25rem] overflow-hidden bg-[#FFFBF7] mb-3 sm:mb-5 relative flex items-center justify-center p-1.5 sm:p-2 z-10 pointer-events-none">
 						{#if primaryImg}
-							<img src={primaryImg.image_url} alt={product.name} class="w-full h-full object-cover rounded-xl transition-transform duration-500 group-hover:scale-105" />
+							<img src={primaryImg.image_url} alt={product.name} class="w-full h-full object-cover rounded-[1rem] sm:rounded-xl transition-transform duration-500 group-hover:scale-105" />
 						{:else}
-							<div class="w-full h-full flex items-center justify-center text-slate-300 bg-slate-100 rounded-xl">No Image</div>
+							<div class="w-full h-full flex items-center justify-center text-slate-300 bg-slate-100 rounded-[1rem] sm:rounded-xl">No Image</div>
 						{/if}
 						{#if product.category}
-							<div class="absolute top-4 left-4 px-3 py-1 bg-white/90 backdrop-blur-sm text-[#8C5A35] text-[11px] font-bold rounded-full shadow-sm z-10">
+							<div class="absolute top-2 left-2 sm:top-4 sm:left-4 px-2 py-0.5 sm:px-3 sm:py-1 bg-white/90 backdrop-blur-sm text-[#8C5A35] text-[9px] sm:text-[11px] font-bold rounded-full shadow-sm z-10">
 								{product.category.name}
 							</div>
 						{/if}
 					</div>
-					<div class="px-2 flex flex-col flex-1 z-10 pointer-events-none">
-						<h3 class="font-bold text-[#4A3B32] mb-1.5 text-[15px] group-hover:text-[#8C5A35] transition-colors">{product.name}</h3>
-						<p class="text-[13px] text-[#4A3B32]/50 line-clamp-2 mb-6 flex-1 leading-relaxed">{product.description}</p>
+					<div class="px-1 sm:px-2 flex flex-col flex-1 z-10 pointer-events-none">
+						<h3 class="font-bold text-[#4A3B32] mb-1 text-[13px] sm:text-[15px] group-hover:text-[#8C5A35] transition-colors line-clamp-1">{product.name}</h3>
+						<p class="text-[11px] sm:text-[13px] text-[#4A3B32]/50 line-clamp-2 mb-3 sm:mb-6 flex-1 leading-relaxed hidden sm:block">{product.description}</p>
+						<p class="text-[11px] sm:text-[13px] text-[#4A3B32]/50 line-clamp-2 mb-3 sm:mb-6 flex-1 leading-relaxed sm:hidden">{product.description || ''}</p>
 						
 						<div class="flex items-center justify-between mt-auto pointer-events-auto">
 							<div class="flex flex-col">
-								<span class="text-[10px] uppercase font-bold tracking-wider text-[#4A3B32]/50 mb-0.5">Start from</span>
-								<span class="font-bold text-[#4A3B32] text-lg leading-none">{formatCurrency(product.base_price)}</span>
+								<span class="text-[8px] sm:text-[10px] uppercase font-bold tracking-wider text-[#4A3B32]/50 mb-0.5">Start from</span>
+								<span class="font-bold text-[#4A3B32] text-[13px] sm:text-lg leading-none">{formatCurrency(product.base_price)}</span>
 							</div>
-							<a href={`/order/${product.id}`} class="px-5 py-2.5 bg-[#8C5A35] text-white text-[13px] font-semibold rounded-full hover:bg-[#724828] transition-colors shadow-md shadow-[#8C5A35]/20 relative z-20">Pesan</a>
+							<a href={`/order/${product.id}`} class="px-3 py-1.5 sm:px-5 sm:py-2.5 bg-[#8C5A35] text-white text-[11px] sm:text-[13px] font-semibold rounded-full hover:bg-[#724828] transition-colors shadow-md shadow-[#8C5A35]/20 relative z-20">Pesan</a>
 						</div>
 					</div>
 				</div>

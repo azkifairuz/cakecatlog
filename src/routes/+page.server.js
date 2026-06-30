@@ -24,8 +24,15 @@ export const load = async ({ locals: { supabase } }) => {
 		.select('*')
 		.order('name', { ascending: true });
 
+	const { data: banners } = await supabase
+		.from('hero_banners')
+		.select('*')
+		.eq('is_active', true)
+		.order('display_order', { ascending: true });
+
 	return {
 		products: products ?? [],
-		categories: categories ?? []
+		categories: categories ?? [],
+		banners: banners ?? []
 	};
 };

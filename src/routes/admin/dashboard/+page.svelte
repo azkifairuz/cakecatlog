@@ -73,7 +73,7 @@
 	}));
 
 	let pendingOrders = $derived(filteredOrders.filter(order => order.status === 'Pending'));
-	let processingOrders = $derived(filteredOrders.filter(order => order.status === 'Diperoses'));
+	let processingOrders = $derived(filteredOrders.filter(order => order.status === 'Diproses'));
 	let completedOrders = $derived(filteredOrders.filter(order => order.status === 'Selesai'));
 	let totalRevenue = $derived(filteredOrders.reduce((acc, order) => acc + Number(order.amount || 0), 0));
 	let totalSales = $derived(filteredOrders.length);
@@ -156,7 +156,7 @@
 				<select bind:value={statusFilter} class="h-12 rounded-full bg-slate-50 border border-[#8C5A35]/20 px-4 text-sm font-medium text-[#4A3B32] focus:outline-none focus:border-[#8C5A35] focus:bg-white focus:ring-2 focus:ring-slate-100">
 					<option value="All">Semua Status</option>
 					<option value="Pending">Pending</option>
-					<option value="Diperoses">Diperoses</option>
+					<option value="Diproses">Diproses</option>
 					<option value="Selesai">Selesai</option>
 				</select>
 				{#if dateMode === 'range'}
@@ -211,7 +211,7 @@
 				</div>
 
 				<div class="rounded-3xl border border-[#8C5A35]/20 bg-slate-50 p-4">
-					<p class="text-sm font-semibold text-[#4A3B32]/70">Diperoses</p>
+					<p class="text-sm font-semibold text-[#4A3B32]/70">Diproses</p>
 					<p class="mt-3 text-3xl font-bold text-[#4A3B32]">{processingOrders.length}</p>
 					<p class="mt-2 text-sm text-[#4A3B32]/70">Pesanan sedang dibuat.</p>
 				</div>
@@ -299,9 +299,9 @@
 						};
 					}}>
 						<input type="hidden" name="id" value={selectedOrder.id} />
-						<select name="status" class="w-full text-[15px] font-bold rounded-xl border-2 px-4 py-4 focus:outline-none focus:ring-2 focus:ring-[#8C5A35] transition-colors cursor-pointer shadow-sm {selectedOrder.status === 'Selesai' ? 'bg-green-50 text-green-700 border-green-200' : selectedOrder.status === 'Diperoses' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-slate-50 text-[#4A3B32] border-[#8C5A35]/20'}" onchange={(e) => e.target.form.requestSubmit()}>
+						<select name="status" class="w-full text-[15px] font-bold rounded-xl border-2 px-4 py-4 focus:outline-none focus:ring-2 focus:ring-[#8C5A35] transition-colors cursor-pointer shadow-sm {selectedOrder.status === 'Selesai' ? 'bg-green-50 text-green-700 border-green-200' : selectedOrder.status === 'Diproses' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-slate-50 text-[#4A3B32] border-[#8C5A35]/20'}" onchange={(e) => e.target.form.requestSubmit()}>
 							<option value="Pending" selected={selectedOrder.status === 'Pending'}>Pending (Belum Diproses)</option>
-							<option value="Diperoses" selected={selectedOrder.status === 'Diperoses'}>Diperoses (Sedang Dibuat)</option>
+							<option value="Diproses" selected={selectedOrder.status === 'Diproses'}>Diproses (Sedang Dibuat)</option>
 							<option value="Selesai" selected={selectedOrder.status === 'Selesai'}>Selesai (Sudah Dikirim)</option>
 						</select>
 					</form>

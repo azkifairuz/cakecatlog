@@ -137,7 +137,7 @@
 			<select bind:value={statusFilter} class="h-11 w-full rounded-xl bg-slate-50 border-transparent hover:border-slate-200 focus:border-slate-800 focus:bg-white px-3 text-sm font-medium text-slate-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-800">
 				<option value="All">Semua Status</option>
 				<option value="Pending">Pending</option>
-				<option value="Diperoses">Diperoses</option>
+				<option value="Diproses">Diproses</option>
 				<option value="Selesai">Selesai</option>
 			</select>
 		</div>
@@ -177,11 +177,11 @@
 						<input type="hidden" name="id" value={order.id} />
 						<select name="status" class="text-xs sm:text-sm font-bold rounded-full border px-3 sm:px-4 py-2 sm:py-2.5 focus:outline-none focus:ring-2 focus:ring-slate-800 transition-colors cursor-pointer
 							{order.status === 'Selesai' ? 'bg-green-50 text-green-700 border-green-200' : 
-							 order.status === 'Diperoses' ? 'bg-blue-50 text-blue-700 border-blue-200' : 
+							 order.status === 'Diproses' ? 'bg-blue-50 text-blue-700 border-blue-200' : 
 							 'bg-slate-50 text-slate-700 border-slate-200'}" 
 							onchange={(e) => e.target.form.requestSubmit()}>
 							<option value="Pending" selected={order.status === 'Pending'}>Pending</option>
-							<option value="Diperoses" selected={order.status === 'Diperoses'}>Diperoses</option>
+							<option value="Diproses" selected={order.status === 'Diproses'}>Diproses</option>
 							<option value="Selesai" selected={order.status === 'Selesai'}>Selesai</option>
 						</select>
 					</form>
@@ -270,11 +270,11 @@
 						<input type="hidden" name="id" value={selectedOrder.id} />
 						<select name="status" class="w-full text-[15px] font-bold rounded-xl border-2 px-4 py-4 focus:outline-none focus:ring-2 focus:ring-slate-800 transition-colors cursor-pointer shadow-sm
 							{selectedOrder.status === 'Selesai' ? 'bg-green-50 text-green-700 border-green-200' : 
-							 selectedOrder.status === 'Diperoses' ? 'bg-blue-50 text-blue-700 border-blue-200' : 
+							 selectedOrder.status === 'Diproses' ? 'bg-blue-50 text-blue-700 border-blue-200' : 
 							 'bg-slate-50 text-slate-700 border-slate-200'}" 
 							onchange={(e) => e.target.form.requestSubmit()}>
 							<option value="Pending" selected={selectedOrder.status === 'Pending'}>Pending (Belum Diproses)</option>
-							<option value="Diperoses" selected={selectedOrder.status === 'Diperoses'}>Diperoses (Sedang Dibuat)</option>
+							<option value="Diproses" selected={selectedOrder.status === 'Diproses'}>Diproses (Sedang Dibuat)</option>
 							<option value="Selesai" selected={selectedOrder.status === 'Selesai'}>Selesai (Sudah Dikirim)</option>
 						</select>
 					</form>
