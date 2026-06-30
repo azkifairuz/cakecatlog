@@ -21,6 +21,9 @@
 	let fileName = $state('no file selected');
 	let showSuccessModal = $state(false);
 
+	const d = new Date();
+	const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
 	async function handleSubmit(event) {
 		event.preventDefault();
 		loading = true;
@@ -28,6 +31,13 @@
 
 		const form = event.target;
 		const formData = new FormData(form);
+
+		const selectedDate = formData.get('delivery_date');
+		if (selectedDate && selectedDate < today) {
+			loading = false;
+			errorMsg = 'Tanggal pengiriman tidak boleh di masa lalu!';
+			return;
+		}
 
 		try {
 			let reference_image_url = null;
@@ -335,7 +345,7 @@ Mohon info total harga dan instruksi pembayaran. Terima kasih!`;
 					<div class="grid grid-cols-2 gap-4">
 						<div>
 							<label for="delivery_date" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Tanggal</label>
-							<input type="date" id="delivery_date" name="delivery_date" class="w-full px-4 py-[13.5px] bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl text-[15px] text-slate-700 focus:outline-none focus:border-slate-800 transition-all cursor-pointer" />
+							<input type="date" id="delivery_date" name="delivery_date" min={today} class="w-full px-4 py-[13.5px] bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl text-[15px] text-slate-700 focus:outline-none focus:border-slate-800 transition-all cursor-pointer" />
 						</div>
 						<div>
 							<label for="delivery_time" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Waktu</label>
