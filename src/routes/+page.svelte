@@ -1,5 +1,6 @@
 <script>
 	import HeroCarousel from '$lib/components/HeroCarousel.svelte';
+	import TopPicksCarousel from '$lib/components/TopPicksCarousel.svelte';
 	let { data } = $props();
 
 	let selectedCategory = $state('All');
@@ -16,6 +17,8 @@
 </script>
 
 <HeroCarousel banners={data.banners} />
+
+<TopPicksCarousel topPicks={data.topPicks} />
 
 <!-- ABOUT SECTION -->
 <section id="about" class="py-24 bg-white relative overflow-hidden">
@@ -89,23 +92,30 @@
 		<h2 class="text-3xl font-bold text-[#4A3B32] mb-8 font-['Playfair_Display']">Katalog</h2>
 		
 		<!-- Category Pills -->
-		<div class="flex flex-wrap justify-center gap-3">
+		<div class="relative -mx-6 sm:mx-0">
+			<!-- Fading Edges for Scroll Indication (Mobile Only) -->
+			<div class="absolute left-0 top-0 bottom-2 w-8 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none sm:hidden"></div>
+			<div class="absolute right-0 top-0 bottom-2 w-12 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none sm:hidden"></div>
+
+			<div class="flex overflow-x-auto gap-3 pb-2 px-6 sm:px-0 sm:flex-wrap sm:justify-center [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] snap-x">
 			<button 
-				class="px-6 py-2 rounded-full border text-[13px] font-semibold tracking-wide transition-all {selectedCategory === 'All' ? 'border-[#8C5A35] bg-[#8C5A35] text-white' : 'border-slate-200 text-[#4A3B32] hover:border-[#8C5A35]'}"
+				class="shrink-0 snap-start sm:snap-align-none whitespace-nowrap px-6 py-2 rounded-full border text-[13px] font-semibold tracking-wide transition-all {selectedCategory === 'All' ? 'border-[#8C5A35] bg-[#8C5A35] text-white' : 'border-slate-200 text-[#4A3B32] hover:border-[#8C5A35]'}"
 				onclick={() => selectedCategory = 'All'}
 			>
 				Semua
 			</button>
 			{#each data.categories as category}
 				<button 
-					class="px-6 py-2 rounded-full border text-[13px] font-semibold tracking-wide transition-all {selectedCategory === category.slug ? 'border-[#8C5A35] bg-[#8C5A35] text-white' : 'border-slate-200 text-[#4A3B32] hover:border-[#8C5A35]'}"
+					class="shrink-0 snap-start sm:snap-align-none whitespace-nowrap px-6 py-2 rounded-full border text-[13px] font-semibold tracking-wide transition-all {selectedCategory === category.slug ? 'border-[#8C5A35] bg-[#8C5A35] text-white' : 'border-slate-200 text-[#4A3B32] hover:border-[#8C5A35]'}"
 					onclick={() => selectedCategory = category.slug}
 				>
 					{category.name}
 				</button>
 			{/each}
+			</div>
 		</div>
 	</div>
+
 
 	<div class="container mx-auto px-4 sm:px-6 max-w-7xl">
 		<div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-6 sm:gap-x-6 sm:gap-y-12">

@@ -8,7 +8,7 @@
 	
 	let { data } = $props();
 	
-	let banners = $state(data.banners || []);
+	let banners = $state([]);
 	let isUploading = $state(false);
 	let isSaving = $state(false);
 	

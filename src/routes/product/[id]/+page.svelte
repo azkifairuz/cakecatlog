@@ -83,7 +83,7 @@
 				</div>
 
 				<div class="pt-8 border-t border-[#8C5A35]/10 mt-auto">
-					<a href={`/order/${product.id}`} class="block w-full">
+					<a href={`/order/${product.id}`} class="block w-full mb-5">
 						<button 
 							disabled={!product.is_available}
 							class="w-full py-4 bg-[#8C5A35] text-white rounded-full font-bold text-[15px] hover:bg-[#724828] transition-all shadow-lg shadow-[#8C5A35]/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#8C5A35]"
@@ -91,10 +91,6 @@
 							{product.is_available ? 'Pesan Sekarang' : 'Stok Sedang Habis'}
 						</button>
 					</a>
-					<div class="flex items-center justify-center gap-2 text-xs font-medium text-[#4A3B32]/50 mt-5 mb-4">
-						<svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-						Pembayaran dilakukan dengan aman melalui transfer.
-					</div>
 
 					{#if product.handling_warning}
 						<div class="p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
@@ -105,6 +101,10 @@
 							</div>
 						</div>
 					{/if}
+					<div class="flex items-center justify-center gap-2 text-xs font-medium text-[#4A3B32]/50 mt-5 mb-4">
+						<svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+						Pembayaran dilakukan dengan aman melalui transfer.
+					</div>
 				</div>
 			</div>
 		</div>

@@ -4,6 +4,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
+	import PriceInput from '$lib/components/PriceInput.svelte';
 	import { Label } from '$lib/components/ui/label';
 	import { Textarea } from '$lib/components/ui/textarea';
 	import * as Card from '$lib/components/ui/card';
@@ -155,9 +156,9 @@
 					</select>
 				</div>
 				
-				<div class="grid gap-2">
-					<Label for="base_price">Start from (Rp) *</Label>
-					<Input id="base_price" name="base_price" type="number" required value={editingProduct?.base_price ?? ''} class="bg-slate-50 focus:bg-white" />
+				<div class="space-y-2 relative">
+					<Label for="base_price">Harga Dasar (Rp) <span class="text-red-500">*</span></Label>
+					<PriceInput id="base_price" name="base_price" required={true} value={editingProduct?.base_price ?? ''} class="bg-slate-50 focus:bg-white" />
 				</div>
 				
 				<div class="grid gap-2 md:col-span-2">

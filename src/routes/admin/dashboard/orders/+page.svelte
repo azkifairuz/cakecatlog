@@ -3,6 +3,7 @@
 	import * as Card from '$lib/components/ui/card';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
+	import PriceInput from '$lib/components/PriceInput.svelte';
 	import { Label } from '$lib/components/ui/label';
 	import { fly, fade } from 'svelte/transition';
 	import * as XLSX from 'xlsx';
@@ -139,6 +140,7 @@
 				<option value="Pending">Pending</option>
 				<option value="Diproses">Diproses</option>
 				<option value="Selesai">Selesai</option>
+				<option value="Batal/Refund">Batal / Refund</option>
 			</select>
 		</div>
 	</div>
@@ -178,11 +180,13 @@
 						<select name="status" class="text-xs sm:text-sm font-bold rounded-full border px-3 sm:px-4 py-2 sm:py-2.5 focus:outline-none focus:ring-2 focus:ring-slate-800 transition-colors cursor-pointer
 							{order.status === 'Selesai' ? 'bg-green-50 text-green-700 border-green-200' : 
 							 order.status === 'Diproses' ? 'bg-blue-50 text-blue-700 border-blue-200' : 
+							 order.status === 'Batal/Refund' ? 'bg-red-50 text-red-700 border-red-200' : 
 							 'bg-slate-50 text-slate-700 border-slate-200'}" 
 							onchange={(e) => e.target.form.requestSubmit()}>
 							<option value="Pending" selected={order.status === 'Pending'}>Pending</option>
 							<option value="Diproses" selected={order.status === 'Diproses'}>Diproses</option>
 							<option value="Selesai" selected={order.status === 'Selesai'}>Selesai</option>
+							<option value="Batal/Refund" selected={order.status === 'Batal/Refund'}>Batal / Refund</option>
 						</select>
 					</form>
 				</div>
@@ -268,14 +272,11 @@
 						};
 					}}>
 						<input type="hidden" name="id" value={selectedOrder.id} />
-						<select name="status" class="w-full text-[15px] font-bold rounded-xl border-2 px-4 py-4 focus:outline-none focus:ring-2 focus:ring-slate-800 transition-colors cursor-pointer shadow-sm
-							{selectedOrder.status === 'Selesai' ? 'bg-green-50 text-green-700 border-green-200' : 
-							 selectedOrder.status === 'Diproses' ? 'bg-blue-50 text-blue-700 border-blue-200' : 
-							 'bg-slate-50 text-slate-700 border-slate-200'}" 
-							onchange={(e) => e.target.form.requestSubmit()}>
+						<select name="status" class="w-full px-4 h-12 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-slate-800 transition-colors cursor-pointer">
 							<option value="Pending" selected={selectedOrder.status === 'Pending'}>Pending (Belum Diproses)</option>
 							<option value="Diproses" selected={selectedOrder.status === 'Diproses'}>Diproses (Sedang Dibuat)</option>
 							<option value="Selesai" selected={selectedOrder.status === 'Selesai'}>Selesai (Sudah Dikirim)</option>
+							<option value="Batal/Refund" selected={selectedOrder.status === 'Batal/Refund'}>Batal / Refund</option>
 						</select>
 					</form>
 				</div>
@@ -293,8 +294,7 @@
 					}} class="flex flex-col gap-3">
 						<input type="hidden" name="id" value={selectedOrder.id} />
 						<div class="relative">
-							<span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-lg">Rp</span>
-							<Input name="amount" type="number" placeholder="0" value={selectedOrder.amount || ''} class="w-full pl-12 h-14 text-lg font-bold text-slate-800 rounded-xl bg-slate-50 border-slate-200 focus-visible:ring-slate-800 shadow-inner" />
+							<PriceInput name="amount" placeholder="0" value={selectedOrder.amount || ''} class="w-full h-14 text-lg font-bold text-slate-800 rounded-xl bg-slate-50 border-slate-200 focus-visible:ring-slate-800 shadow-inner" />
 						</div>
 						<Button type="submit" class="w-full h-14 rounded-xl bg-slate-900 hover:bg-slate-800 active:scale-[0.98] transition-transform text-[16px] font-bold shadow-lg shadow-slate-900/20">Simpan Harga</Button>
 					</form>

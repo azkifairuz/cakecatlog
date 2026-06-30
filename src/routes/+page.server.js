@@ -30,9 +30,14 @@ export const load = async ({ locals: { supabase } }) => {
 		.eq('is_active', true)
 		.order('display_order', { ascending: true });
 
+	const { data: topPicks } = await supabase
+		.from('top_selling_products')
+		.select('*, product_images(image_url, is_primary)');
+
 	return {
 		products: products ?? [],
 		categories: categories ?? [],
-		banners: banners ?? []
+		banners: banners ?? [],
+		topPicks: topPicks ?? []
 	};
 };

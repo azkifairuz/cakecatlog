@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
+	import PriceInput from '$lib/components/PriceInput.svelte';
 	import { Label } from '$lib/components/ui/label';
 	import { fly, fade } from 'svelte/transition';
 	import * as XLSX from 'xlsx';
@@ -158,6 +159,7 @@
 					<option value="Pending">Pending</option>
 					<option value="Diproses">Diproses</option>
 					<option value="Selesai">Selesai</option>
+					<option value="Batal/Refund">Batal / Refund</option>
 				</select>
 				{#if dateMode === 'range'}
 					<div class="flex flex-wrap gap-3">
@@ -299,10 +301,11 @@
 						};
 					}}>
 						<input type="hidden" name="id" value={selectedOrder.id} />
-						<select name="status" class="w-full text-[15px] font-bold rounded-xl border-2 px-4 py-4 focus:outline-none focus:ring-2 focus:ring-[#8C5A35] transition-colors cursor-pointer shadow-sm {selectedOrder.status === 'Selesai' ? 'bg-green-50 text-green-700 border-green-200' : selectedOrder.status === 'Diproses' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-slate-50 text-[#4A3B32] border-[#8C5A35]/20'}" onchange={(e) => e.target.form.requestSubmit()}>
+						<select name="status" class="w-full text-[15px] font-bold rounded-xl border-2 px-4 py-4 focus:outline-none focus:ring-2 focus:ring-[#8C5A35] transition-colors cursor-pointer shadow-sm {selectedOrder.status === 'Selesai' ? 'bg-green-50 text-green-700 border-green-200' : selectedOrder.status === 'Diproses' ? 'bg-blue-50 text-blue-700 border-blue-200' : selectedOrder.status === 'Batal/Refund' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-slate-50 text-[#4A3B32] border-[#8C5A35]/20'}" onchange={(e) => e.target.form.requestSubmit()}>
 							<option value="Pending" selected={selectedOrder.status === 'Pending'}>Pending (Belum Diproses)</option>
 							<option value="Diproses" selected={selectedOrder.status === 'Diproses'}>Diproses (Sedang Dibuat)</option>
 							<option value="Selesai" selected={selectedOrder.status === 'Selesai'}>Selesai (Sudah Dikirim)</option>
+							<option value="Batal/Refund" selected={selectedOrder.status === 'Batal/Refund'}>Batal / Refund</option>
 						</select>
 					</form>
 				</div>
@@ -317,8 +320,7 @@
 					}} class="flex flex-col gap-3">
 						<input type="hidden" name="id" value={selectedOrder.id} />
 						<div class="relative">
-							<span class="absolute left-4 top-1/2 -translate-y-1/2 text-[#4A3B32]/70 font-bold text-lg">Rp</span>
-							<Input name="amount" type="number" placeholder="0" value={selectedOrder.amount || ''} class="w-full pl-12 h-14 text-lg font-bold text-[#4A3B32] rounded-xl bg-slate-50 border-[#8C5A35]/20 focus-visible:ring-slate-800 shadow-inner" />
+							<PriceInput name="amount" placeholder="0" value={selectedOrder.amount || ''} class="w-full h-14 text-lg font-bold text-[#4A3B32] rounded-xl bg-slate-50 border-[#8C5A35]/20 focus-visible:ring-slate-800 shadow-inner" />
 						</div>
 						<Button type="submit" class="w-full h-14 rounded-xl bg-[#8C5A35] hover:bg-[#724828] active:scale-[0.98] transition-transform text-[16px] font-bold shadow-lg shadow-slate-900/20">Simpan Harga</Button>
 					</form>
