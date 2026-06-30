@@ -1,7 +1,7 @@
 <script>
 	import { page } from '$app/stores';
 	import { Button } from '$lib/components/ui/button';
-	import { ChartBar, LogOut, MessageCircle, Package, ShoppingCart, Tags } from 'lucide-svelte';
+	import { ChartBar, LogOut, MessageCircle, Package, ShoppingCart, Tags, Image } from 'lucide-svelte';
 
 	let { children } = $props();
 </script>
@@ -17,6 +17,7 @@
 			<a href="/admin/dashboard" class="px-4 py-2.5 rounded-full transition-all {$page.url.pathname === '/admin/dashboard' ? 'bg-[#8C5A35]/10 text-[#8C5A35]' : 'text-[#4A3B32]/70 hover:text-[#8C5A35] hover:bg-[#8C5A35]/5'}">Analytics</a>
 			<a href="/admin/dashboard/orders" class="px-4 py-2.5 rounded-full transition-all {$page.url.pathname === '/admin/dashboard/orders' ? 'bg-[#8C5A35]/10 text-[#8C5A35]' : 'text-[#4A3B32]/70 hover:text-[#8C5A35] hover:bg-[#8C5A35]/5'}">Orders</a>
 			<a href="/admin/dashboard/products" class="px-4 py-2.5 rounded-full transition-all {$page.url.pathname === '/admin/dashboard/products' ? 'bg-[#8C5A35]/10 text-[#8C5A35]' : 'text-[#4A3B32]/70 hover:text-[#8C5A35] hover:bg-[#8C5A35]/5'}">Products</a>
+			<a href="/admin/dashboard/banners" class="px-4 py-2.5 rounded-full transition-all {$page.url.pathname === '/admin/dashboard/banners' ? 'bg-[#8C5A35]/10 text-[#8C5A35]' : 'text-[#4A3B32]/70 hover:text-[#8C5A35] hover:bg-[#8C5A35]/5'}">Banners</a>
 			<a href="/admin/dashboard/categories" class="px-4 py-2.5 rounded-full transition-all {$page.url.pathname === '/admin/dashboard/categories' ? 'bg-[#8C5A35]/10 text-[#8C5A35]' : 'text-[#4A3B32]/70 hover:text-[#8C5A35] hover:bg-[#8C5A35]/5'}">Categories</a>
 			<a href="/admin/dashboard/whatsapp" class="px-4 py-2.5 rounded-full transition-all {$page.url.pathname === '/admin/dashboard/whatsapp' ? 'bg-[#8C5A35]/10 text-[#8C5A35]' : 'text-[#4A3B32]/70 hover:text-[#8C5A35] hover:bg-[#8C5A35]/5'}">WhatsApp</a>
 		</nav>
@@ -111,6 +112,10 @@
 		<a href="/admin/dashboard/categories" class="flex flex-col items-center justify-center gap-1.5 flex-1 h-[85%] mx-0.5 rounded-2xl active:scale-95 transition-all { $page.url.pathname === '/admin/dashboard/categories' ? 'text-[#8C5A35] bg-[#8C5A35]/10' : 'text-[#4A3B32]/50 hover:bg-[#8C5A35]/5 hover:text-[#8C5A35]' }">
 			<Tags class="h-[22px] w-[22px]" />
 			<span class="text-[11px] font-bold">Categories</span>
+		</a>
+		<a href="/admin/dashboard/banners" class="flex flex-col items-center justify-center gap-1.5 flex-1 h-[85%] mx-0.5 rounded-2xl active:scale-95 transition-all { $page.url.pathname === '/admin/dashboard/banners' ? 'text-[#8C5A35] bg-[#8C5A35]/10' : 'text-[#4A3B32]/50 hover:bg-[#8C5A35]/5 hover:text-[#8C5A35]' }">
+			<Image class="h-[22px] w-[22px]" />
+			<span class="text-[11px] font-bold">Banners</span>
 		</a>
 		<a href="/admin/dashboard/whatsapp" class="flex flex-col items-center justify-center gap-1.5 flex-1 h-[85%] mx-0.5 rounded-2xl active:scale-95 transition-all { $page.url.pathname === '/admin/dashboard/whatsapp' ? 'text-[#8C5A35] bg-[#8C5A35]/10' : 'text-[#4A3B32]/50 hover:bg-[#8C5A35]/5 hover:text-[#8C5A35]' }">
 			<MessageCircle class="h-[22px] w-[22px]" />

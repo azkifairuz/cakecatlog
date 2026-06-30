@@ -38,6 +38,7 @@ export const actions = {
 		const flavors = formData.get('flavors');
 		const crown_options = formData.get('crown_options');
 		const edible_glitter = formData.get('edible_glitter');
+		const handling_warning = formData.get('handling_warning');
 
 		if (!name || !base_price) {
 			return { success: false, error: 'Name and Base Price are required' };
@@ -56,7 +57,8 @@ export const actions = {
 				colors,
 				flavors,
 				crown_options,
-				edible_glitter
+				edible_glitter,
+				handling_warning
 			})
 			.select()
 			.single();
@@ -116,6 +118,7 @@ export const actions = {
 		const flavors = formData.get('flavors');
 		const crown_options = formData.get('crown_options');
 		const edible_glitter = formData.get('edible_glitter');
+		const handling_warning = formData.get('handling_warning');
 
 		if (!id || !name || !base_price) {
 			return { success: false, error: 'ID, Name, and Base Price are required' };
@@ -134,7 +137,8 @@ export const actions = {
 				colors,
 				flavors,
 				crown_options,
-				edible_glitter
+				edible_glitter,
+				handling_warning
 			})
 			.eq('id', id);
 

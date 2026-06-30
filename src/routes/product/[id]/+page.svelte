@@ -91,10 +91,20 @@
 							{product.is_available ? 'Pesan Sekarang' : 'Stok Sedang Habis'}
 						</button>
 					</a>
-					<div class="flex items-center justify-center gap-2 text-xs font-medium text-[#4A3B32]/50 mt-5">
+					<div class="flex items-center justify-center gap-2 text-xs font-medium text-[#4A3B32]/50 mt-5 mb-4">
 						<svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
 						Pembayaran dilakukan dengan aman melalui transfer.
 					</div>
+
+					{#if product.handling_warning}
+						<div class="p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
+							<svg class="w-5 h-5 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+							<div>
+								<h4 class="text-[13px] font-bold text-amber-900 mb-0.5 uppercase tracking-wide">Info Penanganan Khusus</h4>
+								<p class="text-[13px] text-amber-800 leading-relaxed">{product.handling_warning}</p>
+							</div>
+						</div>
+					{/if}
 				</div>
 			</div>
 		</div>

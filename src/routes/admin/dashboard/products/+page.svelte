@@ -165,6 +165,11 @@
 					<Textarea id="description" name="description" rows="3" value={editingProduct?.description ?? ''} class="bg-slate-50 focus:bg-white resize-none" />
 				</div>
 
+				<div class="grid gap-2 md:col-span-2">
+					<Label for="handling_warning">Handling Warning (Peringatan Penanganan Khusus)</Label>
+					<Textarea id="handling_warning" name="handling_warning" placeholder="Contoh: Harap simpan di dalam kulkas setelah diterima." rows="2" value={editingProduct?.handling_warning ?? ''} class="bg-slate-50 focus:bg-white resize-none border-amber-200 focus-visible:ring-amber-500" />
+				</div>
+
 				<div class="grid gap-2 md:col-span-2 mt-2 pt-4 border-t border-slate-100">
 					<h3 class="text-sm font-semibold text-slate-800">Product Customization Options</h3>
 					<p class="text-xs text-muted-foreground mb-2">Pisahkan dengan koma jika lebih dari satu (contoh: Merah, Kuning)</p>
