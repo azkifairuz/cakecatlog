@@ -30,6 +30,12 @@
 	let sendingInvoice = $state(false);
 	let invoiceStatus = $state(null); // { success: bool, message: string }
 
+	// Harga State
+	let draftCakePrice = $state(0);
+	let draftDeliveryFee = $state(0);
+	let draftDeliveryVehicle = $state('Bike');
+	let calculatedTotal = $derived(Number(draftCakePrice || 0) + Number(draftDeliveryFee || 0));
+
 	// Filters State
 	let todayStr = new Date().toISOString().split('T')[0];
 	let searchQuery = $state('');
@@ -50,6 +56,9 @@
 
 	function openDrawer(order) {
 		selectedOrder = order;
+		draftCakePrice = order.cake_price || order.amount || 0;
+		draftDeliveryFee = order.delivery_fee || 0;
+		draftDeliveryVehicle = order.delivery_vehicle || 'Bike';
 		isDrawerOpen = true;
 	}
 
@@ -193,12 +202,23 @@
 				
 				<!-- Detail Produk -->
 				<div class="bg-slate-50/80 rounded-xl p-3.5 border border-slate-100 flex flex-col gap-2 text-sm text-slate-600">
-					<p class="flex justify-between items-start gap-2">
-						<span class="font-bold text-slate-700 leading-tight break-words flex-1">{order.products?.name ?? 'Unknown'}</span>
-						<span class="font-medium text-[12px] px-2 py-0.5 bg-white border border-slate-200 rounded text-slate-600 shrink-0">{order.cake_size}</span>
-					</p>
-					<div class="flex justify-between items-center text-[12px] sm:text-[13px]">
-						<span>Qty: <span class="font-semibold text-slate-700">{order.quantity}</span></span>
+					{#if order.order_items && order.order_items.length > 0}
+						<p class="flex justify-between items-start gap-2">
+							<span class="font-bold text-slate-700 leading-tight break-words flex-1">
+								{order.order_items[0].products?.name ?? 'Unknown'}
+								{#if order.order_items.length > 1}
+									<span class="text-xs text-slate-500 font-normal block mt-0.5">+ {order.order_items.length - 1} produk lainnya</span>
+								{/if}
+							</span>
+							<span class="font-medium text-[12px] px-2 py-0.5 bg-white border border-slate-200 rounded text-slate-600 shrink-0">
+								{order.order_items.length} item
+							</span>
+						</p>
+					{:else}
+						<p class="font-bold text-slate-700 leading-tight">Data pesanan lama (Legacy)</p>
+					{/if}
+					
+					<div class="flex justify-end items-center text-[12px] sm:text-[13px] mt-1">
 						<span class="flex items-center gap-1 text-slate-500 text-right">
 							<svg class="w-3.5 h-3.5 shrink-0 hidden sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
 							{formatDate(order.delivery_date)} &bull; {order.delivery_time}
@@ -263,6 +283,37 @@
 
 			<div class="space-y-6 overflow-y-auto max-h-[70vh] pb-8 px-1">
 				
+				<!-- Daftar Item -->
+				{#if selectedOrder.order_items && selectedOrder.order_items.length > 0}
+					<div class="space-y-3">
+						<Label class="text-slate-800 font-bold text-[15px]">Daftar Item Pesanan</Label>
+						<div class="space-y-3 max-h-60 overflow-y-auto pr-1">
+							{#each selectedOrder.order_items as item}
+								<div class="p-3 bg-slate-50 border border-slate-100 rounded-xl">
+									<h4 class="font-bold text-slate-800 text-sm mb-1">{item.products?.name ?? 'Unknown'}</h4>
+									<div class="grid grid-cols-2 gap-y-1 gap-x-2 text-xs text-slate-600">
+										<p><span class="text-slate-400">Qty:</span> {item.quantity}</p>
+										<p><span class="text-slate-400">Size:</span> {item.cake_size}</p>
+										{#if item.cake_flavor}<p><span class="text-slate-400">Rasa:</span> {item.cake_flavor}</p>{/if}
+										{#if item.cake_color}<p><span class="text-slate-400">Warna:</span> {item.cake_color}</p>{/if}
+										{#if item.cake_text}<p class="col-span-2"><span class="text-slate-400">Tulisan Kue:</span> {item.cake_text}</p>{/if}
+										{#if item.gift_card_text}<p class="col-span-2"><span class="text-slate-400">Kartu Ucapan:</span> {item.gift_card_text}</p>{/if}
+									</div>
+									{#if item.reference_image_url}
+										<div class="mt-2 pt-2 border-t border-slate-200">
+											<a href={item.reference_image_url} target="_blank" class="text-xs text-[#8C5A35] font-semibold hover:underline flex items-center gap-1">
+												<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+												Lihat Gambar Referensi
+											</a>
+										</div>
+									{/if}
+								</div>
+							{/each}
+						</div>
+					</div>
+					<hr class="border-slate-100" />
+				{/if}
+
 				<!-- Form Update Status -->
 				<div class="space-y-3">
 					<Label class="text-slate-800 font-bold text-[15px]">Status Pesanan</Label>
@@ -284,19 +335,42 @@
 				<hr class="border-slate-100" />
 
 				<!-- Form Set Harga -->
-				<div class="space-y-3">
-					<Label class="text-slate-800 font-bold text-[15px]">Input Total Harga</Label>
+				<div class="space-y-4">
+					<Label class="text-slate-800 font-bold text-[15px]">Kelola Harga & Pengiriman</Label>
 					<form method="POST" action="?/updateAmount" use:enhance={() => {
 						return async ({ update }) => {
 							await update();
 							closeDrawer();
 						};
-					}} class="flex flex-col gap-3">
+					}} class="flex flex-col gap-4">
 						<input type="hidden" name="id" value={selectedOrder.id} />
-						<div class="relative">
-							<PriceInput name="amount" placeholder="0" value={selectedOrder.amount || ''} class="w-full h-14 text-lg font-bold text-slate-800 rounded-xl bg-slate-50 border-slate-200 focus-visible:ring-slate-800 shadow-inner" />
+						
+						<div class="space-y-1.5">
+							<Label class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Harga Total Kue</Label>
+							<PriceInput name="cake_price" placeholder="0" bind:value={draftCakePrice} class="w-full h-12 text-sm font-bold text-slate-800 rounded-xl bg-slate-50 border-slate-200 focus-visible:ring-slate-800 shadow-inner" />
 						</div>
-						<Button type="submit" class="w-full h-14 rounded-xl bg-slate-900 hover:bg-slate-800 active:scale-[0.98] transition-transform text-[16px] font-bold shadow-lg shadow-slate-900/20">Simpan Harga</Button>
+
+						<div class="grid grid-cols-2 gap-4">
+							<div class="space-y-1.5">
+								<Label class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Biaya Ongkir</Label>
+								<PriceInput name="delivery_fee" placeholder="0" bind:value={draftDeliveryFee} class="w-full h-12 text-sm font-bold text-slate-800 rounded-xl bg-slate-50 border-slate-200 focus-visible:ring-slate-800 shadow-inner" />
+							</div>
+							<div class="space-y-1.5">
+								<Label class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Kendaraan</Label>
+								<select name="delivery_vehicle" bind:value={draftDeliveryVehicle} class="w-full h-12 px-3 text-sm font-bold text-slate-800 rounded-xl bg-slate-50 border border-slate-200 focus-visible:ring-slate-800 shadow-inner">
+									<option value="Bike">Motor (Bike)</option>
+									<option value="Car">Mobil (Car)</option>
+								</select>
+							</div>
+						</div>
+
+						<div class="bg-amber-50 p-4 rounded-xl border border-amber-100 mt-2 flex justify-between items-center">
+							<span class="text-sm font-bold text-amber-900 uppercase tracking-wider">Total Tagihan</span>
+							<span class="text-xl font-black text-amber-600">{formatCurrency(calculatedTotal)}</span>
+							<input type="hidden" name="amount" value={calculatedTotal} />
+						</div>
+
+						<Button type="submit" class="w-full h-14 rounded-xl bg-slate-900 hover:bg-slate-800 active:scale-[0.98] transition-transform text-[16px] font-bold shadow-lg shadow-slate-900/20 mt-2">Simpan Tagihan</Button>
 					</form>
 				</div>
 

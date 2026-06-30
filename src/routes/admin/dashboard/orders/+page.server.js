@@ -3,8 +3,11 @@ export const load = async ({ locals: { supabase } }) => {
 		.from('orders')
 		.select(`
 			*,
-			products (
-				name
+			order_items (
+				*,
+				products (
+					name
+				)
 			)
 		`)
 		.order('created_at', { ascending: false });
@@ -34,12 +37,20 @@ export const actions = {
 		const formData = await request.formData();
 		const id = formData.get('id');
 		const amount = formData.get('amount');
+		const cake_price = formData.get('cake_price');
+		const delivery_fee = formData.get('delivery_fee');
+		const delivery_vehicle = formData.get('delivery_vehicle');
 
 		if (!id || !amount) return { success: false, error: 'Missing data' };
 
+		const payload = { amount: parseFloat(amount) };
+		if (cake_price) payload.cake_price = parseFloat(cake_price);
+		if (delivery_fee) payload.delivery_fee = parseFloat(delivery_fee);
+		if (delivery_vehicle) payload.delivery_vehicle = delivery_vehicle;
+
 		const { error } = await supabase
 			.from('orders')
-			.update({ amount: parseFloat(amount) })
+			.update(payload)
 			.eq('id', id);
 
 		if (error) return { success: false, error: error.message };

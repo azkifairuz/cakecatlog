@@ -1,7 +1,17 @@
 <script>
 	import HeroCarousel from '$lib/components/HeroCarousel.svelte';
 	import TopPicksCarousel from '$lib/components/TopPicksCarousel.svelte';
+	import QuickAddModal from '$lib/components/QuickAddModal.svelte';
+
 	let { data } = $props();
+
+	let isQuickAddOpen = $state(false);
+	let selectedProduct = $state(null);
+
+	function openQuickAdd(product) {
+		selectedProduct = product;
+		isQuickAddOpen = true;
+	}
 
 	let selectedCategory = $state('All');
 	
@@ -18,7 +28,7 @@
 
 <HeroCarousel banners={data.banners} />
 
-<TopPicksCarousel topPicks={data.topPicks} />
+<TopPicksCarousel topPicks={data.topPicks} onQuickAdd={openQuickAdd} />
 
 <!-- ABOUT SECTION -->
 <section id="about" class="py-24 bg-white relative overflow-hidden">
@@ -142,13 +152,17 @@
 						<p class="text-[11px] sm:text-[13px] text-[#4A3B32]/50 line-clamp-2 mb-3 sm:mb-6 flex-1 leading-relaxed hidden sm:block">{product.description}</p>
 						<p class="text-[11px] sm:text-[13px] text-[#4A3B32]/50 line-clamp-2 mb-3 sm:mb-6 flex-1 leading-relaxed sm:hidden">{product.description || ''}</p>
 						
-						<div class="flex items-center justify-between mt-auto pointer-events-auto">
-							<div class="flex flex-col">
-								<span class="text-[8px] sm:text-[10px] uppercase font-bold tracking-wider text-[#4A3B32]/50 mb-0.5">Start from</span>
-								<span class="font-bold text-[#4A3B32] text-[13px] sm:text-lg leading-none">{formatCurrency(product.base_price)}</span>
+							<div class="flex items-center justify-between mt-auto pointer-events-auto">
+								<div class="flex flex-col">
+									<span class="text-[8px] sm:text-[10px] uppercase font-bold tracking-wider text-[#4A3B32]/50 mb-0.5">Start from</span>
+									<span class="font-bold text-[#4A3B32] text-[13px] sm:text-lg leading-none">{formatCurrency(product.base_price)}</span>
+								</div>
+								<div class="flex gap-2 items-center relative z-20">
+									<button onclick={() => openQuickAdd(product)} class="p-2 sm:p-2.5 rounded-full bg-[#8C5A35]/10 text-[#8C5A35] hover:bg-[#8C5A35] hover:text-white transition-colors" title="Tambah ke Keranjang">
+										<svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+									</button>
+								</div>
 							</div>
-							<a href={`/order/${product.id}`} class="px-3 py-1.5 sm:px-5 sm:py-2.5 bg-[#8C5A35] text-white text-[11px] sm:text-[13px] font-semibold rounded-full hover:bg-[#724828] transition-colors shadow-md shadow-[#8C5A35]/20 relative z-20">Pesan</a>
-						</div>
 					</div>
 				</div>
 			{:else}
@@ -163,3 +177,5 @@
 		</div>
 	</div>
 </section>
+
+<QuickAddModal bind:isOpen={isQuickAddOpen} product={selectedProduct} />

@@ -76,7 +76,7 @@
 	let pendingOrders = $derived(filteredOrders.filter(order => order.status === 'Pending'));
 	let processingOrders = $derived(filteredOrders.filter(order => order.status === 'Diproses'));
 	let completedOrders = $derived(filteredOrders.filter(order => order.status === 'Selesai'));
-	let totalRevenue = $derived(filteredOrders.reduce((acc, order) => acc + Number(order.amount || 0), 0));
+	let totalRevenue = $derived(completedOrders.reduce((acc, order) => acc + Number(order.amount || 0), 0));
 	let totalSales = $derived(filteredOrders.length);
 
 	function openDrawer(order) {
@@ -193,9 +193,9 @@
 		<div class="space-y-4">
 			<div class="grid gap-4 sm:grid-cols-2">
 				<div class="rounded-3xl border border-[#8C5A35]/20 bg-slate-50 p-4">
-					<p class="text-sm font-semibold text-[#4A3B32]/70">Total Omset</p>
+					<p class="text-sm font-semibold text-[#4A3B32]/70">Total Omset (Selesai)</p>
 					<p class="mt-3 text-3xl font-bold text-[#4A3B32]">{formatCurrency(totalRevenue)}</p>
-					<p class="mt-2 text-sm text-[#4A3B32]/70">Total omset untuk periode ini.</p>
+					<p class="mt-2 text-sm text-[#4A3B32]/70">Total omset pesanan berstatus selesai.</p>
 				</div>
 
 				<div class="rounded-3xl border border-[#8C5A35]/20 bg-slate-50 p-4">
@@ -255,8 +255,17 @@
 						<tr class="hover:bg-slate-50 transition-colors">
 							<td class="px-4 py-4 font-semibold text-[#4A3B32]">#{order.order_number}</td>
 							<td class="px-4 py-4">{order.customer_name}</td>
-							<td class="px-4 py-4">{order.products?.name ?? 'N/A'}</td>
-							<td class="px-4 py-4">{order.quantity}</td>
+							<td class="px-4 py-4">
+								{#if order.order_items && order.order_items.length > 0}
+									{order.order_items[0].products?.name ?? 'Unknown'}
+									{#if order.order_items.length > 1}
+										<br><span class="text-xs text-[#8C5A35] font-semibold">+{order.order_items.length - 1} produk lainnya</span>
+									{/if}
+								{:else}
+									Data pesanan lama (Legacy)
+								{/if}
+							</td>
+							<td class="px-4 py-4">{order.order_items ? order.order_items.length : order.quantity} item</td>
 							<td class="px-4 py-4">{formatDate(order.delivery_date)}</td>
 							<td class="px-4 py-4 font-semibold text-[#4A3B32]">{formatCurrency(order.amount)}</td>
 							<td class="px-4 py-4">

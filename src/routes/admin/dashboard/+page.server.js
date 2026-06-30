@@ -3,8 +3,11 @@ export const load = async ({ locals: { supabase } }) => {
 		.from('orders')
 		.select(`
 			*,
-			products (
-				name
+			order_items (
+				*,
+				products (
+					name
+				)
 			)
 		`)
 		.order('created_at', { ascending: false });

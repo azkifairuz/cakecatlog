@@ -20,6 +20,25 @@ function generateInvoiceText(order) {
 	const line = '━'.repeat(28);
 	const dashes = '─'.repeat(28);
 
+	let itemsText = '';
+	if (order.order_items && order.order_items.length > 0) {
+		itemsText = order.order_items.map((item, index) => {
+			return `${index + 1}. *${item.products?.name || 'Kue'}* (${item.quantity}x)
+   Ukuran: ${item.cake_size || '-'}
+   Rasa: ${item.cake_flavor || '-'}
+   Tulisan: ${item.cake_text || '-'}`;
+		}).join('\n\n');
+	} else {
+		itemsText = `Produk       : ${order.product_name || '-'}
+Ukuran       : ${order.cake_size || '-'}
+Jumlah       : ${order.quantity || 1}`;
+	}
+
+	let vehicleText = '';
+	if (order.delivery_vehicle) {
+		vehicleText = order.delivery_vehicle === 'Car' ? 'Mobil' : 'Motor';
+	}
+
 	return `🧁 *INVOICE - desertbyfir*
 ${line}
 
@@ -35,19 +54,20 @@ No. HP       : ${order.phone_number}
 
 🎂 *Detail Produk*
 ${dashes}
-Produk       : ${order.product_name || '-'}
-Ukuran       : ${order.cake_size || '-'}
-Jumlah       : ${order.quantity}
-Catatan      : ${order.notes || '-'}
+${itemsText}
 
 📅 *Pengiriman*
 ${dashes}
 Tanggal      : ${formatDate(order.delivery_date)}
 Waktu        : ${order.delivery_time || '-'}
+Alamat       : ${order.address || '-'}
 
 💰 *Total Pembayaran*
 ${line}
-*${formatCurrency(order.amount)}*
+Harga Kue    : ${formatCurrency(order.cake_price || order.amount)}
+Ongkos Kirim : ${formatCurrency(order.delivery_fee || 0)} ${vehicleText ? `(${vehicleText})` : ''}
+${dashes}
+*TOTAL       : ${formatCurrency(order.amount)}*
 ${line}
 
 Terima kasih telah memesan di *desertbyfir* 🍰
@@ -67,8 +87,11 @@ export async function POST({ request, locals: { supabase } }) {
 			.from('orders')
 			.select(`
 				*,
-				products (
-					name
+				order_items (
+					*,
+					products (
+						name
+					)
 				)
 			`)
 			.eq('id', orderId)
