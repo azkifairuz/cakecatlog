@@ -7,7 +7,7 @@
 </script>
 
 <div class="flex min-h-screen w-full flex-col bg-slate-50 pb-16 sm:pb-0 font-sans text-[#4A3B32]">
-	<header class="sticky top-0 z-30 flex h-16 items-center gap-6 border-b border-[#8C5A35]/10 bg-white px-6 shadow-sm">
+	<header class="hidden md:flex sticky top-0 z-30 h-16 items-center gap-6 border-b border-[#8C5A35]/10 bg-white px-6 shadow-sm">
 		<div class="flex items-center gap-2 font-bold text-[#8C5A35] font-['Playfair_Display'] text-xl">
 			<ShoppingCart class="h-6 w-6" />
 			<span>desertbyfir Admin</span>
@@ -78,11 +78,11 @@
 	</aside> -->
 
 	<div class="flex flex-col xl:gap-4 xl:py-4 xl:justify-center ">
-		<header class="sticky top-0 z-30 flex h-14 items-center gap-4 border-b border-[#8C5A35]/10 bg-white px-4 xl:static xl:h-auto xl:border-0 xl:bg-transparent xl:px-6 shadow-sm xl:shadow-none">
-			<div class="flex xl:hidden font-bold text-[#8C5A35] font-['Playfair_Display'] text-lg">
+		<header class="sticky top-0 z-30 flex h-14 items-center gap-4 border-b border-[#8C5A35]/10 bg-white px-4 md:hidden shadow-sm">
+			<div class="flex font-bold text-[#8C5A35] font-['Playfair_Display'] text-lg">
 				<span>desertbyfir Admin</span>
 			</div>
-			<div class="ml-auto xl:hidden">
+			<div class="ml-auto">
 				<form action="/admin/logout" method="POST">
 					<Button type="submit" variant="ghost" size="icon" class="text-[#8C5A35] hover:bg-[#8C5A35]/10">
 						<LogOut class="h-5 w-5" />

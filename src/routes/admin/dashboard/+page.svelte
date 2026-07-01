@@ -3,6 +3,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import PriceInput from '$lib/components/PriceInput.svelte';
+	import DatePicker from '$lib/components/DatePicker.svelte';
 	import { Label } from '$lib/components/ui/label';
 	import { fly, fade } from 'svelte/transition';
 	import * as XLSX from 'xlsx';
@@ -39,6 +40,7 @@
 	let customEnd = $state(todayStr);
 	let startDate = $state(todayStr);
 	let endDate = $state(todayStr);
+	let dateTypeFilter = $state('delivery_date');
 
 	$effect(() => {
 		const today = new Date();
@@ -67,8 +69,15 @@
 			order.order_number?.toString().includes(searchQuery);
 
 		const matchesStatus = statusFilter === 'All' || order.status === statusFilter;
-		const deliveryDate = order.delivery_date || '';
-		const inRange = deliveryDate >= startDate && deliveryDate <= endDate;
+		
+		let targetDate = '';
+		if (dateTypeFilter === 'created_at') {
+			targetDate = order.created_at ? order.created_at.split('T')[0] : '';
+		} else {
+			targetDate = order.delivery_date || '';
+		}
+		
+		const inRange = targetDate >= startDate && targetDate <= endDate;
 
 		return matchesSearch && matchesStatus && inRange;
 	}));
@@ -141,54 +150,55 @@
 	{/if}
 
 	<div class="flex flex-col gap-5">
-		<div class="flex flex-wrap items-center justify-between gap-3 bg-transparent px-0">
-			<div class="relative flex-1 min-w-[220px]">
+		<div class="flex flex-col lg:flex-row items-center justify-between gap-3 bg-transparent px-0">
+			<!-- Search -->
+			<div class="relative w-full lg:flex-1 lg:min-w-[220px]">
 				<svg class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#4A3B32]/50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-				<Input type="text" placeholder="Cari nama atau nomor order..." bind:value={searchQuery} class="pl-11 h-12 w-full rounded-full bg-slate-50 border border-[#8C5A35]/20 focus:border-[#8C5A35] focus:bg-white transition-colors" />
+				<Input type="text" placeholder="Cari pesanan..." bind:value={searchQuery} class="pl-11 h-12 w-full rounded-2xl bg-white border border-[#8C5A35]/20 focus:border-[#8C5A35] transition-colors" />
 			</div>
 
-			<div class="flex flex-wrap items-center gap-3 flex-1 min-w-[280px]">
-				<select bind:value={dateMode} class="h-12 rounded-full bg-slate-50 border border-[#8C5A35]/20 px-4 text-sm font-medium text-[#4A3B32] focus:outline-none focus:border-[#8C5A35] focus:bg-white focus:ring-2 focus:ring-slate-100">
-					<option value="daily">Daily</option>
-					<option value="weekly">Weekly</option>
-					<option value="monthly">Monthly</option>
+			<!-- Filters -->
+			<div class="grid grid-cols-2 md:flex items-center gap-2 md:gap-3 w-full lg:w-auto">
+				<select bind:value={dateTypeFilter} class="h-12 w-full md:w-auto rounded-2xl bg-white border border-[#8C5A35]/20 px-3 text-sm font-medium text-[#4A3B32] focus:outline-none focus:border-[#8C5A35] focus:ring-2 focus:ring-slate-100">
+					<option value="delivery_date">Tgl Kirim</option>
+					<option value="created_at">Tgl Order</option>
+				</select>
+				
+				<select bind:value={dateMode} class="h-12 w-full md:w-auto rounded-2xl bg-white border border-[#8C5A35]/20 px-3 text-sm font-medium text-[#4A3B32] focus:outline-none focus:border-[#8C5A35] focus:ring-2 focus:ring-slate-100">
+					<option value="daily">Harian</option>
+					<option value="weekly">Mingguan</option>
+					<option value="monthly">Bulanan</option>
 					<option value="range">Range</option>
 				</select>
-				<select bind:value={statusFilter} class="h-12 rounded-full bg-slate-50 border border-[#8C5A35]/20 px-4 text-sm font-medium text-[#4A3B32] focus:outline-none focus:border-[#8C5A35] focus:bg-white focus:ring-2 focus:ring-slate-100">
+				
+				<select bind:value={statusFilter} class="h-12 w-full md:w-auto col-span-2 md:col-span-1 rounded-2xl bg-white border border-[#8C5A35]/20 px-3 text-sm font-medium text-[#4A3B32] focus:outline-none focus:border-[#8C5A35] focus:ring-2 focus:ring-slate-100">
 					<option value="All">Semua Status</option>
 					<option value="Pending">Pending</option>
 					<option value="Diproses">Diproses</option>
 					<option value="Selesai">Selesai</option>
-					<option value="Batal/Refund">Batal / Refund</option>
+					<option value="Batal/Refund">Batal/Refund</option>
 				</select>
+				
 				{#if dateMode === 'range'}
-					<div class="flex flex-wrap gap-3">
-						<Input type="date" bind:value={customStart} class="h-12 rounded-full bg-slate-50 border border-[#8C5A35]/20 px-4 text-sm text-[#4A3B32] focus:outline-none focus:border-[#8C5A35] focus:bg-white" />
-						<Input type="date" bind:value={customEnd} class="h-12 rounded-full bg-slate-50 border border-[#8C5A35]/20 px-4 text-sm text-[#4A3B32] focus:outline-none focus:border-[#8C5A35] focus:bg-white" />
+					<div class="flex col-span-2 md:w-auto gap-2">
+						<DatePicker bind:value={customStart} class="h-12 rounded-2xl px-3 text-sm font-medium w-full lg:w-[140px] border-[#8C5A35]/20 bg-white" placeholder="Awal" />
+						<DatePicker bind:value={customEnd} class="h-12 rounded-2xl px-3 text-sm font-medium w-full lg:w-[140px] border-[#8C5A35]/20 bg-white" placeholder="Akhir" />
 					</div>
 				{/if}
 			</div>
 
-			<Button variant="outline" class="h-12 rounded-full px-5 text-sm font-semibold" onclick={() => {
-				searchQuery = '';
-				statusFilter = 'All';
-				dateMode = 'daily';
-				customStart = todayStr;
-				customEnd = todayStr;
-			}}>
-				Reset
-			</Button>
-		</div>
-		<div class="flex flex-wrap gap-3 items-center ">
-			<Button variant="outline" class="rounded-full px-5 py-3 text-sm font-semibold" onclick={() => { dateMode = 'daily'; }}>
-				Daily
-			</Button>
-			<Button variant="outline" class="rounded-full px-5 py-3 text-sm font-semibold" onclick={() => { dateMode = 'weekly'; }}>
-				Weekly
-			</Button>
-			<Button variant="outline" class="rounded-full px-5 py-3 text-sm font-semibold" onclick={() => { dateMode = 'monthly'; }}>
-				Monthly
-			</Button>
+			{#if searchQuery || statusFilter !== 'All' || dateMode !== 'daily' || dateTypeFilter !== 'delivery_date'}
+				<Button variant="outline" class="h-12 rounded-2xl px-5 text-sm font-semibold w-full lg:w-auto mt-1 lg:mt-0 border-[#8C5A35]/30 text-[#8C5A35] hover:bg-[#8C5A35]/10" onclick={() => {
+					searchQuery = '';
+					statusFilter = 'All';
+					dateMode = 'daily';
+					customStart = todayStr;
+					customEnd = todayStr;
+					dateTypeFilter = 'delivery_date';
+				}}>
+					Reset
+				</Button>
+			{/if}
 		</div>
 		<div class="space-y-4">
 			<div class="grid gap-4 sm:grid-cols-2">

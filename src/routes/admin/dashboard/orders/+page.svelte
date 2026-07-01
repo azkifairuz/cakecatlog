@@ -4,6 +4,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import PriceInput from '$lib/components/PriceInput.svelte';
+	import DatePicker from '$lib/components/DatePicker.svelte';
 	import { Label } from '$lib/components/ui/label';
 	import { fly, fade } from 'svelte/transition';
 	import * as XLSX from 'xlsx';
@@ -41,6 +42,7 @@
 	let searchQuery = $state('');
 	let statusFilter = $state('All');
 	let dateFilter = $state(todayStr);
+	let dateTypeFilter = $state('delivery_date');
 
 	let filteredOrders = $derived(data.orders.filter(order => {
 		const matchesSearch = !searchQuery || 
@@ -49,7 +51,14 @@
 		
 		const matchesStatus = statusFilter === 'All' || order.status === statusFilter;
 		
-		const matchesDate = !dateFilter || order.delivery_date === dateFilter;
+		let targetDate = '';
+		if (dateTypeFilter === 'created_at') {
+			targetDate = order.created_at ? order.created_at.split('T')[0] : '';
+		} else {
+			targetDate = order.delivery_date || '';
+		}
+		
+		const matchesDate = !dateFilter || targetDate === dateFilter;
 
 		return matchesSearch && matchesStatus && matchesDate;
 	}));
@@ -129,37 +138,46 @@
 	</Button>
 </div>
 
-<div class="flex flex-col sm:flex-row items-center gap-3 mb-6 bg-white p-3 sm:p-4 rounded-2xl shadow-sm border border-slate-100">
+<div class="flex flex-col lg:flex-row items-center gap-3 mb-6 bg-white p-3 sm:p-4 rounded-2xl shadow-sm border border-slate-100">
 	<!-- Search -->
-	<div class="relative w-full sm:flex-1">
+	<div class="relative w-full lg:flex-1">
 		<svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
 		<Input type="text" placeholder="Cari nama atau no order..." bind:value={searchQuery} class="pl-9 h-11 w-full rounded-xl bg-slate-50 border-transparent hover:border-slate-200 focus:border-slate-800 focus:bg-white transition-colors" />
 	</div>
 	
-	<div class="flex items-center gap-3 w-full sm:w-auto">
+	<div class="grid grid-cols-2 md:flex items-center gap-2 md:gap-3 w-full lg:w-auto">
+		<!-- Date Type Filter -->
+		<div class="col-span-1 md:w-auto">
+			<select bind:value={dateTypeFilter} class="h-11 w-full rounded-xl bg-slate-50 border-transparent hover:border-slate-200 focus:border-slate-800 focus:bg-white px-3 text-sm font-medium text-slate-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-800">
+				<option value="delivery_date">Tgl Kirim</option>
+				<option value="created_at">Tgl Order</option>
+			</select>
+		</div>
+
 		<!-- Date Filter -->
-		<div class="w-full sm:w-auto">
-			<Input type="date" bind:value={dateFilter} class="h-11 w-full rounded-xl bg-slate-50 border-transparent hover:border-slate-200 focus:border-slate-800 focus:bg-white text-slate-700 cursor-pointer text-sm" />
+		<div class="col-span-1 md:w-auto">
+			<DatePicker bind:value={dateFilter} class="h-11 w-full md:w-[150px] rounded-xl bg-slate-50 hover:bg-slate-100 border-transparent focus:border-slate-800 text-slate-700 text-sm font-medium" placeholder="Semua Tanggal" />
 		</div>
 
 		<!-- Status Filter -->
-		<div class="w-full sm:w-auto">
-			<select bind:value={statusFilter} class="h-11 w-full rounded-xl bg-slate-50 border-transparent hover:border-slate-200 focus:border-slate-800 focus:bg-white px-3 text-sm font-medium text-slate-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-800">
+		<div class="col-span-2 md:col-span-1 md:w-auto">
+			<select bind:value={statusFilter} class="h-11 w-full md:w-[150px] rounded-xl bg-slate-50 border-transparent hover:border-slate-200 focus:border-slate-800 focus:bg-white px-3 text-sm font-medium text-slate-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-800">
 				<option value="All">Semua Status</option>
 				<option value="Pending">Pending</option>
 				<option value="Diproses">Diproses</option>
 				<option value="Selesai">Selesai</option>
-				<option value="Batal/Refund">Batal / Refund</option>
+				<option value="Batal/Refund">Batal/Refund</option>
 			</select>
 		</div>
 	</div>
 
 	<!-- Reset Button -->
-	{#if searchQuery || statusFilter !== 'All' || dateFilter !== todayStr}
-		<Button variant="ghost" class="h-11 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 shrink-0 w-full sm:w-auto" onclick={() => {
+	{#if searchQuery || statusFilter !== 'All' || dateFilter !== todayStr || dateTypeFilter !== 'delivery_date'}
+		<Button variant="ghost" class="h-11 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 shrink-0 w-full lg:w-auto" onclick={() => {
 			searchQuery = '';
 			statusFilter = 'All';
 			dateFilter = todayStr;
+			dateTypeFilter = 'delivery_date';
 		}}>
 			Reset Filter
 		</Button>
@@ -248,11 +266,12 @@
 					Tidak ada pesanan yang sesuai dengan filter.
 				{/if}
 			</p>
-			{#if searchQuery || statusFilter !== 'All' || dateFilter !== ''}
+			{#if searchQuery || statusFilter !== 'All' || dateFilter !== '' || dateTypeFilter !== 'delivery_date'}
 				<Button variant="outline" size="sm" class="mt-4 rounded-full" onclick={() => {
 					searchQuery = '';
 					statusFilter = 'All';
 					dateFilter = ''; // Show all dates
+					dateTypeFilter = 'delivery_date';
 				}}>
 					Tampilkan Semua Pesanan
 				</Button>
