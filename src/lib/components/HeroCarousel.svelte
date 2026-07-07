@@ -1,11 +1,15 @@
 <script>
+	import { getI18n } from '$lib/i18n.svelte.js';
+
 	let { banners = [] } = $props();
+	const i18n = getI18n();
 
 	// Fallback data if no banners are provided
-	const displayBanners = banners.length > 0 ? banners : [
+	const fallbackBanners = [
 		{ id: 'default-1', image_url: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80' },
 		{ id: 'default-2', image_url: 'https://images.unsplash.com/photo-1557308536-ee471ef2c390?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80' }
 	];
+	let displayBanners = $derived(banners.length > 0 ? banners : fallbackBanners);
 
 	// Append optimization parameters to URL
 	function optimizeImageUrl(url) {
@@ -40,7 +44,7 @@
 			
 			<img 
 				src={optimizeImageUrl(banner.image_url)} 
-				alt="Hero Banner {i + 1}" 
+				alt={i18n.t('hero.bannerAlt', { number: i + 1 })} 
 				class="w-full h-full object-cover object-center"
 				loading={i === 0 ? "eager" : "lazy"}
 				fetchpriority={i === 0 ? "high" : "auto"}
@@ -51,20 +55,20 @@
 	<!-- Static Overlay Content -->
 	<div class="absolute inset-0 z-20 flex flex-col items-center justify-center text-center px-6">
 		<p class="text-white/80 text-xs sm:text-sm font-bold uppercase tracking-[0.3em] mb-4 drop-shadow-md">
-			Artisan Bakery & Cake Shop
+			{i18n.t('hero.eyebrow')}
 		</p>
 		<h1 class="text-6xl md:text-8xl lg:text-9xl font-serif italic text-white mb-8 font-['Playfair_Display'] leading-none drop-shadow-lg">
 			desertbyfir
 		</h1>
 		<p class="text-white/90 leading-relaxed max-w-lg mx-auto mb-10 text-base sm:text-lg drop-shadow-md">
-			Kami mempersembahkan kue dan pastry premium yang dibuat dengan cinta dan bahan-bahan berkualitas tinggi untuk momen spesial Anda.
+			{i18n.t('hero.description')}
 		</p>
 		
 		<a 
 			href="#catalog" 
 			class="px-10 py-4 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/50 text-white rounded-full text-sm font-bold tracking-widest transition-all duration-300 shadow-[0_0_40px_rgba(255,255,255,0.1)] hover:shadow-[0_0_60px_rgba(255,255,255,0.2)] hover:scale-105"
 		>
-			ORDER CAKE
+			{i18n.t('hero.cta')}
 		</a>
 	</div>
 
@@ -74,7 +78,7 @@
 			{#each displayBanners as _, i}
 				<button 
 					type="button"
-					aria-label="Go to slide {i + 1}"
+					aria-label={i18n.t('hero.slideLabel', { number: i + 1 })}
 					onclick={() => currentIndex = i}
 					class="transition-all duration-300 rounded-full {currentIndex === i ? 'w-8 h-2 bg-white' : 'w-2 h-2 bg-white/50 hover:bg-white/80'}"
 				></button>

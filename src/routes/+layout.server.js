@@ -1,8 +1,12 @@
 import { normalizeSiteInfo } from '$lib/site-info.js';
+import { normalizeLocale } from '$lib/i18n.svelte.js';
 
-export const load = async ({ locals: { supabase }, url }) => {
+export const load = async ({ locals: { supabase }, request, url }) => {
+	const locale = normalizeLocale(request.headers.get('accept-language'));
+
 	if (url.pathname.startsWith('/admin')) {
 		return {
+			locale,
 			siteInfo: normalizeSiteInfo()
 		};
 	}
@@ -14,6 +18,7 @@ export const load = async ({ locals: { supabase }, url }) => {
 		.maybeSingle();
 
 	return {
+		locale,
 		siteInfo: normalizeSiteInfo(siteInfo)
 	};
 };

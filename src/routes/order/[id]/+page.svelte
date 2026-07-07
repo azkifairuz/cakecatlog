@@ -1,8 +1,10 @@
 <script>
 	import { supabase } from '$lib/supabase';
+	import { getI18n } from '$lib/i18n.svelte.js';
 
 
 	let { data } = $props();
+	const i18n = getI18n();
 	let product = $derived(data.product);
 
 	function parseOptions(str) {
@@ -18,7 +20,7 @@
 
 	let loading = $state(false);
 	let errorMsg = $state('');
-	let fileName = $state('no file selected');
+	let fileName = $state('');
 	let showSuccessModal = $state(false);
 
 	const d = new Date();
@@ -35,7 +37,7 @@
 		const selectedDate = formData.get('delivery_date');
 		if (selectedDate && selectedDate < today) {
 			loading = false;
-			errorMsg = 'Tanggal pengiriman tidak boleh di masa lalu!';
+			errorMsg = i18n.t('order.datePastError');
 			return;
 		}
 
@@ -118,22 +120,22 @@ Mohon info total harga dan instruksi pembayaran. Terima kasih!`;
 
 		} catch (err) {
 			console.error(err);
-			errorMsg = err.message || 'Terjadi kesalahan saat memproses pesanan Anda.';
+			errorMsg = err.message || i18n.t('order.processError');
 			loading = false;
 		}
 	}
 </script>
 
 <svelte:head>
-	<title>Order {product.name} | desertbyfir</title>
+	<title>{i18n.t('order.title', { name: product.name })}</title>
 </svelte:head>
 
 <div class="max-w-xl mx-auto min-h-screen bg-[#f8fafc] sm:py-8">
 	<div class="bg-white sm:rounded-3xl sm:shadow-[0_2px_20px_-8px_rgba(0,0,0,0.1)] overflow-hidden">
 		<!-- Header -->
 		<div class="px-6 py-8 bg-gradient-to-br from-slate-50 to-white border-b border-slate-100">
-			<h2 class="text-2xl font-bold text-slate-800 tracking-tight">Detail Pesanan</h2>
-			<p class="text-slate-500 text-sm mt-1.5">Lengkapi data di bawah untuk memproses pesanan Anda.</p>
+			<h2 class="text-2xl font-bold text-slate-800 tracking-tight">{i18n.t('order.detailTitle')}</h2>
+			<p class="text-slate-500 text-sm mt-1.5">{i18n.t('order.detailDescription')}</p>
 		</div>
 
 		<form onsubmit={handleSubmit} class="p-6 space-y-8">
@@ -147,17 +149,17 @@ Mohon info total harga dan instruksi pembayaran. Terima kasih!`;
 			<div class="space-y-5">
 				<div class="flex items-center gap-2.5">
 					<div class="w-1.5 h-4 bg-slate-800 rounded-full"></div>
-					<h3 class="text-sm font-bold uppercase tracking-wider text-slate-800">Informasi Pemesan</h3>
+					<h3 class="text-sm font-bold uppercase tracking-wider text-slate-800">{i18n.t('order.customerInfo')}</h3>
 				</div>
 				
 				<div class="space-y-4">
 					<div>
-						<label for="customer_name" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Nama Lengkap <span class="text-red-400">*</span></label>
-						<input type="text" id="customer_name" name="customer_name" required placeholder="Masukkan nama Anda" class="w-full px-4 py-3.5 bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl text-[15px] placeholder-slate-400 focus:outline-none focus:border-slate-800 transition-all" />
+						<label for="customer_name" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">{i18n.t('form.fullName')} <span class="text-red-400">{i18n.t('form.required')}</span></label>
+						<input type="text" id="customer_name" name="customer_name" required placeholder={i18n.t('form.fullNamePlaceholder')} class="w-full px-4 py-3.5 bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl text-[15px] placeholder-slate-400 focus:outline-none focus:border-slate-800 transition-all" />
 					</div>
 					<div>
-						<label for="phone_number" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">No. WhatsApp <span class="text-red-400">*</span></label>
-						<input type="tel" inputmode="numeric" pattern="[0-9]*" oninput={(e) => { e.currentTarget.value = e.currentTarget.value.replace(/[^0-9]/g, ''); }} id="phone_number" name="phone_number" required placeholder="Contoh: 08123456789" class="w-full px-4 py-3.5 bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl text-[15px] placeholder-slate-400 focus:outline-none focus:border-slate-800 transition-all" />
+						<label for="phone_number" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">{i18n.t('form.whatsapp')} <span class="text-red-400">{i18n.t('form.required')}</span></label>
+						<input type="tel" inputmode="numeric" pattern="[0-9]*" oninput={(e) => { e.currentTarget.value = e.currentTarget.value.replace(/[^0-9]/g, ''); }} id="phone_number" name="phone_number" required placeholder={i18n.t('form.whatsappPlaceholder')} class="w-full px-4 py-3.5 bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl text-[15px] placeholder-slate-400 focus:outline-none focus:border-slate-800 transition-all" />
 					</div>
 				</div>
 			</div>
@@ -168,12 +170,12 @@ Mohon info total harga dan instruksi pembayaran. Terima kasih!`;
 			<div class="space-y-5">
 				<div class="flex items-center gap-2.5">
 					<div class="w-1.5 h-4 bg-slate-800 rounded-full"></div>
-					<h3 class="text-sm font-bold uppercase tracking-wider text-slate-800">Detail Kue</h3>
+					<h3 class="text-sm font-bold uppercase tracking-wider text-slate-800">{i18n.t('order.cakeDetail')}</h3>
 				</div>
 				
 				<div class="space-y-4">
 					<div>
-						<div class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Kue Pilihan</div>
+						<div class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">{i18n.t('order.selectedCake')}</div>
 						<div class="w-full px-4 py-3.5 bg-slate-100/50 rounded-xl text-[15px] text-slate-700 font-medium border-2 border-transparent">
 							{product.name}
 						</div>
@@ -181,10 +183,10 @@ Mohon info total harga dan instruksi pembayaran. Terima kasih!`;
 
 					<div class="grid grid-cols-2 gap-4">
 						<div>
-							<label for="cake_size" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Ukuran <span class="text-red-400">*</span></label>
+							<label for="cake_size" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">{i18n.t('form.size')} <span class="text-red-400">{i18n.t('form.required')}</span></label>
 							<div class="relative">
 								<select id="cake_size" name="cake_size" required class="w-full px-4 py-3.5 bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl text-[15px] appearance-none focus:outline-none focus:border-slate-800 transition-all text-slate-700">
-									<option value="" disabled selected>Pilih...</option>
+									<option value="" disabled selected>{i18n.t('form.choose')}</option>
 									{#if sizes.length > 0}
 										{#each sizes as size}
 											<option value={size}>{size}</option>
@@ -214,25 +216,25 @@ Mohon info total harga dan instruksi pembayaran. Terima kasih!`;
 							</div>
 						</div>
 						<div>
-							<label for="quantity" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Jumlah <span class="text-red-400">*</span></label>
+							<label for="quantity" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">{i18n.t('form.quantity')} <span class="text-red-400">{i18n.t('form.required')}</span></label>
 							<input type="number" id="quantity" name="quantity" min="1" value="1" required class="w-full px-4 py-3.5 bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl text-[15px] focus:outline-none focus:border-slate-800 transition-all text-center" />
 						</div>
 					</div>
 
 					<div>
-						<label class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Referensi Desain (Opsional)</label>
+						<div class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">{i18n.t('form.designReference')}</div>
 						<label class="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-200 border-dashed rounded-xl cursor-pointer bg-slate-50 hover:bg-slate-100 transition-all group overflow-hidden relative">
-							{#if fileName !== 'no file selected'}
+							{#if fileName}
 								<div class="absolute inset-0 bg-slate-800/5 flex items-center justify-center p-4">
 									<span class="px-4 py-2 bg-white rounded-lg shadow-sm text-sm font-medium text-slate-700 truncate max-w-[90%] border border-slate-200">{fileName}</span>
 								</div>
 							{:else}
 								<div class="flex flex-col items-center justify-center pt-5 pb-6">
 									<svg class="w-7 h-7 mb-2.5 text-slate-400 group-hover:text-slate-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-									<p class="text-sm text-slate-500 font-medium">Tap untuk upload</p>
+									<p class="text-sm text-slate-500 font-medium">{i18n.t('form.tapToUpload')}</p>
 								</div>
 							{/if}
-							<input type="file" id="reference_image" name="reference_image" accept="image/*" class="hidden" onchange={(e) => fileName = e.target.files[0]?.name || 'no file selected'} />
+							<input type="file" id="reference_image" name="reference_image" accept="image/*" class="hidden" onchange={(e) => fileName = e.target.files[0]?.name || ''} />
 						</label>
 					</div>
 				</div>
@@ -244,16 +246,16 @@ Mohon info total harga dan instruksi pembayaran. Terima kasih!`;
 			<div class="space-y-5">
 				<div class="flex items-center gap-2.5">
 					<div class="w-1.5 h-4 bg-slate-800 rounded-full"></div>
-					<h3 class="text-sm font-bold uppercase tracking-wider text-slate-800">Kustomisasi</h3>
+					<h3 class="text-sm font-bold uppercase tracking-wider text-slate-800">{i18n.t('order.customization')}</h3>
 				</div>
 				
 				<div class="space-y-4">
 					{#if flavors.length > 0}
 						<div>
-							<label for="cake_flavor" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Pilihan Rasa</label>
+							<label for="cake_flavor" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">{i18n.t('form.flavor')}</label>
 							<div class="relative">
 								<select id="cake_flavor" name="cake_flavor" class="w-full px-4 py-3.5 bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl text-[15px] appearance-none focus:outline-none focus:border-slate-800 transition-all text-slate-700">
-									<option value="" selected>Pilih Rasa...</option>
+									<option value="" selected>{i18n.t('form.chooseFlavor')}</option>
 									{#each flavors as flavor}
 										<option value={flavor}>{flavor}</option>
 									{/each}
@@ -267,10 +269,10 @@ Mohon info total harga dan instruksi pembayaran. Terima kasih!`;
 
 					{#if colors.length > 0}
 						<div>
-							<label for="cake_color" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Pilihan Warna</label>
+							<label for="cake_color" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">{i18n.t('form.color')}</label>
 							<div class="relative">
 								<select id="cake_color" name="cake_color" class="w-full px-4 py-3.5 bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl text-[15px] appearance-none focus:outline-none focus:border-slate-800 transition-all text-slate-700">
-									<option value="" selected>Pilih Warna...</option>
+									<option value="" selected>{i18n.t('form.chooseColor')}</option>
 									{#each colors as color}
 										<option value={color}>{color}</option>
 									{/each}
@@ -284,10 +286,10 @@ Mohon info total harga dan instruksi pembayaran. Terima kasih!`;
 
 					{#if crowns.length > 0}
 						<div>
-							<label for="crown_option" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Pilihan Mahkota</label>
+							<label for="crown_option" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">{i18n.t('form.crown')}</label>
 							<div class="relative">
 								<select id="crown_option" name="crown_option" class="w-full px-4 py-3.5 bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl text-[15px] appearance-none focus:outline-none focus:border-slate-800 transition-all text-slate-700">
-									<option value="" selected>Pilih Mahkota...</option>
+									<option value="" selected>{i18n.t('form.chooseCrown')}</option>
 									{#each crowns as crown}
 										<option value={crown}>{crown}</option>
 									{/each}
@@ -301,10 +303,10 @@ Mohon info total harga dan instruksi pembayaran. Terima kasih!`;
 
 					{#if glitters.length > 0}
 						<div>
-							<label for="add_edible_glitter" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Edible Glitter</label>
+							<label for="add_edible_glitter" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">{i18n.t('form.glitter')}</label>
 							<div class="relative">
 								<select id="add_edible_glitter" name="add_edible_glitter" class="w-full px-4 py-3.5 bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl text-[15px] appearance-none focus:outline-none focus:border-slate-800 transition-all text-slate-700">
-									<option value="" selected>Pilih Glitter...</option>
+									<option value="" selected>{i18n.t('form.chooseGlitter')}</option>
 									{#each glitters as glitter}
 										<option value={glitter}>{glitter}</option>
 									{/each}
@@ -316,18 +318,18 @@ Mohon info total harga dan instruksi pembayaran. Terima kasih!`;
 						</div>
 					{:else}
 						<div>
-							<label for="add_edible_glitter" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Glitter Tambahan</label>
-							<input type="text" id="add_edible_glitter" name="add_edible_glitter" placeholder="Contoh: Ya, warna gold" class="w-full px-4 py-3.5 bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl text-[15px] placeholder-slate-400 focus:outline-none focus:border-slate-800 transition-all" />
+							<label for="add_edible_glitter" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">{i18n.t('form.extraGlitter')}</label>
+							<input type="text" id="add_edible_glitter" name="add_edible_glitter" placeholder={i18n.t('form.extraGlitterPlaceholder')} class="w-full px-4 py-3.5 bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl text-[15px] placeholder-slate-400 focus:outline-none focus:border-slate-800 transition-all" />
 						</div>
 					{/if}
 
 					<div>
-						<label for="gift_card_text" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Tulisan Giftcard</label>
-						<input type="text" id="gift_card_text" name="gift_card_text" placeholder="Kosongkan jika tidak ada" class="w-full px-4 py-3.5 bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl text-[15px] placeholder-slate-400 focus:outline-none focus:border-slate-800 transition-all" />
+						<label for="gift_card_text" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">{i18n.t('form.giftCard')}</label>
+						<input type="text" id="gift_card_text" name="gift_card_text" placeholder={i18n.t('form.emptyGiftCard')} class="w-full px-4 py-3.5 bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl text-[15px] placeholder-slate-400 focus:outline-none focus:border-slate-800 transition-all" />
 					</div>
 					<div>
-						<label for="add_on" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Request Tambahan</label>
-						<input type="text" id="add_on" name="add_on" placeholder="Topper, lilin, bentuk khusus..." class="w-full px-4 py-3.5 bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl text-[15px] placeholder-slate-400 focus:outline-none focus:border-slate-800 transition-all" />
+						<label for="add_on" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">{i18n.t('form.extraRequest')}</label>
+						<input type="text" id="add_on" name="add_on" placeholder={i18n.t('form.extraRequestPlaceholder')} class="w-full px-4 py-3.5 bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl text-[15px] placeholder-slate-400 focus:outline-none focus:border-slate-800 transition-all" />
 					</div>
 				</div>
 			</div>
@@ -338,23 +340,23 @@ Mohon info total harga dan instruksi pembayaran. Terima kasih!`;
 			<div class="space-y-5">
 				<div class="flex items-center gap-2.5">
 					<div class="w-1.5 h-4 bg-slate-800 rounded-full"></div>
-					<h3 class="text-sm font-bold uppercase tracking-wider text-slate-800">Pengiriman</h3>
+					<h3 class="text-sm font-bold uppercase tracking-wider text-slate-800">{i18n.t('order.shipping')}</h3>
 				</div>
 				
 				<div class="space-y-4">
 					<div class="grid grid-cols-2 gap-4">
 						<div>
-							<label for="delivery_date" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Tanggal</label>
+							<label for="delivery_date" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">{i18n.t('form.date')}</label>
 							<input type="date" id="delivery_date" name="delivery_date" min={today} class="w-full px-4 py-[13.5px] bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl text-[15px] text-slate-700 focus:outline-none focus:border-slate-800 transition-all cursor-pointer" />
 						</div>
 						<div>
-							<label for="delivery_time" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Waktu</label>
+							<label for="delivery_time" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">{i18n.t('form.time')}</label>
 							<input type="time" id="delivery_time" name="delivery_time" class="w-full px-4 py-[13.5px] bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl text-[15px] text-slate-700 focus:outline-none focus:border-slate-800 transition-all cursor-pointer appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none" />
 						</div>
 					</div>
 					<div>
-						<label for="address" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Alamat <span class="text-red-400">*</span></label>
-						<textarea id="address" name="address" required placeholder="Tuliskan alamat lengkap pengiriman..." rows="3" class="w-full px-4 py-3.5 bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl text-[15px] placeholder-slate-400 focus:outline-none focus:border-slate-800 transition-all resize-none"></textarea>
+						<label for="address" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">{i18n.t('form.address')} <span class="text-red-400">{i18n.t('form.required')}</span></label>
+						<textarea id="address" name="address" required placeholder={i18n.t('form.addressPlaceholder')} rows="3" class="w-full px-4 py-3.5 bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl text-[15px] placeholder-slate-400 focus:outline-none focus:border-slate-800 transition-all resize-none"></textarea>
 					</div>
 				</div>
 			</div>
@@ -365,7 +367,7 @@ Mohon info total harga dan instruksi pembayaran. Terima kasih!`;
 					{#if loading}
 						<span class="animate-spin inline-block w-5 h-5 border-2 border-white/30 border-t-white rounded-full"></span>
 					{/if}
-					Kirim Pesanan
+					{i18n.t('order.sendOrder')}
 				</button>
 			</div>
 		</form>
@@ -380,10 +382,10 @@ Mohon info total harga dan instruksi pembayaran. Terima kasih!`;
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
 				</svg>
 			</div>
-			<h3 class="text-2xl font-bold text-slate-800 mb-2">Pesanan Berhasil!</h3>
-			<p class="text-slate-500 text-[15px] mb-8 leading-relaxed">Terima kasih! Data pesanan Anda telah kami terima dengan baik dan akan segera diproses.</p>
+			<h3 class="text-2xl font-bold text-slate-800 mb-2">{i18n.t('order.successTitle')}</h3>
+			<p class="text-slate-500 text-[15px] mb-8 leading-relaxed">{i18n.t('order.successDescription')}</p>
 			<a href="/" class="block w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl transition-all shadow-md">
-				Kembali ke Katalog
+				{i18n.t('order.backToCatalog')}
 			</a>
 		</div>
 	</div>

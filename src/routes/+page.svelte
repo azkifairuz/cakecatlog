@@ -3,8 +3,10 @@
 	import TopPicksCarousel from '$lib/components/TopPicksCarousel.svelte';
 	import QuickAddModal from '$lib/components/QuickAddModal.svelte';
 	import { getStartFromPrice } from '$lib/pricing.js';
+	import { getI18n } from '$lib/i18n.svelte.js';
 
 	let { data } = $props();
+	const i18n = getI18n();
 
 	let isQuickAddOpen = $state(false);
 	let selectedProduct = $state(null);
@@ -23,7 +25,7 @@
 	);
 
 	function formatCurrency(amount) {
-		return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount);
+		return new Intl.NumberFormat(i18n.locale === 'en' ? 'en-US' : 'id-ID', { style: 'currency', currency: 'IDR' }).format(amount);
 	}
 </script>
 
@@ -35,21 +37,21 @@
 <section id="about" class="py-24 bg-white relative overflow-hidden">
 	<div class="container mx-auto px-6 lg:px-12 flex flex-col md:flex-row items-center gap-16">
 		<div class="md:w-1/2 relative">
-			<img src="https://images.unsplash.com/photo-1621303837174-89787a7d4729?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="About Us Cake" class="rounded-[2rem] w-full max-w-md mx-auto shadow-2xl relative z-10" />
+			<img src="https://images.unsplash.com/photo-1621303837174-89787a7d4729?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt={i18n.t('home.aboutImageAlt')} class="rounded-[2rem] w-full max-w-md mx-auto shadow-2xl relative z-10" />
 			<div class="absolute -bottom-8 -left-8 w-64 h-64 bg-[#FFFBF7] rounded-full -z-10"></div>
 		</div>
 		<div class="md:w-1/2">
-			<h2 class="text-3xl lg:text-4xl font-bold text-[#4A3B32] mb-6 font-['Playfair_Display']">Tentang Kami</h2>
+			<h2 class="text-3xl lg:text-4xl font-bold text-[#4A3B32] mb-6 font-['Playfair_Display']">{i18n.t('home.aboutTitle')}</h2>
 			<div class="space-y-4 text-[#4A3B32]/70 text-[15px] leading-relaxed">
 				<p>
-					desertbyfir adalah toko kue artisan yang berdedikasi untuk menciptakan karya seni yang dapat dinikmati. Kami percaya bahwa setiap perayaan layak mendapatkan kue yang tidak hanya cantik dipandang, tetapi juga luar biasa saat dirasakan.
+					{i18n.t('home.aboutParagraph1')}
 				</p>
 				<p>
-					Setiap kue dibuat secara *handmade* oleh para *pastry chef* berpengalaman kami, menggunakan resep rahasia yang telah disempurnakan bertahun-tahun. Kepuasan Anda adalah prioritas utama kami.
+					{i18n.t('home.aboutParagraph2')}
 				</p>
 			</div>
 			<div class="mt-8">
-				<a href="#catalog" class="inline-block px-8 py-3 border border-[#8C5A35] text-[#8C5A35] rounded-full text-sm font-semibold hover:bg-[#8C5A35]/5 transition-all">Lihat Koleksi Kami</a>
+				<a href="#catalog" class="inline-block px-8 py-3 border border-[#8C5A35] text-[#8C5A35] rounded-full text-sm font-semibold hover:bg-[#8C5A35]/5 transition-all">{i18n.t('home.aboutCta')}</a>
 			</div>
 		</div>
 	</div>
@@ -58,8 +60,8 @@
 <!-- FEATURES SECTION -->
 <section id="features" class="py-24 bg-[#FFFBF7]">
 	<div class="container mx-auto px-6 text-center mb-16">
-		<h2 class="text-3xl font-bold text-[#4A3B32] mb-4 font-['Playfair_Display']">Mengapa Memilih Kami?</h2>
-		<p class="text-[#4A3B32]/60 text-sm max-w-xl mx-auto">Kami berkomitmen memberikan pelayanan dan kualitas terbaik untuk setiap pesanan Anda.</p>
+		<h2 class="text-3xl font-bold text-[#4A3B32] mb-4 font-['Playfair_Display']">{i18n.t('home.featuresTitle')}</h2>
+		<p class="text-[#4A3B32]/60 text-sm max-w-xl mx-auto">{i18n.t('home.featuresDescription')}</p>
 	</div>
 	<div class="container mx-auto grid max-w-5xl grid-cols-4 gap-x-2 gap-y-8 px-4 text-center sm:gap-x-6 sm:px-6 lg:gap-12">
 		<!-- Feature 1 -->
@@ -67,7 +69,7 @@
 			<div class="mb-3 flex h-11 w-11 items-center justify-center rounded-full border border-[#8C5A35]/10 bg-white text-[#8C5A35] shadow-sm sm:mb-5 sm:h-16 sm:w-16">
 				<svg class="h-5 w-5 sm:h-7 sm:w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path></svg>
 			</div>
-			<h4 class="mb-0 w-full break-words text-[10px] font-bold leading-tight text-[#4A3B32] sm:mb-2 sm:text-[15px] sm:leading-snug">Garansi Kualitas</h4>
+			<h4 class="mb-0 w-full break-words text-[10px] font-bold leading-tight text-[#4A3B32] sm:mb-2 sm:text-[15px] sm:leading-snug">{i18n.t('home.featureQuality')}</h4>
 			<!-- <p class="text-[13px] text-[#4A3B32]/60 leading-relaxed">Kami menggunakan bahan baku premium pilihan untuk hasil yang maksimal.</p> -->
 		</div>
 		<!-- Feature 2 -->
@@ -75,7 +77,7 @@
 			<div class="mb-3 flex h-11 w-11 items-center justify-center rounded-full border border-[#8C5A35]/10 bg-white text-[#8C5A35] shadow-sm sm:mb-5 sm:h-16 sm:w-16">
 				<svg class="h-5 w-5 sm:h-7 sm:w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
 			</div>
-			<h4 class="mb-0 w-full break-words text-[10px] font-bold leading-tight text-[#4A3B32] sm:mb-2 sm:text-[15px] sm:leading-snug">Pengiriman Tepat Waktu</h4>
+			<h4 class="mb-0 w-full break-words text-[10px] font-bold leading-tight text-[#4A3B32] sm:mb-2 sm:text-[15px] sm:leading-snug">{i18n.t('home.featureDelivery')}</h4>
 			<!-- <p class="text-[13px] text-[#4A3B32]/60 leading-relaxed">Pesanan Anda akan tiba tepat pada waktu yang telah disepakati.</p> -->
 		</div>
 		<!-- Feature 3 -->
@@ -83,7 +85,7 @@
 			<div class="mb-3 flex h-11 w-11 items-center justify-center rounded-full border border-[#8C5A35]/10 bg-white text-[#8C5A35] shadow-sm sm:mb-5 sm:h-16 sm:w-16">
 				<svg class="h-5 w-5 sm:h-7 sm:w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
 			</div>
-			<h4 class="mb-0 w-full break-words text-[10px] font-bold leading-tight text-[#4A3B32] sm:mb-2 sm:text-[15px] sm:leading-snug">Resep Rahasia</h4>
+			<h4 class="mb-0 w-full break-words text-[10px] font-bold leading-tight text-[#4A3B32] sm:mb-2 sm:text-[15px] sm:leading-snug">{i18n.t('home.featureRecipe')}</h4>
 			<!-- <p class="text-[13px] text-[#4A3B32]/60 leading-relaxed">Dibuat dari resep original yang disempurnakan oleh ahlinya.</p> -->
 		</div>
 		<!-- Feature 4 -->
@@ -91,7 +93,7 @@
 			<div class="mb-3 flex h-11 w-11 items-center justify-center rounded-full border border-[#8C5A35]/10 bg-white text-[#8C5A35] shadow-sm sm:mb-5 sm:h-16 sm:w-16">
 				<svg class="h-5 w-5 sm:h-7 sm:w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
 			</div>
-			<h4 class="mb-0 w-full break-words text-[10px] font-bold leading-tight text-[#4A3B32] sm:mb-2 sm:text-[15px] sm:leading-snug">Pelayanan Ramah</h4>
+			<h4 class="mb-0 w-full break-words text-[10px] font-bold leading-tight text-[#4A3B32] sm:mb-2 sm:text-[15px] sm:leading-snug">{i18n.t('home.featureService')}</h4>
 			<!-- <p class="text-[13px] text-[#4A3B32]/60 leading-relaxed">Customer service kami siap membantu mewujudkan kue impian Anda.</p> -->
 		</div>
 	</div>
@@ -100,7 +102,7 @@
 <!-- CATALOG SECTION -->
 <section id="catalog" class="py-24 bg-white">
 	<div class="container mx-auto px-6 text-center mb-16">
-		<h2 class="text-3xl font-bold text-[#4A3B32] mb-8 font-['Playfair_Display']">Katalog</h2>
+		<h2 class="text-3xl font-bold text-[#4A3B32] mb-8 font-['Playfair_Display']">{i18n.t('home.catalogTitle')}</h2>
 		
 		<!-- Category Pills -->
 		<div class="relative -mx-6 sm:mx-0">
@@ -113,7 +115,7 @@
 				class="shrink-0 snap-start sm:snap-align-none whitespace-nowrap px-6 py-2 rounded-full border text-[13px] font-semibold tracking-wide transition-all {selectedCategory === 'All' ? 'border-[#8C5A35] bg-[#8C5A35] text-white' : 'border-slate-200 text-[#4A3B32] hover:border-[#8C5A35]'}"
 				onclick={() => selectedCategory = 'All'}
 			>
-				Semua
+				{i18n.t('home.allCategory')}
 			</button>
 			{#each data.categories as category}
 				<button 
@@ -134,13 +136,13 @@
 				{@const primaryImg = product.product_images?.find(img => img.is_primary) || product.product_images?.[0]}
 				<div class="bg-white rounded-3xl p-3 sm:p-4 border border-slate-100 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_30px_-10px_rgba(140,90,53,0.15)] hover:-translate-y-1 transition-all duration-300 group flex flex-col h-full relative">
 					<!-- Card Link Cover (Makes the whole top part clickable) -->
-					<a href={`/product/${product.id}`} class="absolute inset-0 z-0" aria-label={`Lihat detail ${product.name}`}></a>
+					<a href={`/product/${product.id}`} class="absolute inset-0 z-0" aria-label={i18n.t('home.productDetailLabel', { name: product.name })}></a>
 					
 					<div class="aspect-square w-full rounded-[1.25rem] overflow-hidden bg-[#FFFBF7] mb-3 sm:mb-5 relative flex items-center justify-center p-1.5 sm:p-2 z-10 pointer-events-none">
 						{#if primaryImg}
 							<img src={primaryImg.image_url} alt={product.name} class="w-full h-full object-cover rounded-[1rem] sm:rounded-xl transition-transform duration-500 group-hover:scale-105" />
 						{:else}
-							<div class="w-full h-full flex items-center justify-center text-slate-300 bg-slate-100 rounded-[1rem] sm:rounded-xl">No Image</div>
+							<div class="w-full h-full flex items-center justify-center text-slate-300 bg-slate-100 rounded-[1rem] sm:rounded-xl">{i18n.t('home.noImage')}</div>
 						{/if}
 						{#if product.category}
 							<div class="absolute top-2 left-2 sm:top-4 sm:left-4 px-2 py-0.5 sm:px-3 sm:py-1 bg-white/90 backdrop-blur-sm text-[#8C5A35] text-[9px] sm:text-[11px] font-bold rounded-full shadow-sm z-10">
@@ -155,11 +157,11 @@
 						
 							<div class="flex items-center justify-between mt-auto pointer-events-auto">
 								<div class="flex flex-col">
-									<span class="text-[8px] sm:text-[10px] uppercase font-bold tracking-wider text-[#4A3B32]/50 mb-0.5">Start from</span>
+									<span class="text-[8px] sm:text-[10px] uppercase font-bold tracking-wider text-[#4A3B32]/50 mb-0.5">{i18n.t('home.startFrom')}</span>
 									<span class="font-bold text-[#4A3B32] text-[13px] sm:text-lg leading-none">{formatCurrency(getStartFromPrice(product))}</span>
 								</div>
 								<div class="flex gap-2 items-center relative z-20">
-									<button onclick={() => openQuickAdd(product)} class="p-2 sm:p-2.5 rounded-full bg-[#8C5A35]/10 text-[#8C5A35] hover:bg-[#8C5A35] hover:text-white transition-colors" title="Tambah ke Keranjang">
+									<button onclick={() => openQuickAdd(product)} class="p-2 sm:p-2.5 rounded-full bg-[#8C5A35]/10 text-[#8C5A35] hover:bg-[#8C5A35] hover:text-white transition-colors" title={i18n.t('home.addToCartTitle')}>
 										<svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
 									</button>
 								</div>
@@ -169,9 +171,9 @@
 			{:else}
 				<div class="col-span-full text-center py-16 text-[#4A3B32]/50">
 					{#if selectedCategory === 'All'}
-						Belum ada produk di katalog.
+						{i18n.t('home.emptyCatalog')}
 					{:else}
-						Belum ada produk di kategori ini.
+						{i18n.t('home.emptyCategory')}
 					{/if}
 				</div>
 			{/each}

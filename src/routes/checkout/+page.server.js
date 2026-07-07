@@ -1,8 +1,10 @@
 import { supabase } from '$lib/supabase';
+import { normalizeLocale, translate } from '$lib/i18n.svelte.js';
 
 export const actions = {
 	checkout: async ({ request }) => {
 		const formData = await request.formData();
+		const locale = normalizeLocale(formData.get('locale'));
 		
 		const customer_name = formData.get('customer_name');
 		const phone_number = formData.get('phone_number');
@@ -17,11 +19,11 @@ export const actions = {
 			cartItems = JSON.parse(cart_items_json);
 		} catch (e) {
 			console.error('Failed to parse cart items', e);
-			return { success: false, error: 'Data keranjang tidak valid' };
+			return { success: false, error: translate(locale, 'server.invalidCart') };
 		}
 
 		if (cartItems.length === 0) {
-			return { success: false, error: 'Keranjang kosong' };
+			return { success: false, error: translate(locale, 'server.emptyCart') };
 		}
 
 		const firstItem = cartItems[0];
