@@ -70,7 +70,7 @@
 				customer_name: formData.get('customer_name'),
 				phone_number: formData.get('phone_number'),
 				address: formData.get('address'),
-				email: null,
+				email: String(formData.get('email') || '').trim().toLowerCase(),
 				cake_size: formData.get('cake_size'),
 				quantity: parseInt(formData.get('quantity')),
 				cake_flavor: formData.get('cake_flavor') || 'Standard',
@@ -156,6 +156,10 @@ Mohon info total harga dan instruksi pembayaran. Terima kasih!`;
 					<div>
 						<label for="customer_name" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">{i18n.t('form.fullName')} <span class="text-red-400">{i18n.t('form.required')}</span></label>
 						<input type="text" id="customer_name" name="customer_name" required placeholder={i18n.t('form.fullNamePlaceholder')} class="w-full px-4 py-3.5 bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl text-[15px] placeholder-slate-400 focus:outline-none focus:border-slate-800 transition-all" />
+					</div>
+					<div>
+						<label for="email" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">{i18n.t('form.email')} <span class="text-red-400">{i18n.t('form.required')}</span></label>
+						<input type="email" id="email" name="email" required placeholder={i18n.t('form.emailPlaceholder')} class="w-full px-4 py-3.5 bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl text-[15px] placeholder-slate-400 focus:outline-none focus:border-slate-800 transition-all" />
 					</div>
 					<div>
 						<label for="phone_number" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">{i18n.t('form.whatsapp')} <span class="text-red-400">{i18n.t('form.required')}</span></label>

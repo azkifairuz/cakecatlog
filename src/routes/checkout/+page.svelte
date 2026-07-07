@@ -161,6 +161,10 @@
 								<input type="text" id="customer_name" name="customer_name" required placeholder={i18n.t('form.fullNamePlaceholder')} class="w-full px-4 py-3.5 bg-slate-50 border border-[#8C5A35]/20 focus:bg-white rounded-xl text-[15px] placeholder-slate-400 focus:outline-none focus:border-[#8C5A35] transition-all" />
 							</div>
 							<div>
+								<label for="email" class="block text-[13px] font-semibold text-[#4A3B32] mb-1.5 uppercase tracking-wide">{i18n.t('form.email')} <span class="text-red-400">{i18n.t('form.required')}</span></label>
+								<input type="email" id="email" name="email" required placeholder={i18n.t('form.emailPlaceholder')} class="w-full px-4 py-3.5 bg-slate-50 border border-[#8C5A35]/20 focus:bg-white rounded-xl text-[15px] placeholder-slate-400 focus:outline-none focus:border-[#8C5A35] transition-all" />
+							</div>
+							<div class="md:col-span-2">
 								<label for="phone_number" class="block text-[13px] font-semibold text-[#4A3B32] mb-1.5 uppercase tracking-wide">{i18n.t('form.whatsapp')} <span class="text-red-400">{i18n.t('form.required')}</span></label>
 								<input type="tel" inputmode="numeric" pattern="[0-9]*" oninput={(e) => { e.currentTarget.value = e.currentTarget.value.replace(/[^0-9]/g, ''); }} id="phone_number" name="phone_number" required placeholder={i18n.t('form.whatsappPlaceholder')} class="w-full px-4 py-3.5 bg-slate-50 border border-[#8C5A35]/20 focus:bg-white rounded-xl text-[15px] placeholder-slate-400 focus:outline-none focus:border-[#8C5A35] transition-all" />
 							</div>

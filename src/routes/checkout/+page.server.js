@@ -7,6 +7,7 @@ export const actions = {
 		const locale = normalizeLocale(formData.get('locale'));
 		
 		const customer_name = formData.get('customer_name');
+		const email = String(formData.get('email') || '').trim().toLowerCase();
 		const phone_number = formData.get('phone_number');
 		const rawDeliveryOption = formData.get('delivery_option');
 		const delivery_option = rawDeliveryOption === 'pickup' || rawDeliveryOption === 'delivery' ? rawDeliveryOption : null;
@@ -18,6 +19,10 @@ export const actions = {
 
 		if (!delivery_option) {
 			return { success: false, error: translate(locale, 'server.invalidDeliveryOption') };
+		}
+
+		if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+			return { success: false, error: translate(locale, 'server.invalidEmail') };
 		}
 
 		if (delivery_option === 'delivery' && !submittedAddress) {
@@ -51,6 +56,7 @@ export const actions = {
 			.from('orders')
 			.insert({
 				customer_name,
+				email,
 				phone_number,
 				delivery_option,
 				address,
@@ -68,7 +74,6 @@ export const actions = {
 				cake_text: cartItems[0].cake_text || null,
 				gift_card_text: cartItems[0].gift_card_text || null,
 				reference_image_url: cartItems[0].reference_image_url || null,
-				email: null,
 				amount: estimatedSubtotal,
 				estimated_subtotal: estimatedSubtotal,
 				size_price: firstItem.size_price || firstItem.price_at_order || 0,

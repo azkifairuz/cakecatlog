@@ -1,89 +1,7 @@
 import { json } from '@sveltejs/kit';
 import { WA_GATEWAY_API_KEY } from '$env/static/private';
 import { PUBLIC_WA_GATEWAY_URL } from '$env/static/public';
-
-function formatCurrency(amount) {
-	return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(amount) || 0);
-}
-
-function formatDate(dateString) {
-	if (!dateString) return '-';
-	return new Date(dateString).toLocaleDateString('id-ID', {
-		weekday: 'long',
-		year: 'numeric',
-		month: 'long',
-		day: 'numeric'
-	});
-}
-
-function generateInvoiceText(order) {
-	const line = '━'.repeat(28);
-	const dashes = '─'.repeat(28);
-
-	let itemsText = '';
-	if (order.order_items && order.order_items.length > 0) {
-		itemsText = order.order_items.map((item, index) => {
-			return `${index + 1}. *${item.products?.name || 'Kue'}* (${item.quantity}x)
-   Ukuran: ${item.cake_size || '-'}
-   Rasa: ${item.cake_flavor || '-'}
-   Tulisan: ${item.cake_text || '-'}`;
-		}).join('\n\n');
-	} else {
-		itemsText = `Produk       : ${order.product_name || '-'}
-Ukuran       : ${order.cake_size || '-'}
-Jumlah       : ${order.quantity || 1}`;
-	}
-
-	let vehicleText = '';
-	if (order.delivery_vehicle) {
-		vehicleText = order.delivery_vehicle === 'Car' ? 'Mobil' : 'Motor';
-	}
-
-	const deliveryOption = order.delivery_option === 'pickup' ? 'pickup' : 'delivery';
-	const deliveryLabel = deliveryOption === 'pickup' ? 'Pickup' : 'Delivery';
-	const fulfillmentDetails =
-		deliveryOption === 'pickup'
-			? `Metode       : ${deliveryLabel}
-Tanggal      : ${formatDate(order.delivery_date)}
-Waktu        : ${order.delivery_time || '-'}
-Keterangan   : Pickup di toko`
-			: `Metode       : ${deliveryLabel}
-Tanggal      : ${formatDate(order.delivery_date)}
-Waktu        : ${order.delivery_time || '-'}
-Alamat       : ${order.address || '-'}`;
-
-	return `🧁 *INVOICE - desertbyfir*
-${line}
-
-📋 *Detail Pesanan*
-${dashes}
-No. Order    : *#${order.order_number}*
-Tanggal      : ${formatDate(order.created_at)}
-
-👤 *Data Pelanggan*
-${dashes}
-Nama         : ${order.customer_name}
-No. HP       : ${order.phone_number}
-
-🎂 *Detail Produk*
-${dashes}
-${itemsText}
-
-📅 *${deliveryOption === 'pickup' ? 'Pickup' : 'Pengiriman'}*
-${dashes}
-${fulfillmentDetails}
-
-💰 *Total Pembayaran*
-${line}
-Harga Kue    : ${formatCurrency(order.cake_price || order.amount)}
-Ongkos Kirim : ${formatCurrency(order.delivery_fee || 0)} ${vehicleText ? `(${vehicleText})` : ''}
-${dashes}
-*TOTAL       : ${formatCurrency(order.amount)}*
-${line}
-
-Terima kasih telah memesan di *desertbyfir* 🍰
-Hubungi kami jika ada pertanyaan.`;
-}
+import { generateInvoiceText, invoiceOrderSelect } from '$lib/server/invoice.js';
 
 export async function POST({ request, locals: { supabase } }) {
 	try {
@@ -96,15 +14,7 @@ export async function POST({ request, locals: { supabase } }) {
 		// Fetch order data from Supabase
 		const { data: order, error: dbError } = await supabase
 			.from('orders')
-			.select(`
-				*,
-				order_items (
-					*,
-					products (
-						name
-					)
-				)
-			`)
+			.select(invoiceOrderSelect)
 			.eq('id', orderId)
 			.single();
 

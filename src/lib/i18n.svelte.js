@@ -107,6 +107,8 @@ export const translations = {
 			optional: 'Opsional',
 			fullName: 'Nama Lengkap',
 			fullNamePlaceholder: 'Masukkan nama Anda',
+			email: 'Email',
+			emailPlaceholder: 'contoh@email.com',
 			whatsapp: 'No. WhatsApp',
 			whatsappPlaceholder: 'Contoh: 08123456789',
 			deliveryDate: 'Tanggal Pengiriman',
@@ -195,6 +197,7 @@ export const translations = {
 		server: {
 			invalidCart: 'Data keranjang tidak valid',
 			emptyCart: 'Keranjang kosong',
+			invalidEmail: 'Email tidak valid',
 			invalidDeliveryOption: 'Metode pesanan tidak valid',
 			deliveryAddressRequired: 'Alamat pengiriman wajib diisi',
 			deliveryTimeRequired: 'Waktu pengiriman wajib diisi'
@@ -295,6 +298,8 @@ export const translations = {
 			optional: 'Optional',
 			fullName: 'Full Name',
 			fullNamePlaceholder: 'Enter your name',
+			email: 'Email',
+			emailPlaceholder: 'example@email.com',
 			whatsapp: 'WhatsApp Number',
 			whatsappPlaceholder: 'Example: 08123456789',
 			deliveryDate: 'Delivery Date',
@@ -383,6 +388,7 @@ export const translations = {
 		server: {
 			invalidCart: 'Cart data is invalid',
 			emptyCart: 'Cart is empty',
+			invalidEmail: 'Email is invalid',
 			invalidDeliveryOption: 'Order method is invalid',
 			deliveryAddressRequired: 'Delivery address is required',
 			deliveryTimeRequired: 'Delivery time is required'
