@@ -9,6 +9,7 @@
 	const i18n = getI18n();
 	let mounted = $state(false);
 	let showSuccessModal = $state(false);
+	let selectedDeliveryOption = $state('');
 	
 	onMount(() => {
 		mounted = true;
@@ -37,6 +38,19 @@
 			errorMsg = i18n.t('checkout.datePastError');
 			return;
 		}
+
+		if (selectedDeliveryOption === 'delivery' && !String(formData.get('delivery_time') || '').trim()) {
+			event.preventDefault();
+			errorMsg = i18n.t('server.deliveryTimeRequired');
+			return;
+		}
+
+		if (selectedDeliveryOption === 'delivery' && !String(formData.get('address') || '').trim()) {
+			event.preventDefault();
+			errorMsg = i18n.t('server.deliveryAddressRequired');
+			return;
+		}
+
 		loading = true;
 	}
 </script>
@@ -57,7 +71,9 @@
 			<!-- Form Info Pemesan -->
 			<div class="w-full lg:w-2/3">
 				<div class="bg-white rounded-3xl p-8 border border-[#8C5A35]/10 shadow-sm">
-					<h2 class="text-2xl font-bold text-[#4A3B32] font-['Playfair_Display'] mb-6">{i18n.t('checkout.shippingInfo')}</h2>
+					<h2 class="text-2xl font-bold text-[#4A3B32] font-['Playfair_Display'] mb-6">
+						{selectedDeliveryOption ? (selectedDeliveryOption === 'delivery' ? i18n.t('checkout.shippingInfo') : i18n.t('checkout.pickupInfo')) : i18n.t('checkout.deliveryOptionTitle')}
+					</h2>
 					
 					{#if errorMsg}
 						<div class="bg-red-50 text-red-600 p-4 rounded-xl text-sm font-medium border border-red-100 mb-6">
@@ -65,6 +81,43 @@
 						</div>
 					{/if}
 
+					{#if !selectedDeliveryOption}
+						<div class="grid gap-4 sm:grid-cols-2">
+							<button
+								type="button"
+								onclick={() => {
+									selectedDeliveryOption = 'pickup';
+									errorMsg = '';
+								}}
+								class="group flex min-h-44 flex-col items-start justify-between rounded-2xl border border-[#8C5A35]/15 bg-[#FFFBF7] p-5 text-left transition-all hover:-translate-y-0.5 hover:border-[#8C5A35] hover:shadow-lg hover:shadow-[#8C5A35]/10"
+							>
+								<span class="mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-white text-[#8C5A35] shadow-sm">
+									<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 21h18M5 21V7l8-4 6 4v14M9 21v-8h6v8M9 9h.01M15 9h.01"></path></svg>
+								</span>
+								<span>
+									<span class="block text-lg font-extrabold text-[#4A3B32]">{i18n.t('checkout.pickup')}</span>
+									<span class="mt-1 block text-sm leading-relaxed text-[#4A3B32]/60">{i18n.t('checkout.pickupDescription')}</span>
+								</span>
+							</button>
+
+							<button
+								type="button"
+								onclick={() => {
+									selectedDeliveryOption = 'delivery';
+									errorMsg = '';
+								}}
+								class="group flex min-h-44 flex-col items-start justify-between rounded-2xl border border-[#8C5A35]/15 bg-[#FFFBF7] p-5 text-left transition-all hover:-translate-y-0.5 hover:border-[#8C5A35] hover:shadow-lg hover:shadow-[#8C5A35]/10"
+							>
+								<span class="mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-white text-[#8C5A35] shadow-sm">
+									<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 17h8M8 17a2 2 0 11-4 0m4 0a2 2 0 10-4 0m12 0a2 2 0 114 0m-4 0a2 2 0 104 0M3 6h11v11H6M14 8h3l4 4v5h-2M5 11h4"></path></svg>
+								</span>
+								<span>
+									<span class="block text-lg font-extrabold text-[#4A3B32]">{i18n.t('checkout.delivery')}</span>
+									<span class="mt-1 block text-sm leading-relaxed text-[#4A3B32]/60">{i18n.t('checkout.deliveryDescription')}</span>
+								</span>
+							</button>
+						</div>
+					{:else}
 					<form method="POST" action="?/checkout" use:enhance={() => {
 						return async ({ result, update }) => {
 							loading = false;
@@ -83,6 +136,24 @@
 						<input type="hidden" name="cart_items" value={JSON.stringify(cart.items)} />
 						<input type="hidden" name="total_price" value={cart.totalPrice} />
 						<input type="hidden" name="locale" value={i18n.locale} />
+						<input type="hidden" name="delivery_option" value={selectedDeliveryOption} />
+
+						<div class="flex items-center justify-between gap-3 rounded-2xl bg-[#FFFBF7] px-4 py-3 border border-[#8C5A35]/10">
+							<div>
+								<p class="text-[11px] font-bold uppercase tracking-wider text-[#4A3B32]/50">{i18n.t('checkout.method')}</p>
+								<p class="text-sm font-bold text-[#4A3B32]">{selectedDeliveryOption === 'delivery' ? i18n.t('checkout.delivery') : i18n.t('checkout.pickup')}</p>
+							</div>
+							<button
+								type="button"
+								onclick={() => {
+									selectedDeliveryOption = '';
+									errorMsg = '';
+								}}
+								class="rounded-full border border-[#8C5A35]/20 px-4 py-2 text-xs font-bold text-[#8C5A35] transition-colors hover:bg-[#8C5A35]/10"
+							>
+								{i18n.t('checkout.changeDeliveryOption')}
+							</button>
+						</div>
 
 						<div class="grid md:grid-cols-2 gap-6">
 							<div>
@@ -97,19 +168,21 @@
 
 						<div class="grid md:grid-cols-2 gap-6">
 							<div>
-								<label for="delivery_date" class="block text-[13px] font-semibold text-[#4A3B32] mb-1.5 uppercase tracking-wide">{i18n.t('form.deliveryDate')} <span class="text-red-400">{i18n.t('form.required')}</span></label>
+								<label for="delivery_date" class="block text-[13px] font-semibold text-[#4A3B32] mb-1.5 uppercase tracking-wide">{selectedDeliveryOption === 'delivery' ? i18n.t('form.deliveryDate') : i18n.t('form.pickupDate')} <span class="text-red-400">{i18n.t('form.required')}</span></label>
 								<input type="date" id="delivery_date" name="delivery_date" required min={today} class="w-full px-4 py-3.5 bg-slate-50 border border-[#8C5A35]/20 focus:bg-white rounded-xl text-[15px] text-[#4A3B32] focus:outline-none focus:border-[#8C5A35] transition-all cursor-pointer" />
 							</div>
 							<div>
-								<label for="delivery_time" class="block text-[13px] font-semibold text-[#4A3B32] mb-1.5 uppercase tracking-wide">{i18n.t('form.deliveryTime')} <span class="text-red-400">{i18n.t('form.required')}</span></label>
-								<input type="time" id="delivery_time" name="delivery_time" required class="w-full px-4 py-3.5 bg-slate-50 border border-[#8C5A35]/20 focus:bg-white rounded-xl text-[15px] text-[#4A3B32] focus:outline-none focus:border-[#8C5A35] transition-all cursor-pointer" />
+								<label for="delivery_time" class="block text-[13px] font-semibold text-[#4A3B32] mb-1.5 uppercase tracking-wide">{selectedDeliveryOption === 'delivery' ? i18n.t('form.deliveryTime') : i18n.t('form.pickupTime')} {#if selectedDeliveryOption === 'delivery'}<span class="text-red-400">{i18n.t('form.required')}</span>{/if}</label>
+								<input type="time" id="delivery_time" name="delivery_time" required={selectedDeliveryOption === 'delivery'} class="w-full px-4 py-3.5 bg-slate-50 border border-[#8C5A35]/20 focus:bg-white rounded-xl text-[15px] text-[#4A3B32] focus:outline-none focus:border-[#8C5A35] transition-all cursor-pointer" />
 							</div>
 						</div>
 
-						<div>
-							<label for="address" class="block text-[13px] font-semibold text-[#4A3B32] mb-1.5 uppercase tracking-wide">{i18n.t('form.fullAddress')} <span class="text-red-400">{i18n.t('form.required')}</span></label>
-							<textarea id="address" name="address" required placeholder={i18n.t('form.addressPlaceholder')} rows="3" class="w-full px-4 py-3.5 bg-slate-50 border border-[#8C5A35]/20 focus:bg-white rounded-xl text-[15px] placeholder-slate-400 focus:outline-none focus:border-[#8C5A35] transition-all resize-none"></textarea>
-						</div>
+						{#if selectedDeliveryOption === 'delivery'}
+							<div>
+								<label for="address" class="block text-[13px] font-semibold text-[#4A3B32] mb-1.5 uppercase tracking-wide">{i18n.t('form.fullAddress')} <span class="text-red-400">{i18n.t('form.required')}</span></label>
+								<textarea id="address" name="address" required placeholder={i18n.t('form.addressPlaceholder')} rows="3" class="w-full px-4 py-3.5 bg-slate-50 border border-[#8C5A35]/20 focus:bg-white rounded-xl text-[15px] placeholder-slate-400 focus:outline-none focus:border-[#8C5A35] transition-all resize-none"></textarea>
+							</div>
+						{/if}
 
 						<div class="pt-6">
 							<button type="submit" disabled={loading || cart.items.length === 0} class="w-full py-4 bg-[#8C5A35] hover:bg-[#724828] active:scale-[0.99] text-white font-bold text-[16px] tracking-wide rounded-xl transition-all shadow-lg shadow-[#8C5A35]/20 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed">
@@ -120,6 +193,7 @@
 							</button>
 						</div>
 					</form>
+					{/if}
 				</div>
 			</div>
 
@@ -127,6 +201,13 @@
 			<div class="w-full lg:w-1/3">
 				<div class="bg-white rounded-3xl p-6 border border-[#8C5A35]/10 shadow-sm sticky top-24">
 					<h3 class="text-lg font-bold text-[#4A3B32] mb-6">{i18n.t('checkout.orderSummary')}</h3>
+
+					{#if selectedDeliveryOption}
+						<div class="mb-5 rounded-2xl bg-[#FFFBF7] px-4 py-3 border border-[#8C5A35]/10">
+							<p class="text-[11px] font-bold uppercase tracking-wider text-[#4A3B32]/50">{i18n.t('checkout.method')}</p>
+							<p class="text-sm font-bold text-[#4A3B32]">{selectedDeliveryOption === 'delivery' ? i18n.t('checkout.delivery') : i18n.t('checkout.pickup')}</p>
+						</div>
+					{/if}
 					
 					{#if mounted}
 						<div class="space-y-4 mb-6 max-h-[300px] overflow-y-auto pr-2">

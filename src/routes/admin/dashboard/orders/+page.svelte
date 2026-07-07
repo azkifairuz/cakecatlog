@@ -25,6 +25,18 @@
 		return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount);
 	}
 
+	function getDeliveryOption(order) {
+		if (order.delivery_option === 'pickup' || order.delivery_option === 'delivery') {
+			return order.delivery_option;
+		}
+
+		return order.address === 'Pickup' ? 'pickup' : 'delivery';
+	}
+
+	function getDeliveryOptionLabel(order) {
+		return getDeliveryOption(order) === 'pickup' ? 'Pickup' : 'Delivery';
+	}
+
 	let selectedOrder = $state(null);
 	let isDrawerOpen = $state(false);
 	let uploadingReceipt = $state(false);
@@ -102,6 +114,7 @@
 			'No Order': order.order_number,
 			'Nama Pelanggan': order.customer_name,
 			'No HP': order.phone_number,
+			'Metode': getDeliveryOptionLabel(order),
 			'Produk': order.products?.name ?? '-',
 			'Ukuran': order.cake_size ?? '-',
 			'Warna': order.cake_color ?? '-',
@@ -111,6 +124,7 @@
 			'Qty': order.quantity,
 			'Tanggal Kirim': order.delivery_date ?? '-',
 			'Waktu Kirim': order.delivery_time ?? '-',
+			'Alamat': getDeliveryOption(order) === 'delivery' ? (order.address ?? '-') : 'Pickup',
 			'Status': order.status,
 			'Total Harga': order.amount ?? 0,
 			'Catatan': order.notes ?? '-'
@@ -119,8 +133,10 @@
 		const ws = XLSX.utils.json_to_sheet(rows);
 		ws['!cols'] = [
 			{ wch: 4 }, { wch: 10 }, { wch: 22 }, { wch: 16 },
-			{ wch: 20 }, { wch: 10 }, { wch: 5 }, { wch: 14 },
-			{ wch: 12 }, { wch: 12 }, { wch: 16 }, { wch: 28 }
+			{ wch: 12 }, { wch: 20 }, { wch: 10 }, { wch: 10 },
+			{ wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 8 },
+			{ wch: 16 }, { wch: 12 }, { wch: 30 }, { wch: 14 },
+			{ wch: 16 }, { wch: 28 }
 		];
 		const wb = XLSX.utils.book_new();
 		XLSX.utils.book_append_sheet(wb, ws, 'Daftar Pesanan');
@@ -200,6 +216,9 @@
 						<p class="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">#{order.order_number}</p>
 						<h3 class="font-bold text-slate-800 text-lg leading-tight truncate">{order.customer_name}</h3>
 						<p class="text-[13px] text-slate-500 mt-0.5 truncate">{order.phone_number}</p>
+						<span class="mt-2 inline-flex rounded-full px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-wide {getDeliveryOption(order) === 'pickup' ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-blue-50 text-blue-700 border border-blue-200'}">
+							{getDeliveryOptionLabel(order)}
+						</span>
 					</div>
 					<!-- Status Dropdown -->
 					<form method="POST" action="?/updateStatus" use:enhance class="shrink-0">
@@ -239,7 +258,7 @@
 					<div class="flex justify-end items-center text-[12px] sm:text-[13px] mt-1">
 						<span class="flex items-center gap-1 text-slate-500 text-right">
 							<svg class="w-3.5 h-3.5 shrink-0 hidden sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-							{formatDate(order.delivery_date)} &bull; {order.delivery_time}
+							{getDeliveryOption(order) === 'pickup' ? 'Pickup' : 'Kirim'}: {formatDate(order.delivery_date)}{order.delivery_time ? ` • ${order.delivery_time}` : ''}
 						</span>
 					</div>
 				</div>
@@ -301,6 +320,24 @@
 			</div>
 
 			<div class="space-y-6 overflow-y-auto max-h-[70vh] pb-8 px-1">
+				<!-- Metode Pemenuhan -->
+				<div class="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+					<div class="mb-3 flex items-center justify-between gap-3">
+						<Label class="text-slate-800 font-bold text-[15px]">Metode Pesanan</Label>
+						<span class="rounded-full px-3 py-1 text-xs font-extrabold uppercase tracking-wide {getDeliveryOption(selectedOrder) === 'pickup' ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'}">
+							{getDeliveryOptionLabel(selectedOrder)}
+						</span>
+					</div>
+					<div class="grid gap-2 text-sm text-slate-600">
+						<p><span class="font-semibold text-slate-400">Tanggal:</span> {formatDate(selectedOrder.delivery_date)}</p>
+						<p><span class="font-semibold text-slate-400">Waktu:</span> {selectedOrder.delivery_time || '-'}</p>
+						{#if getDeliveryOption(selectedOrder) === 'delivery'}
+							<p class="whitespace-pre-line"><span class="font-semibold text-slate-400">Alamat:</span> {selectedOrder.address || '-'}</p>
+						{:else}
+							<p><span class="font-semibold text-slate-400">Keterangan:</span> Customer pilih pickup.</p>
+						{/if}
+					</div>
+				</div>
 				
 				<!-- Daftar Item -->
 				{#if selectedOrder.order_items && selectedOrder.order_items.length > 0}

@@ -111,6 +111,8 @@ export const translations = {
 			whatsappPlaceholder: 'Contoh: 08123456789',
 			deliveryDate: 'Tanggal Pengiriman',
 			deliveryTime: 'Waktu Pengiriman',
+			pickupDate: 'Tanggal Pickup',
+			pickupTime: 'Waktu Pickup (Opsional)',
 			date: 'Tanggal',
 			time: 'Waktu',
 			fullAddress: 'Alamat Lengkap',
@@ -151,7 +153,17 @@ export const translations = {
 		checkout: {
 			title: 'Checkout | desertbyfir',
 			back: 'Kembali Belanja',
+			deliveryOptionTitle: 'Pilih Metode Pesanan',
+			deliveryOptionDescription: 'Tentukan cara menerima pesanan sebelum mengisi data order.',
+			pickup: 'Pickup',
+			pickupDescription: 'Ambil sendiri di lokasi desertbyfir.',
+			delivery: 'Delivery',
+			deliveryDescription: 'Pesanan dikirim ke alamat tujuan.',
+			continueToOrder: 'Lanjut Isi Form',
+			changeDeliveryOption: 'Ubah metode pesanan',
+			method: 'Metode',
 			shippingInfo: 'Informasi Pengiriman',
+			pickupInfo: 'Informasi Pickup',
 			sendOrder: 'Kirim Pesanan',
 			orderSummary: 'Ringkasan Pesanan',
 			datePastError: 'Tanggal pengiriman tidak boleh di masa lalu!',
@@ -182,7 +194,10 @@ export const translations = {
 		},
 		server: {
 			invalidCart: 'Data keranjang tidak valid',
-			emptyCart: 'Keranjang kosong'
+			emptyCart: 'Keranjang kosong',
+			invalidDeliveryOption: 'Metode pesanan tidak valid',
+			deliveryAddressRequired: 'Alamat pengiriman wajib diisi',
+			deliveryTimeRequired: 'Waktu pengiriman wajib diisi'
 		}
 	},
 	en: {
@@ -284,6 +299,8 @@ export const translations = {
 			whatsappPlaceholder: 'Example: 08123456789',
 			deliveryDate: 'Delivery Date',
 			deliveryTime: 'Delivery Time',
+			pickupDate: 'Pickup Date',
+			pickupTime: 'Pickup Time (Optional)',
 			date: 'Date',
 			time: 'Time',
 			fullAddress: 'Full Address',
@@ -324,7 +341,17 @@ export const translations = {
 		checkout: {
 			title: 'Checkout | desertbyfir',
 			back: 'Continue Shopping',
+			deliveryOptionTitle: 'Choose Order Method',
+			deliveryOptionDescription: 'Choose how you want to receive your order before filling in the order form.',
+			pickup: 'Pickup',
+			pickupDescription: 'Pick up your order at desertbyfir.',
+			delivery: 'Delivery',
+			deliveryDescription: 'Have your order sent to a destination address.',
+			continueToOrder: 'Continue to Form',
+			changeDeliveryOption: 'Change order method',
+			method: 'Method',
 			shippingInfo: 'Delivery Information',
+			pickupInfo: 'Pickup Information',
 			sendOrder: 'Send Order',
 			orderSummary: 'Order Summary',
 			datePastError: 'Delivery date cannot be in the past!',
@@ -355,7 +382,10 @@ export const translations = {
 		},
 		server: {
 			invalidCart: 'Cart data is invalid',
-			emptyCart: 'Cart is empty'
+			emptyCart: 'Cart is empty',
+			invalidDeliveryOption: 'Order method is invalid',
+			deliveryAddressRequired: 'Delivery address is required',
+			deliveryTimeRequired: 'Delivery time is required'
 		}
 	}
 };

@@ -39,6 +39,19 @@ Jumlah       : ${order.quantity || 1}`;
 		vehicleText = order.delivery_vehicle === 'Car' ? 'Mobil' : 'Motor';
 	}
 
+	const deliveryOption = order.delivery_option === 'pickup' ? 'pickup' : 'delivery';
+	const deliveryLabel = deliveryOption === 'pickup' ? 'Pickup' : 'Delivery';
+	const fulfillmentDetails =
+		deliveryOption === 'pickup'
+			? `Metode       : ${deliveryLabel}
+Tanggal      : ${formatDate(order.delivery_date)}
+Waktu        : ${order.delivery_time || '-'}
+Keterangan   : Pickup di toko`
+			: `Metode       : ${deliveryLabel}
+Tanggal      : ${formatDate(order.delivery_date)}
+Waktu        : ${order.delivery_time || '-'}
+Alamat       : ${order.address || '-'}`;
+
 	return `🧁 *INVOICE - desertbyfir*
 ${line}
 
@@ -56,11 +69,9 @@ No. HP       : ${order.phone_number}
 ${dashes}
 ${itemsText}
 
-📅 *Pengiriman*
+📅 *${deliveryOption === 'pickup' ? 'Pickup' : 'Pengiriman'}*
 ${dashes}
-Tanggal      : ${formatDate(order.delivery_date)}
-Waktu        : ${order.delivery_time || '-'}
-Alamat       : ${order.address || '-'}
+${fulfillmentDetails}
 
 💰 *Total Pembayaran*
 ${line}

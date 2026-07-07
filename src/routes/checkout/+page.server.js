@@ -8,11 +8,28 @@ export const actions = {
 		
 		const customer_name = formData.get('customer_name');
 		const phone_number = formData.get('phone_number');
-		const address = formData.get('address');
+		const rawDeliveryOption = formData.get('delivery_option');
+		const delivery_option = rawDeliveryOption === 'pickup' || rawDeliveryOption === 'delivery' ? rawDeliveryOption : null;
+		const submittedAddress = String(formData.get('address') || '').trim();
 		const delivery_date = formData.get('delivery_date');
-		const delivery_time = formData.get('delivery_time');
+		const submittedDeliveryTime = String(formData.get('delivery_time') || '').trim();
 		const total_price = formData.get('total_price');
 		const cart_items_json = formData.get('cart_items');
+
+		if (!delivery_option) {
+			return { success: false, error: translate(locale, 'server.invalidDeliveryOption') };
+		}
+
+		if (delivery_option === 'delivery' && !submittedAddress) {
+			return { success: false, error: translate(locale, 'server.deliveryAddressRequired') };
+		}
+
+		if (delivery_option === 'delivery' && !submittedDeliveryTime) {
+			return { success: false, error: translate(locale, 'server.deliveryTimeRequired') };
+		}
+
+		const address = delivery_option === 'pickup' ? 'Pickup' : submittedAddress;
+		const delivery_time = submittedDeliveryTime || null;
 
 		let cartItems = [];
 		try {
@@ -35,6 +52,7 @@ export const actions = {
 			.insert({
 				customer_name,
 				phone_number,
+				delivery_option,
 				address,
 				delivery_date,
 				delivery_time,
