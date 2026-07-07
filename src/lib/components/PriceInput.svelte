@@ -3,17 +3,14 @@
 	let {
 		id = '',
 		name = '',
-		value = '',
+		value = $bindable(''),
 		required = false,
 		placeholder = '',
 		class: className = ''
 	} = $props();
 
-	// Raw numeric value
-	let rawValue = $state(value ? String(value) : '');
-	
-	// Formatted display value
-	let displayValue = $state(formatNumber(rawValue));
+	let rawValue = $state('');
+	let displayValue = $state('');
 
 	function formatNumber(numStr) {
 		if (!numStr) return '';
@@ -24,6 +21,7 @@
 		// Get input and strip all non-numeric characters
 		const inputVal = event.target.value.replace(/\D/g, '');
 		
+		value = inputVal;
 		rawValue = inputVal;
 		displayValue = formatNumber(inputVal);
 		
@@ -31,6 +29,12 @@
 		// if user typed invalid characters
 		event.target.value = displayValue;
 	}
+
+	$effect(() => {
+		const nextValue = value ? String(value) : '';
+		rawValue = nextValue;
+		displayValue = formatNumber(nextValue);
+	});
 </script>
 
 <div class="relative w-full">

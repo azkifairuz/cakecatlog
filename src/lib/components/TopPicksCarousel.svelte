@@ -2,6 +2,7 @@
 	import emblaCarouselSvelte from 'embla-carousel-svelte';
 	import Autoplay from 'embla-carousel-autoplay';
 	import { ChevronLeft, ChevronRight } from 'lucide-svelte';
+	import { getStartFromPrice } from '$lib/pricing.js';
 
 	let { topPicks = [], onQuickAdd = null } = $props();
 
@@ -109,7 +110,7 @@
 									<div class="flex items-center justify-between mt-auto pointer-events-auto">
 										<div class="flex flex-col">
 											<span class="text-[9px] sm:text-[10px] uppercase font-bold tracking-wider text-[#4A3B32]/50 mb-0.5">Start from</span>
-											<span class="font-bold text-[#4A3B32] text-[13px] sm:text-lg leading-none">{formatCurrency(product.base_price)}</span>
+											<span class="font-bold text-[#4A3B32] text-[13px] sm:text-lg leading-none">{formatCurrency(getStartFromPrice(product))}</span>
 										</div>
 										<div class="flex gap-2 items-center relative z-20">
 											{#if onQuickAdd}

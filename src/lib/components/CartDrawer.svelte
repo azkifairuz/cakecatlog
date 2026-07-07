@@ -9,6 +9,12 @@
 	function closeCart() {
 		cart.isOpen = false;
 	}
+
+	function handleBackdropKey(event) {
+		if (event.key === 'Escape' || (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' '))) {
+			closeCart();
+		}
+	}
 </script>
 
 {#if cart.isOpen}
@@ -17,6 +23,10 @@
 		class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 transition-opacity"
 		transition:fade={{ duration: 200 }}
 		onclick={closeCart}
+		onkeydown={handleBackdropKey}
+		role="button"
+		tabindex="0"
+		aria-label="Tutup keranjang"
 	></div>
 	
 	<!-- Drawer -->
@@ -29,6 +39,7 @@
 			<h2 class="text-xl font-bold text-[#4A3B32] font-['Playfair_Display']">Keranjang Belanja</h2>
 			<button 
 				onclick={closeCart}
+				aria-label="Tutup keranjang"
 				class="p-2 text-[#4A3B32]/50 hover:text-[#8C5A35] hover:bg-[#8C5A35]/10 rounded-full transition-colors"
 			>
 				<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -72,11 +83,19 @@
 							
 							<div class="text-xs text-[#8C5A35] mt-1 space-y-0.5">
 								{#if item.cake_flavor}<div>Rasa: {item.cake_flavor}</div>{/if}
+								{#if item.cake_color}<div>Warna: {item.cake_color}</div>{/if}
+								{#if item.has_cake_topper}<div>Cake topper: Ya</div>{/if}
 								{#if item.cake_text}<div>Tulisan: {item.cake_text}</div>{/if}
 							</div>
 							
+							<div class="mt-2 space-y-0.5 text-[11px] text-[#4A3B32]/55">
+								{#if item.size_price}<div>Size: {formatCurrency(item.size_price)}</div>{/if}
+								{#if item.dark_color_surcharge}<div>Warna gelap: +{formatCurrency(item.dark_color_surcharge)}</div>{/if}
+								{#if item.cake_topper_fee}<div>Cake topper: +{formatCurrency(item.cake_topper_fee)}</div>{/if}
+							</div>
+
 							<div class="font-bold text-[#4A3B32] mt-3">
-								{formatCurrency((item.price_at_order || 0) * (item.quantity || 1))}
+								{formatCurrency((item.estimated_unit_price || item.price_at_order || 0) * (item.quantity || 1))}
 							</div>
 						</div>
 					</div>
@@ -88,9 +107,10 @@
 		{#if cart.items.length > 0}
 			<div class="p-6 bg-[#FFFBF7] border-t border-[#8C5A35]/10 shadow-[0_-10px_20px_-10px_rgba(140,90,53,0.1)]">
 				<div class="flex items-center justify-between mb-4">
-					<span class="text-[#4A3B32]/70 font-medium text-sm">Total Belanja</span>
+					<span class="text-[#4A3B32]/70 font-medium text-sm">Estimasi Total</span>
 					<span class="text-2xl font-bold text-[#8C5A35]">{formatCurrency(cart.totalPrice)}</span>
 				</div>
+				<p class="mb-4 text-[11px] leading-relaxed text-[#4A3B32]/55">Harga hanya estimasi. Harga final akan dikirim melalui invoice setelah pesanan direview.</p>
 				<a href="/checkout" onclick={closeCart} class="block">
 					<button class="w-full py-4 bg-[#8C5A35] text-white font-bold rounded-xl shadow-lg shadow-[#8C5A35]/20 hover:bg-[#724828] active:scale-[0.98] transition-all flex items-center justify-center gap-2">
 						Lanjut Checkout

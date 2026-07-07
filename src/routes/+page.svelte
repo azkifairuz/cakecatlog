@@ -2,6 +2,7 @@
 	import HeroCarousel from '$lib/components/HeroCarousel.svelte';
 	import TopPicksCarousel from '$lib/components/TopPicksCarousel.svelte';
 	import QuickAddModal from '$lib/components/QuickAddModal.svelte';
+	import { getStartFromPrice } from '$lib/pricing.js';
 
 	let { data } = $props();
 
@@ -60,38 +61,38 @@
 		<h2 class="text-3xl font-bold text-[#4A3B32] mb-4 font-['Playfair_Display']">Mengapa Memilih Kami?</h2>
 		<p class="text-[#4A3B32]/60 text-sm max-w-xl mx-auto">Kami berkomitmen memberikan pelayanan dan kualitas terbaik untuk setiap pesanan Anda.</p>
 	</div>
-	<div class="container mx-auto px-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12 text-center max-w-5xl">
+	<div class="container mx-auto grid max-w-5xl grid-cols-4 gap-x-2 gap-y-8 px-4 text-center sm:gap-x-6 sm:px-6 lg:gap-12">
 		<!-- Feature 1 -->
-		<div class="flex flex-col items-center">
-			<div class="w-16 h-16 rounded-full bg-white shadow-sm border border-[#8C5A35]/10 flex items-center justify-center mb-5 text-[#8C5A35]">
-				<svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path></svg>
+		<div class="flex min-w-0 flex-col items-center">
+			<div class="mb-3 flex h-11 w-11 items-center justify-center rounded-full border border-[#8C5A35]/10 bg-white text-[#8C5A35] shadow-sm sm:mb-5 sm:h-16 sm:w-16">
+				<svg class="h-5 w-5 sm:h-7 sm:w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path></svg>
 			</div>
-			<h4 class="font-bold text-[#4A3B32] mb-2 text-[15px]">Garansi Kualitas</h4>
-			<p class="text-[13px] text-[#4A3B32]/60 leading-relaxed">Kami menggunakan bahan baku premium pilihan untuk hasil yang maksimal.</p>
+			<h4 class="mb-0 w-full break-words text-[10px] font-bold leading-tight text-[#4A3B32] sm:mb-2 sm:text-[15px] sm:leading-snug">Garansi Kualitas</h4>
+			<!-- <p class="text-[13px] text-[#4A3B32]/60 leading-relaxed">Kami menggunakan bahan baku premium pilihan untuk hasil yang maksimal.</p> -->
 		</div>
 		<!-- Feature 2 -->
-		<div class="flex flex-col items-center">
-			<div class="w-16 h-16 rounded-full bg-white shadow-sm border border-[#8C5A35]/10 flex items-center justify-center mb-5 text-[#8C5A35]">
-				<svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+		<div class="flex min-w-0 flex-col items-center">
+			<div class="mb-3 flex h-11 w-11 items-center justify-center rounded-full border border-[#8C5A35]/10 bg-white text-[#8C5A35] shadow-sm sm:mb-5 sm:h-16 sm:w-16">
+				<svg class="h-5 w-5 sm:h-7 sm:w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
 			</div>
-			<h4 class="font-bold text-[#4A3B32] mb-2 text-[15px]">Pengiriman Tepat Waktu</h4>
-			<p class="text-[13px] text-[#4A3B32]/60 leading-relaxed">Pesanan Anda akan tiba tepat pada waktu yang telah disepakati.</p>
+			<h4 class="mb-0 w-full break-words text-[10px] font-bold leading-tight text-[#4A3B32] sm:mb-2 sm:text-[15px] sm:leading-snug">Pengiriman Tepat Waktu</h4>
+			<!-- <p class="text-[13px] text-[#4A3B32]/60 leading-relaxed">Pesanan Anda akan tiba tepat pada waktu yang telah disepakati.</p> -->
 		</div>
 		<!-- Feature 3 -->
-		<div class="flex flex-col items-center">
-			<div class="w-16 h-16 rounded-full bg-white shadow-sm border border-[#8C5A35]/10 flex items-center justify-center mb-5 text-[#8C5A35]">
-				<svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+		<div class="flex min-w-0 flex-col items-center">
+			<div class="mb-3 flex h-11 w-11 items-center justify-center rounded-full border border-[#8C5A35]/10 bg-white text-[#8C5A35] shadow-sm sm:mb-5 sm:h-16 sm:w-16">
+				<svg class="h-5 w-5 sm:h-7 sm:w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
 			</div>
-			<h4 class="font-bold text-[#4A3B32] mb-2 text-[15px]">Resep Rahasia</h4>
-			<p class="text-[13px] text-[#4A3B32]/60 leading-relaxed">Dibuat dari resep original yang disempurnakan oleh ahlinya.</p>
+			<h4 class="mb-0 w-full break-words text-[10px] font-bold leading-tight text-[#4A3B32] sm:mb-2 sm:text-[15px] sm:leading-snug">Resep Rahasia</h4>
+			<!-- <p class="text-[13px] text-[#4A3B32]/60 leading-relaxed">Dibuat dari resep original yang disempurnakan oleh ahlinya.</p> -->
 		</div>
 		<!-- Feature 4 -->
-		<div class="flex flex-col items-center">
-			<div class="w-16 h-16 rounded-full bg-white shadow-sm border border-[#8C5A35]/10 flex items-center justify-center mb-5 text-[#8C5A35]">
-				<svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+		<div class="flex min-w-0 flex-col items-center">
+			<div class="mb-3 flex h-11 w-11 items-center justify-center rounded-full border border-[#8C5A35]/10 bg-white text-[#8C5A35] shadow-sm sm:mb-5 sm:h-16 sm:w-16">
+				<svg class="h-5 w-5 sm:h-7 sm:w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
 			</div>
-			<h4 class="font-bold text-[#4A3B32] mb-2 text-[15px]">Pelayanan Ramah</h4>
-			<p class="text-[13px] text-[#4A3B32]/60 leading-relaxed">Customer service kami siap membantu mewujudkan kue impian Anda.</p>
+			<h4 class="mb-0 w-full break-words text-[10px] font-bold leading-tight text-[#4A3B32] sm:mb-2 sm:text-[15px] sm:leading-snug">Pelayanan Ramah</h4>
+			<!-- <p class="text-[13px] text-[#4A3B32]/60 leading-relaxed">Customer service kami siap membantu mewujudkan kue impian Anda.</p> -->
 		</div>
 	</div>
 </section>
@@ -155,7 +156,7 @@
 							<div class="flex items-center justify-between mt-auto pointer-events-auto">
 								<div class="flex flex-col">
 									<span class="text-[8px] sm:text-[10px] uppercase font-bold tracking-wider text-[#4A3B32]/50 mb-0.5">Start from</span>
-									<span class="font-bold text-[#4A3B32] text-[13px] sm:text-lg leading-none">{formatCurrency(product.base_price)}</span>
+									<span class="font-bold text-[#4A3B32] text-[13px] sm:text-lg leading-none">{formatCurrency(getStartFromPrice(product))}</span>
 								</div>
 								<div class="flex gap-2 items-center relative z-20">
 									<button onclick={() => openQuickAdd(product)} class="p-2 sm:p-2.5 rounded-full bg-[#8C5A35]/10 text-[#8C5A35] hover:bg-[#8C5A35] hover:text-white transition-colors" title="Tambah ke Keranjang">

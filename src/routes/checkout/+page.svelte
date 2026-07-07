@@ -136,17 +136,23 @@
 									</div>
 									<div class="flex-1 min-w-0">
 										<h4 class="font-bold text-sm text-[#4A3B32] truncate">{item.product_name}</h4>
-										<p class="text-xs text-[#4A3B32]/70 mt-0.5">{item.quantity}x @ {formatCurrency(item.price_at_order)}</p>
-										<div class="text-xs font-semibold text-[#8C5A35] mt-1">{formatCurrency(item.price_at_order * item.quantity)}</div>
+										<p class="text-xs text-[#4A3B32]/70 mt-0.5">{item.quantity}x @ {formatCurrency(item.estimated_unit_price || item.price_at_order)}</p>
+										{#if item.cake_color || item.has_cake_topper}
+											<p class="mt-0.5 text-[11px] text-[#4A3B32]/50">
+												{#if item.cake_color}Warna: {item.cake_color}{/if}{item.cake_color && item.has_cake_topper ? ' • ' : ''}{#if item.has_cake_topper}Cake topper{/if}
+											</p>
+										{/if}
+										<div class="text-xs font-semibold text-[#8C5A35] mt-1">{formatCurrency((item.estimated_unit_price || item.price_at_order) * item.quantity)}</div>
 									</div>
 								</div>
 							{/each}
 						</div>
 
 						<div class="border-t border-[#8C5A35]/10 pt-4 flex items-center justify-between">
-							<span class="font-medium text-[#4A3B32]">Total Pembayaran</span>
+							<span class="font-medium text-[#4A3B32]">Estimasi Total</span>
 							<span class="text-xl font-bold text-[#8C5A35]">{formatCurrency(cart.totalPrice)}</span>
 						</div>
+						<p class="mt-3 text-[11px] leading-relaxed text-[#4A3B32]/55">Harga hanya estimasi. Harga final akan dikirim melalui invoice setelah pesanan direview.</p>
 					{/if}
 				</div>
 			</div>

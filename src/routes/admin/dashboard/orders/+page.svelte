@@ -315,8 +315,15 @@
 										<p><span class="text-slate-400">Size:</span> {item.cake_size}</p>
 										{#if item.cake_flavor}<p><span class="text-slate-400">Rasa:</span> {item.cake_flavor}</p>{/if}
 										{#if item.cake_color}<p><span class="text-slate-400">Warna:</span> {item.cake_color}</p>{/if}
+										{#if item.has_cake_topper}<p><span class="text-slate-400">Cake topper:</span> Ya</p>{/if}
 										{#if item.cake_text}<p class="col-span-2"><span class="text-slate-400">Tulisan Kue:</span> {item.cake_text}</p>{/if}
 										{#if item.gift_card_text}<p class="col-span-2"><span class="text-slate-400">Kartu Ucapan:</span> {item.gift_card_text}</p>{/if}
+									</div>
+									<div class="mt-2 grid grid-cols-2 gap-y-1 gap-x-2 border-t border-slate-200 pt-2 text-xs text-slate-600">
+										{#if item.size_price}<p><span class="text-slate-400">Harga size:</span> {formatCurrency(item.size_price)}</p>{/if}
+										{#if item.dark_color_surcharge}<p><span class="text-slate-400">Warna gelap:</span> +{formatCurrency(item.dark_color_surcharge)}</p>{/if}
+										{#if item.cake_topper_fee}<p><span class="text-slate-400">Topper:</span> +{formatCurrency(item.cake_topper_fee)}</p>{/if}
+										{#if item.estimated_subtotal}<p class="col-span-2 font-bold text-slate-800"><span class="text-slate-400 font-medium">Estimasi item:</span> {formatCurrency(item.estimated_subtotal)}</p>{/if}
 									</div>
 									{#if item.reference_image_url}
 										<div class="mt-2 pt-2 border-t border-slate-200">

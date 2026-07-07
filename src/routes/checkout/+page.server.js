@@ -24,6 +24,9 @@ export const actions = {
 			return { success: false, error: 'Keranjang kosong' };
 		}
 
+		const firstItem = cartItems[0];
+		const estimatedSubtotal = parseFloat(total_price) || 0;
+
 		// 1. Insert Order
 		const { data: orderData, error: orderError } = await supabase
 			.from('orders')
@@ -46,7 +49,13 @@ export const actions = {
 				gift_card_text: cartItems[0].gift_card_text || null,
 				reference_image_url: cartItems[0].reference_image_url || null,
 				email: null,
-				amount: parseFloat(total_price) || 0
+				amount: estimatedSubtotal,
+				estimated_subtotal: estimatedSubtotal,
+				size_price: firstItem.size_price || firstItem.price_at_order || 0,
+				dark_color_surcharge: firstItem.dark_color_surcharge || 0,
+				cake_topper_fee: firstItem.cake_topper_fee || 0,
+				estimated_unit_price: firstItem.estimated_unit_price || firstItem.price_at_order || 0,
+				has_cake_topper: Boolean(firstItem.has_cake_topper)
 			})
 			.select('id')
 			.single();
@@ -71,7 +80,13 @@ export const actions = {
 			cake_text: item.cake_text,
 			gift_card_text: item.gift_card_text,
 			reference_image_url: item.reference_image_url,
-			price_at_order: item.price_at_order
+			price_at_order: item.price_at_order,
+			size_price: item.size_price || item.price_at_order || 0,
+			dark_color_surcharge: item.dark_color_surcharge || 0,
+			cake_topper_fee: item.cake_topper_fee || 0,
+			estimated_unit_price: item.estimated_unit_price || item.price_at_order || 0,
+			estimated_subtotal: item.estimated_subtotal || ((item.estimated_unit_price || item.price_at_order || 0) * (item.quantity || 1)),
+			has_cake_topper: Boolean(item.has_cake_topper)
 		}));
 
 		const { error: itemsError } = await supabase

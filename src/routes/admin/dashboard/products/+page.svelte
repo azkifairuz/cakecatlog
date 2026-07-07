@@ -9,6 +9,7 @@
 	import { Textarea } from '$lib/components/ui/textarea';
 	import * as Card from '$lib/components/ui/card';
 	import { fly, fade } from 'svelte/transition';
+	import { getStartFromPrice, normalizeSizePrices, parseCommaOptions, parsePrice } from '$lib/pricing.js';
 
 	let { data, form } = $props();
 	let isFormOpen = $state(false);
@@ -18,6 +19,7 @@
 	let newImages = $state([]);
 	let existingImages = $state([]);
 	let deletedImageIds = $state([]);
+	let sizePriceRows = $state([{ label: '', price: '' }]);
 
 	// Detail drawer
 	let selectedProductDetail = $state(null);
@@ -28,6 +30,7 @@
 		newImages = [];
 		existingImages = [];
 		deletedImageIds = [];
+		sizePriceRows = [{ label: '', price: '' }];
 		isFormOpen = true;
 	}
 
@@ -36,6 +39,7 @@
 		newImages = [];
 		existingImages = product.product_images ? [...product.product_images] : [];
 		deletedImageIds = [];
+		sizePriceRows = getSizePriceRows(product);
 		isFormOpen = true;
 		
 		// Scroll to top
@@ -87,6 +91,45 @@
 		selectedProductDetail = null;
 	}
 
+	function getSizePriceRows(product) {
+		const rows = normalizeSizePrices(product)
+			.filter((item) => item.label && item.price > 0)
+			.map((item) => ({ label: item.label, price: String(item.price) }));
+
+		if (rows.length > 0) return rows;
+
+		const legacyRows = parseCommaOptions(product?.sizes).map((label) => ({
+			label,
+			price: String(parsePrice(product?.base_price) || '')
+		}));
+
+		return legacyRows.length > 0 ? legacyRows : [{ label: '', price: '' }];
+	}
+
+	function addSizePriceRow() {
+		sizePriceRows = [...sizePriceRows, { label: '', price: '' }];
+	}
+
+	function removeSizePriceRow(index) {
+		sizePriceRows = sizePriceRows.filter((_, i) => i !== index);
+		if (sizePriceRows.length === 0) {
+			sizePriceRows = [{ label: '', price: '' }];
+		}
+	}
+
+	function cleanSizePriceRows() {
+		return sizePriceRows
+			.map((row) => ({
+				label: row.label?.trim() ?? '',
+				price: parsePrice(row.price)
+			}))
+			.filter((row) => row.label && row.price > 0);
+	}
+
+	function handlePriceTyping(event, index) {
+		sizePriceRows[index].price = event.target.value.replace(/\D/g, '');
+	}
+
 	function formatCurrency(amount) {
 		if (!amount) return '-';
 		return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount);
@@ -115,6 +158,9 @@
 		<Card.Content class="pt-6">
 			<form method="POST" action={editingProduct ? '?/updateProduct' : '?/createProduct'} enctype="multipart/form-data" use:enhance={({ formData }) => {
 				isSubmitting = true;
+				const cleanedSizePrices = cleanSizePriceRows();
+				formData.set('size_prices', JSON.stringify(cleanedSizePrices));
+				formData.set('sizes', cleanedSizePrices.map((row) => row.label).join(', '));
 				// Prevent default file input from sending if any
 				formData.delete('images_upload');
 				
@@ -173,16 +219,54 @@
 
 				<div class="grid gap-2 md:col-span-2 mt-2 pt-4 border-t border-slate-100">
 					<h3 class="text-sm font-semibold text-slate-800">Product Customization Options</h3>
-					<p class="text-xs text-muted-foreground mb-2">Pisahkan dengan koma jika lebih dari satu (contoh: Merah, Kuning)</p>
+					<p class="text-xs text-muted-foreground mb-2">Harga ukuran dipakai untuk estimasi checkout. Harga final tetap bisa diedit di halaman order.</p>
 					
 					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-						<div class="grid gap-2">
-							<Label for="sizes">Ukuran (Sizes)</Label>
-							<Input id="sizes" name="sizes" placeholder="Contoh: 8cm, 10cm, 12cm" value={editingProduct?.sizes ?? ''} class="bg-slate-50 focus:bg-white" />
+						<div class="grid gap-3 md:col-span-2">
+							<div class="flex items-center justify-between gap-3">
+								<div>
+									<Label>Ukuran & Harga</Label>
+									<p class="mt-1 text-xs text-muted-foreground">Contoh: 10cm - Rp800.000</p>
+								</div>
+								<Button type="button" variant="outline" size="sm" class="rounded-full" onclick={addSizePriceRow}>+ Size</Button>
+							</div>
+
+							<div class="space-y-3">
+								{#each sizePriceRows as row, index}
+									<div class="grid grid-cols-[1fr_1fr_auto] gap-2">
+										<Input
+											aria-label={`Nama ukuran ${index + 1}`}
+											placeholder="10cm"
+											bind:value={row.label}
+											class="bg-slate-50 focus:bg-white"
+										/>
+										<div class="relative">
+											<span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm font-semibold text-slate-500">Rp</span>
+											<input
+												type="text"
+												inputmode="numeric"
+												aria-label={`Harga ukuran ${index + 1}`}
+												placeholder="800000"
+												value={row.price}
+												oninput={(event) => handlePriceTyping(event, index)}
+												class="flex h-9 w-full rounded-md border border-input bg-slate-50 px-3 py-2 pl-9 text-sm shadow-xs transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3 focus-visible:outline-none"
+											/>
+										</div>
+										<Button type="button" variant="ghost" size="icon" class="text-red-500 hover:bg-red-50 hover:text-red-600" onclick={() => removeSizePriceRow(index)} aria-label={`Hapus ukuran ${index + 1}`}>
+											<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+										</Button>
+									</div>
+								{/each}
+							</div>
 						</div>
 						<div class="grid gap-2">
 							<Label for="colors">Warna (Colors)</Label>
 							<Input id="colors" name="colors" placeholder="Contoh: Merah, Putih, Custom" value={editingProduct?.colors ?? ''} class="bg-slate-50 focus:bg-white" />
+						</div>
+						<div class="grid gap-2">
+							<Label for="dark_color_surcharge">Biaya Warna Gelap (Rp)</Label>
+							<PriceInput id="dark_color_surcharge" name="dark_color_surcharge" placeholder="0" value={editingProduct?.dark_color_surcharge ?? ''} class="bg-slate-50 focus:bg-white" />
+							<p class="text-[11px] text-muted-foreground">Berlaku untuk merah, hitam, navy, chocolate, forest green.</p>
 						</div>
 						<div class="grid gap-2">
 							<Label for="flavors">Rasa (Flavors)</Label>
@@ -210,7 +294,7 @@
 						{#each existingImages as img, i}
 							<div class="relative aspect-square rounded-xl overflow-hidden border border-slate-200 group">
 								<img src={img.image_url} alt="Product" class="w-full h-full object-cover" />
-								<button type="button" onclick={() => removeExistingImage(img)} class="absolute top-1 right-1 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-sm">
+								<button type="button" onclick={() => removeExistingImage(img)} aria-label={`Hapus gambar produk ${i + 1}`} class="absolute top-1 right-1 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-sm">
 									<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
 								</button>
 								{#if i === 0 && newImages.length === 0}
@@ -223,7 +307,7 @@
 						{#each newImages as img, i}
 							<div class="relative aspect-square rounded-xl overflow-hidden border border-blue-200 group">
 								<img src={img.previewUrl} alt="New Preview" class="w-full h-full object-cover" />
-								<button type="button" onclick={() => removeNewImage(i)} class="absolute top-1 right-1 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-sm">
+								<button type="button" onclick={() => removeNewImage(i)} aria-label={`Hapus gambar baru ${i + 1}`} class="absolute top-1 right-1 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-sm">
 									<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
 								</button>
 								<span class="absolute top-1 left-1 bg-blue-500 text-white text-[9px] px-1.5 py-0.5 rounded font-bold uppercase">Baru</span>
@@ -299,7 +383,7 @@
 						{/if}
 					</Table.Cell>
 					<Table.Cell>
-						<span class="font-semibold text-slate-700">{formatCurrency(product.base_price)}</span>
+						<span class="font-semibold text-slate-700">{formatCurrency(getStartFromPrice(product))}</span>
 					</Table.Cell>
 					<Table.Cell>
 						<form method="POST" action="?/toggleAvailability" use:enhance>
@@ -365,7 +449,7 @@
 						{/if}
 					</div>
 				</div>
-				<button onclick={closeDetail} class="p-2 -mr-2 text-slate-400 hover:text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-full transition-colors">
+				<button onclick={closeDetail} aria-label="Tutup detail produk" class="p-2 -mr-2 text-slate-400 hover:text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-full transition-colors">
 					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
 				</button>
 			</div>
@@ -392,7 +476,7 @@
 				<div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
 					<div>
 						<h4 class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Start From</h4>
-						<p class="font-bold text-slate-800 text-lg">{formatCurrency(selectedProductDetail.base_price)}</p>
+						<p class="font-bold text-slate-800 text-lg">{formatCurrency(getStartFromPrice(selectedProductDetail))}</p>
 					</div>
 					<div class="sm:col-span-2">
 						<h4 class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Deskripsi</h4>
@@ -408,11 +492,16 @@
 					<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 						<div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
 							<span class="block text-xs font-semibold text-slate-500 mb-1">Ukuran (Sizes)</span>
-							<p class="text-sm font-medium text-slate-800">{selectedProductDetail.sizes || '-'}</p>
+							<div class="space-y-1">
+								{#each normalizeSizePrices(selectedProductDetail) as sizeOption}
+									<p class="text-sm font-medium text-slate-800">{sizeOption.label}: {formatCurrency(sizeOption.price)}</p>
+								{/each}
+							</div>
 						</div>
 						<div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
 							<span class="block text-xs font-semibold text-slate-500 mb-1">Warna (Colors)</span>
 							<p class="text-sm font-medium text-slate-800">{selectedProductDetail.colors || '-'}</p>
+							<p class="mt-1 text-xs text-slate-500">Warna gelap: +{formatCurrency(selectedProductDetail.dark_color_surcharge || 0)}</p>
 						</div>
 						<div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
 							<span class="block text-xs font-semibold text-slate-500 mb-1">Rasa (Flavors)</span>

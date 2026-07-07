@@ -46,7 +46,10 @@ class CartStore {
 	}
 
 	get totalPrice() {
-		return this.items.reduce((sum, item) => sum + ((item.price_at_order || 0) * (item.quantity || 1)), 0);
+		return this.items.reduce((sum, item) => {
+			const unitPrice = item.estimated_unit_price || item.price_at_order || 0;
+			return sum + (unitPrice * (item.quantity || 1));
+		}, 0);
 	}
 }
 

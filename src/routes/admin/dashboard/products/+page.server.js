@@ -1,3 +1,5 @@
+import { parsePrice } from '$lib/pricing.js';
+
 export const load = async ({ locals: { supabase } }) => {
 	const { data: products, error } = await supabase
 		.from('products')
@@ -23,6 +25,22 @@ export const load = async ({ locals: { supabase } }) => {
 	};
 };
 
+function parseSubmittedSizePrices(value) {
+	try {
+		const parsed = JSON.parse(value || '[]');
+		if (!Array.isArray(parsed)) return [];
+
+		return parsed
+			.map((item) => ({
+				label: String(item?.label ?? '').trim(),
+				price: parsePrice(item?.price)
+			}))
+			.filter((item) => item.label && item.price > 0);
+	} catch {
+		return [];
+	}
+}
+
 export const actions = {
 	createProduct: async ({ request, locals: { supabase } }) => {
 		const formData = await request.formData();
@@ -33,12 +51,14 @@ export const actions = {
 		const category_id = formData.get('category_id');
 		const images = formData.getAll('images');
 		
-		const sizes = formData.get('sizes');
+		const size_prices = parseSubmittedSizePrices(formData.get('size_prices'));
+		const sizes = size_prices.map((item) => item.label).join(', ') || formData.get('sizes');
 		const colors = formData.get('colors');
 		const flavors = formData.get('flavors');
 		const crown_options = formData.get('crown_options');
 		const edible_glitter = formData.get('edible_glitter');
 		const handling_warning = formData.get('handling_warning');
+		const dark_color_surcharge = parsePrice(formData.get('dark_color_surcharge'));
 
 		if (!name || !base_price) {
 			return { success: false, error: 'Name and Base Price are required' };
@@ -58,7 +78,9 @@ export const actions = {
 				flavors,
 				crown_options,
 				edible_glitter,
-				handling_warning
+				handling_warning,
+				size_prices,
+				dark_color_surcharge
 			})
 			.select()
 			.single();
@@ -113,12 +135,14 @@ export const actions = {
 		const images = formData.getAll('images');
 		const deletedImageIdsStr = formData.get('deleted_image_ids');
 		
-		const sizes = formData.get('sizes');
+		const size_prices = parseSubmittedSizePrices(formData.get('size_prices'));
+		const sizes = size_prices.map((item) => item.label).join(', ') || formData.get('sizes');
 		const colors = formData.get('colors');
 		const flavors = formData.get('flavors');
 		const crown_options = formData.get('crown_options');
 		const edible_glitter = formData.get('edible_glitter');
 		const handling_warning = formData.get('handling_warning');
+		const dark_color_surcharge = parsePrice(formData.get('dark_color_surcharge'));
 
 		if (!id || !name || !base_price) {
 			return { success: false, error: 'ID, Name, and Base Price are required' };
@@ -138,7 +162,9 @@ export const actions = {
 				flavors,
 				crown_options,
 				edible_glitter,
-				handling_warning
+				handling_warning,
+				size_prices,
+				dark_color_surcharge
 			})
 			.eq('id', id);
 

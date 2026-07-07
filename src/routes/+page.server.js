@@ -2,11 +2,7 @@ export const load = async ({ locals: { supabase } }) => {
 	const { data: products, error } = await supabase
 		.from('products')
 		.select(`
-			id,
-			name,
-			description,
-			base_price,
-			category_id,
+			*,
 			category:categories (
 				name,
 				slug
