@@ -57,7 +57,7 @@
 		<p class="text-white/80 text-xs sm:text-sm font-bold uppercase tracking-[0.3em] mb-4 drop-shadow-md">
 			{i18n.t('hero.eyebrow')}
 		</p>
-		<h1 class="text-6xl md:text-8xl lg:text-9xl font-serif italic text-white mb-8 font-['Playfair_Display'] leading-none drop-shadow-lg">
+		<h1 class="font-pinyon text-6xl leading-none text-white drop-shadow-lg mb-8 md:text-8xl lg:text-9xl">
 			desertbyfir
 		</h1>
 		<p class="text-white/90 leading-relaxed max-w-lg mx-auto mb-10 text-base sm:text-lg drop-shadow-md">

@@ -21,15 +21,11 @@
 	});
 </script>
 
-<svelte:head>
-	<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-</svelte:head>
-
 {#if !isAdminRoute}
 	<div class="min-h-screen flex flex-col font-['Plus_Jakarta_Sans'] bg-white">
 		<header class="w-full bg-white relative z-50">
 			<div class="container mx-auto flex h-20 items-center justify-between px-6 lg:px-12">
-				<a href="/" class="text-[#8C5A35] font-serif italic text-3xl tracking-wider font-['Playfair_Display']">desertbyfir</a>
+				<a href="/" class="font-pinyon text-3xl tracking-wider text-[#8C5A35]">desertbyfir</a>
 				
 				<nav class="hidden md:flex items-center gap-8 text-[#4A3B32] text-sm font-medium">
 					<a href="/#about" class="hover:text-[#8C5A35] transition-colors">{i18n.t('nav.about')}</a>
@@ -108,7 +104,7 @@
 
 			<div class="bg-[#8C5A35] py-8 text-white">
 				<div class="container mx-auto flex flex-col items-center justify-between gap-4 px-6 text-center sm:flex-row lg:px-12">
-					<a href="/" class="font-['Playfair_Display'] text-3xl italic tracking-wider">desertbyfir</a>
+					<a href="/" class="font-pinyon text-3xl tracking-wider">desertbyfir</a>
 					<p class="text-xs text-white/70">
 						&copy; {new Date().getFullYear()} desertbyfir Cake Shop. {i18n.t('footer.rights')}
 					</p>
