@@ -46,8 +46,12 @@ function getInvoiceItems(order) {
 			number: index + 1,
 			name: item.products?.name || 'Kue',
 			quantity: item.quantity || 1,
-			size: item.cake_size || '-',
-			flavor: item.cake_flavor || '-',
+			size: item.customized_options?.size?.name || item.cake_size || '-',
+			flavor: item.customized_options?.flavor?.name || item.cake_flavor || '-',
+			color: item.customized_options?.color?.name || item.cake_color || '-',
+			crown: item.customized_options?.crown?.name || item.crown_option || '-',
+			glitter: item.customized_options?.glitter?.name || item.add_edible_glitter || '-',
+			hasCakeTopper: Boolean(item.customized_options?.cake_topper?.selected ?? item.has_cake_topper),
 			text: item.cake_text || '-',
 			subtotal: item.estimated_subtotal || (item.estimated_unit_price || item.price_at_order || 0) * (item.quantity || 1)
 		}));
@@ -58,8 +62,12 @@ function getInvoiceItems(order) {
 			number: 1,
 			name: order.product_name || 'Kue',
 			quantity: order.quantity || 1,
-			size: order.cake_size || '-',
-			flavor: order.cake_flavor || '-',
+			size: order.customized_options?.size?.name || order.cake_size || '-',
+			flavor: order.customized_options?.flavor?.name || order.cake_flavor || '-',
+			color: order.customized_options?.color?.name || order.cake_color || '-',
+			crown: order.customized_options?.crown?.name || order.crown_option || '-',
+			glitter: order.customized_options?.glitter?.name || order.add_edible_glitter || '-',
+			hasCakeTopper: Boolean(order.customized_options?.cake_topper?.selected ?? order.has_cake_topper),
 			text: order.cake_text || '-',
 			subtotal: order.estimated_subtotal || order.amount || 0
 		}
@@ -78,6 +86,10 @@ export function generateInvoiceText(order) {
 			return `${item.number}. *${item.name}* (${item.quantity}x)
    Ukuran: ${item.size}
    Rasa: ${item.flavor}
+   Warna: ${item.color}
+   Crown: ${item.crown}
+   Glitter: ${item.glitter}
+   Cake Topper: ${item.hasCakeTopper ? 'Ya' : 'Tidak'}
    Tulisan: ${item.text}`;
 		})
 		.join('\n\n');
@@ -149,7 +161,8 @@ export function generateInvoiceEmail(order) {
 				<tr>
 					<td style="padding:12px;border-bottom:1px solid #f1e7dc;">
 						<strong>${item.number}. ${escapeHtml(item.name)}</strong><br />
-						<span style="color:#7a6a5f;font-size:13px;">Ukuran: ${escapeHtml(item.size)} · Rasa: ${escapeHtml(item.flavor)} · Qty: ${item.quantity}x</span>
+						<span style="color:#7a6a5f;font-size:13px;">Ukuran: ${escapeHtml(item.size)} · Rasa: ${escapeHtml(item.flavor)} · Warna: ${escapeHtml(item.color)} · Qty: ${item.quantity}x</span>
+						<br /><span style="color:#7a6a5f;font-size:13px;">Crown: ${escapeHtml(item.crown)} · Glitter: ${escapeHtml(item.glitter)} · Topper: ${item.hasCakeTopper ? 'Ya' : 'Tidak'}</span>
 						${item.text && item.text !== '-' ? `<br /><span style="color:#7a6a5f;font-size:13px;">Tulisan: ${escapeHtml(item.text)}</span>` : ''}
 					</td>
 					<td style="padding:12px;border-bottom:1px solid #f1e7dc;text-align:right;white-space:nowrap;">${formatCurrency(item.subtotal)}</td>

@@ -10,9 +10,9 @@ export async function POST({ request, locals: { supabase } }) {
 			return json({ success: false, message: 'Order ID wajib diisi.' }, { status: 400 });
 		}
 
-		const resendApiKey = env.RESEND_API_KEY;
-		const emailFrom = env.EMAIL_FROM;
-		const emailReplyTo = env.EMAIL_REPLY_TO;
+		const resendApiKey = env.RESEND_API_KEY || process.env.RESEND_API_KEY;
+		const emailFrom = env.EMAIL_FROM || process.env.EMAIL_FROM;
+		const emailReplyTo = env.EMAIL_REPLY_TO || process.env.EMAIL_REPLY_TO;
 
 		if (!resendApiKey || !emailFrom) {
 			return json(

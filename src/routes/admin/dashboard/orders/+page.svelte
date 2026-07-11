@@ -37,6 +37,14 @@
 		return getDeliveryOption(order) === 'pickup' ? 'Pickup' : 'Delivery';
 	}
 
+	function getItemOption(item, key, fallback = '-') {
+		return item.customized_options?.[key]?.name || fallback || '-';
+	}
+
+	function hasItemTopper(item) {
+		return Boolean(item.customized_options?.cake_topper?.selected ?? item.has_cake_topper);
+	}
+
 	let selectedOrder = $state(null);
 	let isDrawerOpen = $state(false);
 	let uploadingReceipt = $state(false);
@@ -387,10 +395,12 @@
 									<h4 class="font-bold text-slate-800 text-sm mb-1">{item.products?.name ?? 'Unknown'}</h4>
 									<div class="grid grid-cols-2 gap-y-1 gap-x-2 text-xs text-slate-600">
 										<p><span class="text-slate-400">Qty:</span> {item.quantity}</p>
-										<p><span class="text-slate-400">Size:</span> {item.cake_size}</p>
-										{#if item.cake_flavor}<p><span class="text-slate-400">Rasa:</span> {item.cake_flavor}</p>{/if}
-										{#if item.cake_color}<p><span class="text-slate-400">Warna:</span> {item.cake_color}</p>{/if}
-										{#if item.has_cake_topper}<p><span class="text-slate-400">Cake topper:</span> Ya</p>{/if}
+										<p><span class="text-slate-400">Size:</span> {getItemOption(item, 'size', item.cake_size)}</p>
+										{#if getItemOption(item, 'flavor', item.cake_flavor) !== '-'}<p><span class="text-slate-400">Rasa:</span> {getItemOption(item, 'flavor', item.cake_flavor)}</p>{/if}
+										{#if getItemOption(item, 'color', item.cake_color) !== '-'}<p><span class="text-slate-400">Warna:</span> {getItemOption(item, 'color', item.cake_color)}</p>{/if}
+										{#if getItemOption(item, 'crown', item.crown_option) !== '-'}<p><span class="text-slate-400">Crown:</span> {getItemOption(item, 'crown', item.crown_option)}</p>{/if}
+										{#if getItemOption(item, 'glitter', item.add_edible_glitter) !== '-'}<p><span class="text-slate-400">Glitter:</span> {getItemOption(item, 'glitter', item.add_edible_glitter)}</p>{/if}
+										{#if hasItemTopper(item)}<p><span class="text-slate-400">Cake topper:</span> Ya</p>{/if}
 										{#if item.cake_text}<p class="col-span-2"><span class="text-slate-400">Tulisan Kue:</span> {item.cake_text}</p>{/if}
 										{#if item.gift_card_text}<p class="col-span-2"><span class="text-slate-400">Kartu Ucapan:</span> {item.gift_card_text}</p>{/if}
 									</div>

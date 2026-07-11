@@ -4,9 +4,9 @@
 	import { supabase } from '$lib/supabase';
 	import {
 		CAKE_TOPPER_FEE,
+		getAddonsByCategory,
 		getSizePrice,
 		getStartFromPrice,
-		isDarkColor,
 		normalizeSizePrices,
 		parseCommaOptions,
 		parsePrice
@@ -21,19 +21,34 @@
 	let fileName = $state('');
 	let selectedSize = $state('');
 	let selectedColor = $state('');
+	let selectedFlavor = $state('');
+	let selectedCrown = $state('');
+	let selectedGlitter = $state('');
 	let quantity = $state(1);
 	let hasCakeTopper = $state(false);
 
-	let sizePriceOptions = $derived(normalizeSizePrices(product));
-	let colors = $derived(parseCommaOptions(product?.colors));
-	let flavors = $derived(parseCommaOptions(product?.flavors));
-	let crowns = $derived(parseCommaOptions(product?.crown_options));
-	let glitters = $derived(parseCommaOptions(product?.edible_glitter));
+	let addonsByCategory = $derived(getAddonsByCategory(product));
+	let sizePriceOptions = $derived(
+		addonsByCategory.size?.length
+			? addonsByCategory.size.map((addon) => ({ label: addon.name, price: addon.price, addon }))
+			: normalizeSizePrices(product)
+	);
+	let colors = $derived(addonsByCategory.color?.length ? addonsByCategory.color : parseCommaOptions(product?.colors).map((name) => ({ name, price: 0 })));
+	let flavors = $derived(addonsByCategory.flavor?.length ? addonsByCategory.flavor : parseCommaOptions(product?.flavors).map((name) => ({ name, price: 0 })));
+	let crowns = $derived(addonsByCategory.crown?.length ? addonsByCategory.crown : parseCommaOptions(product?.crown_options).map((name) => ({ name, price: 0 })));
+	let glitters = $derived(addonsByCategory.glitter?.length ? addonsByCategory.glitter : parseCommaOptions(product?.edible_glitter).map((name) => ({ name, price: 0 })));
+	let cakeTopperAddon = $derived(addonsByCategory.cake_topper?.[0] ?? null);
 	let startFromPrice = $derived(getStartFromPrice(product));
-	let selectedSizePrice = $derived(selectedSize ? getSizePrice(product, selectedSize) : startFromPrice);
-	let darkColorSurcharge = $derived(selectedColor && isDarkColor(selectedColor) ? parsePrice(product?.dark_color_surcharge) : 0);
-	let cakeTopperFee = $derived(hasCakeTopper ? CAKE_TOPPER_FEE : 0);
-	let estimatedUnitPrice = $derived(selectedSizePrice + darkColorSurcharge + cakeTopperFee);
+	let selectedSizeAddon = $derived(sizePriceOptions.find((option) => option.label === selectedSize)?.addon ?? null);
+	let selectedColorAddon = $derived(colors.find((addon) => addon.name === selectedColor) ?? null);
+	let selectedFlavorAddon = $derived(flavors.find((addon) => addon.name === selectedFlavor) ?? null);
+	let selectedCrownAddon = $derived(crowns.find((addon) => addon.name === selectedCrown) ?? null);
+	let selectedGlitterAddon = $derived(glitters.find((addon) => addon.name === selectedGlitter) ?? null);
+	let selectedSizePrice = $derived(selectedSizeAddon ? selectedSizeAddon.price : selectedSize ? getSizePrice(product, selectedSize) : startFromPrice);
+	let darkColorSurcharge = $derived(selectedColorAddon?.is_dark_color ? parsePrice(selectedColorAddon.dark_color_surcharge) : 0);
+	let cakeTopperFee = $derived(hasCakeTopper ? parsePrice(cakeTopperAddon?.price || cakeTopperAddon?.additional_price || CAKE_TOPPER_FEE) : 0);
+	let addonUnitPrice = $derived(parsePrice(selectedFlavorAddon?.price) + parsePrice(selectedColorAddon?.price) + parsePrice(selectedCrownAddon?.price) + parsePrice(selectedGlitterAddon?.price));
+	let estimatedUnitPrice = $derived(selectedSizePrice + addonUnitPrice + darkColorSurcharge + cakeTopperFee);
 	let estimatedSubtotal = $derived(estimatedUnitPrice * Math.max(Number(quantity) || 1, 1));
 
 	let primaryImage = $derived(
@@ -52,6 +67,9 @@
 		fileName = '';
 		selectedSize = '';
 		selectedColor = '';
+		selectedFlavor = '';
+		selectedCrown = '';
+		selectedGlitter = '';
 		quantity = 1;
 		hasCakeTopper = false;
 	}
@@ -92,6 +110,19 @@
 				reference_image_url = publicUrlData.publicUrl;
 			}
 
+			const customizedOptions = {
+				size: selectedSize ? { name: selectedSize, price: selectedSizePrice } : null,
+				flavor: selectedFlavorAddon ? { name: selectedFlavorAddon.name, price: selectedFlavorAddon.price } : null,
+				color: selectedColorAddon ? {
+					name: selectedColorAddon.name,
+					price: selectedColorAddon.price + darkColorSurcharge,
+					is_dark_color: Boolean(selectedColorAddon.is_dark_color)
+				} : null,
+				crown: selectedCrownAddon ? { name: selectedCrownAddon.name, price: selectedCrownAddon.price } : null,
+				glitter: selectedGlitterAddon ? { name: selectedGlitterAddon.name, price: selectedGlitterAddon.price } : null,
+				cake_topper: { selected: hasCakeTopper, price: cakeTopperFee }
+			};
+
 			const cartItem = {
 				product_id: product.id,
 				product_name: product.name,
@@ -110,6 +141,7 @@
 				cake_color: formData.get('cake_color') || null,
 				crown_option: formData.get('crown_option') || null,
 				add_edible_glitter: formData.get('add_edible_glitter') || null,
+				customized_options: customizedOptions,
 				cake_text: formData.get('add_on'),
 				gift_card_text: formData.get('gift_card_text'),
 				reference_image_url,
@@ -196,9 +228,9 @@
 						{#if flavors.length > 0}
 							<div>
 								<label for="cake_flavor" class="block text-[12px] font-semibold text-[#4A3B32] mb-1.5 uppercase tracking-wide">{i18n.t('form.flavor')}</label>
-								<select id="cake_flavor" name="cake_flavor" class="w-full px-3 py-2.5 bg-slate-50 border border-[#8C5A35]/20 focus:bg-white rounded-xl text-sm appearance-none focus:outline-none focus:border-[#8C5A35]">
+								<select id="cake_flavor" name="cake_flavor" bind:value={selectedFlavor} class="w-full px-3 py-2.5 bg-slate-50 border border-[#8C5A35]/20 focus:bg-white rounded-xl text-sm appearance-none focus:outline-none focus:border-[#8C5A35]">
 									<option value="" selected>{i18n.t('form.chooseFlavor')}</option>
-									{#each flavors as flavor}<option value={flavor}>{flavor}</option>{/each}
+									{#each flavors as flavor}<option value={flavor.name}>{flavor.name}{flavor.price > 0 ? ` (+${formatCurrency(flavor.price)})` : ''}</option>{/each}
 								</select>
 							</div>
 						{/if}
@@ -208,7 +240,7 @@
 								<select id="cake_color" name="cake_color" bind:value={selectedColor} class="w-full px-3 py-2.5 bg-slate-50 border border-[#8C5A35]/20 focus:bg-white rounded-xl text-sm appearance-none focus:outline-none focus:border-[#8C5A35]">
 									<option value="">{i18n.t('form.chooseColor')}</option>
 									{#each colors as color}
-										<option value={color}>{color}{isDarkColor(color) && parsePrice(product?.dark_color_surcharge) > 0 ? ` (+${formatCurrency(product.dark_color_surcharge)})` : ''}</option>
+										<option value={color.name}>{color.name}{color.price + (color.is_dark_color ? parsePrice(color.dark_color_surcharge) : 0) > 0 ? ` (+${formatCurrency(color.price + (color.is_dark_color ? parsePrice(color.dark_color_surcharge) : 0))})` : ''}</option>
 									{/each}
 								</select>
 							</div>
@@ -216,18 +248,18 @@
 						{#if crowns.length > 0}
 							<div>
 								<label for="crown_option" class="block text-[12px] font-semibold text-[#4A3B32] mb-1.5 uppercase tracking-wide">{i18n.t('form.crown')}</label>
-								<select id="crown_option" name="crown_option" class="w-full px-3 py-2.5 bg-slate-50 border border-[#8C5A35]/20 focus:bg-white rounded-xl text-sm appearance-none focus:outline-none focus:border-[#8C5A35]">
+								<select id="crown_option" name="crown_option" bind:value={selectedCrown} class="w-full px-3 py-2.5 bg-slate-50 border border-[#8C5A35]/20 focus:bg-white rounded-xl text-sm appearance-none focus:outline-none focus:border-[#8C5A35]">
 									<option value="" selected>{i18n.t('form.chooseCrown')}</option>
-									{#each crowns as crown}<option value={crown}>{crown}</option>{/each}
+									{#each crowns as crown}<option value={crown.name}>{crown.name}{crown.price > 0 ? ` (+${formatCurrency(crown.price)})` : ''}</option>{/each}
 								</select>
 							</div>
 						{/if}
 						{#if glitters.length > 0}
 							<div>
 								<label for="add_edible_glitter" class="block text-[12px] font-semibold text-[#4A3B32] mb-1.5 uppercase tracking-wide">{i18n.t('form.glitter')}</label>
-								<select id="add_edible_glitter" name="add_edible_glitter" class="w-full px-3 py-2.5 bg-slate-50 border border-[#8C5A35]/20 focus:bg-white rounded-xl text-sm appearance-none focus:outline-none focus:border-[#8C5A35]">
+								<select id="add_edible_glitter" name="add_edible_glitter" bind:value={selectedGlitter} class="w-full px-3 py-2.5 bg-slate-50 border border-[#8C5A35]/20 focus:bg-white rounded-xl text-sm appearance-none focus:outline-none focus:border-[#8C5A35]">
 									<option value="" selected>{i18n.t('form.chooseGlitter')}</option>
-									{#each glitters as glitter}<option value={glitter}>{glitter}</option>{/each}
+									{#each glitters as glitter}<option value={glitter.name}>{glitter.name}{glitter.price > 0 ? ` (+${formatCurrency(glitter.price)})` : ''}</option>{/each}
 								</select>
 							</div>
 						{:else}
@@ -243,7 +275,7 @@
 							<input type="checkbox" name="has_cake_topper" bind:checked={hasCakeTopper} class="mt-1 h-4 w-4 rounded border-[#8C5A35]/30 text-[#8C5A35]" />
 							<span>
 								<span class="block text-[12px] font-bold uppercase tracking-wide text-[#4A3B32]">{i18n.t('form.cakeTopper')}</span>
-								<span class="mt-0.5 block text-sm text-[#4A3B32]/65">{i18n.t('form.cakeTopperFee', { price: formatCurrency(CAKE_TOPPER_FEE) })}</span>
+								<span class="mt-0.5 block text-sm text-[#4A3B32]/65">{i18n.t('form.cakeTopperFee', { price: formatCurrency(cakeTopperAddon?.price ?? CAKE_TOPPER_FEE) })}</span>
 							</span>
 						</label>
 					</div>

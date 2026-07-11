@@ -1,7 +1,7 @@
 <script>
 	import { page } from '$app/stores';
 	import { Button } from '$lib/components/ui/button';
-	import { ChartBar, Info, LogOut, MessageCircle, Package, ShoppingCart, Tags, Image } from 'lucide-svelte';
+	import { ChartBar, Info, ListPlus, LogOut, MessageCircle, Package, ShoppingCart, Tags, Image } from 'lucide-svelte';
 
 	let { children } = $props();
 </script>
@@ -17,6 +17,7 @@
 			<a href="/admin/dashboard" class="px-4 py-2.5 rounded-full transition-all {$page.url.pathname === '/admin/dashboard' ? 'bg-[#8C5A35]/10 text-[#8C5A35]' : 'text-[#4A3B32]/70 hover:text-[#8C5A35] hover:bg-[#8C5A35]/5'}">Analytics</a>
 			<a href="/admin/dashboard/orders" class="px-4 py-2.5 rounded-full transition-all {$page.url.pathname === '/admin/dashboard/orders' ? 'bg-[#8C5A35]/10 text-[#8C5A35]' : 'text-[#4A3B32]/70 hover:text-[#8C5A35] hover:bg-[#8C5A35]/5'}">Orders</a>
 			<a href="/admin/dashboard/products" class="px-4 py-2.5 rounded-full transition-all {$page.url.pathname === '/admin/dashboard/products' ? 'bg-[#8C5A35]/10 text-[#8C5A35]' : 'text-[#4A3B32]/70 hover:text-[#8C5A35] hover:bg-[#8C5A35]/5'}">Products</a>
+			<a href="/admin/dashboard/addons" class="px-4 py-2.5 rounded-full transition-all {$page.url.pathname === '/admin/dashboard/addons' ? 'bg-[#8C5A35]/10 text-[#8C5A35]' : 'text-[#4A3B32]/70 hover:text-[#8C5A35] hover:bg-[#8C5A35]/5'}">Addons</a>
 			<a href="/admin/dashboard/banners" class="px-4 py-2.5 rounded-full transition-all {$page.url.pathname === '/admin/dashboard/banners' ? 'bg-[#8C5A35]/10 text-[#8C5A35]' : 'text-[#4A3B32]/70 hover:text-[#8C5A35] hover:bg-[#8C5A35]/5'}">Banners</a>
 			<a href="/admin/dashboard/site-info" class="px-4 py-2.5 rounded-full transition-all {$page.url.pathname === '/admin/dashboard/site-info' ? 'bg-[#8C5A35]/10 text-[#8C5A35]' : 'text-[#4A3B32]/70 hover:text-[#8C5A35] hover:bg-[#8C5A35]/5'}">Info Toko</a>
 			<a href="/admin/dashboard/categories" class="px-4 py-2.5 rounded-full transition-all {$page.url.pathname === '/admin/dashboard/categories' ? 'bg-[#8C5A35]/10 text-[#8C5A35]' : 'text-[#4A3B32]/70 hover:text-[#8C5A35] hover:bg-[#8C5A35]/5'}">Categories</a>
@@ -97,7 +98,7 @@
 	</div>
 
 	<!-- Mobile & Tablet Bottom Nav -->
-	<div class="fixed bottom-0 left-0 z-40 flex h-[72px] w-full items-center overflow-x-auto border-t border-[#8C5A35]/10 bg-white px-1 pb-safe shadow-[0_-4px_20px_rgba(140,90,53,0.05)] [scrollbar-width:none] xl:hidden [&::-webkit-scrollbar]:hidden">
+	<div class="fixed bottom-0 left-0 z-40 flex h-[72px] w-full items-center justify-around overflow-x-auto border-t border-[#8C5A35]/10 bg-white px-1 pb-safe shadow-[0_-4px_20px_rgba(140,90,53,0.05)] [scrollbar-width:none] xl:hidden [&::-webkit-scrollbar]:hidden">
 		<a href="/admin/dashboard" class="flex h-[85%] min-w-[64px] flex-none flex-col items-center justify-center gap-1.5 mx-0.5 rounded-2xl active:scale-95 transition-all { $page.url.pathname === '/admin/dashboard' ? 'text-[#8C5A35] bg-[#8C5A35]/10' : 'text-[#4A3B32]/50 hover:bg-[#8C5A35]/5 hover:text-[#8C5A35]' }">
 			<ChartBar class="h-[22px] w-[22px]" />
 			<span class="text-[11px] font-bold">Analytics</span>
@@ -109,6 +110,10 @@
 		<a href="/admin/dashboard/products" class="flex h-[85%] min-w-[64px] flex-none flex-col items-center justify-center gap-1.5 mx-0.5 rounded-2xl active:scale-95 transition-all { $page.url.pathname === '/admin/dashboard/products' ? 'text-[#8C5A35] bg-[#8C5A35]/10' : 'text-[#4A3B32]/50 hover:bg-[#8C5A35]/5 hover:text-[#8C5A35]' }">
 			<Package class="h-[22px] w-[22px]" />
 			<span class="text-[11px] font-bold">Products</span>
+		</a>
+		<a href="/admin/dashboard/addons" class="flex h-[85%] min-w-[64px] flex-none flex-col items-center justify-center gap-1.5 mx-0.5 rounded-2xl active:scale-95 transition-all { $page.url.pathname === '/admin/dashboard/addons' ? 'text-[#8C5A35] bg-[#8C5A35]/10' : 'text-[#4A3B32]/50 hover:bg-[#8C5A35]/5 hover:text-[#8C5A35]' }">
+			<ListPlus class="h-[22px] w-[22px]" />
+			<span class="text-[11px] font-bold">Addons</span>
 		</a>
 		<a href="/admin/dashboard/categories" class="flex h-[85%] min-w-[64px] flex-none flex-col items-center justify-center gap-1.5 mx-0.5 rounded-2xl active:scale-95 transition-all { $page.url.pathname === '/admin/dashboard/categories' ? 'text-[#8C5A35] bg-[#8C5A35]/10' : 'text-[#4A3B32]/50 hover:bg-[#8C5A35]/5 hover:text-[#8C5A35]' }">
 			<Tags class="h-[22px] w-[22px]" />

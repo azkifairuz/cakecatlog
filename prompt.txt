@@ -1,0 +1,3 @@
+buat issue md yang berisi planning:
+rubah tampilan crate addons pada bgian checkbox ganti pake tooggle,
+pelajari dulu skill untuk membuat ui dan memiliki taste of design

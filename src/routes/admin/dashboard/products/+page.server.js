@@ -13,35 +13,197 @@ export const load = async ({ locals: { supabase } }) => {
 				id,
 				image_url,
 				is_primary
+			),
+			product_addons (
+				addon_id,
+				is_active,
+				global_addons (
+					id,
+					category,
+					name,
+					additional_price,
+					is_dark_color,
+					dark_color_surcharge,
+					is_active
+				)
 			)
 		`)
 		.order('created_at', { ascending: false });
 
 	const { data: categories } = await supabase.from('categories').select('*').order('name');
+	const { data: globalAddons } = await supabase
+		.from('global_addons')
+		.select('*')
+		.order('category')
+		.order('name');
 
 	return {
 		products: products ?? [],
-		categories: categories ?? []
+		categories: categories ?? [],
+		globalAddons: globalAddons ?? []
 	};
 };
 
-function parseSubmittedSizePrices(value) {
+function parseProductAddonStates(value) {
 	try {
 		const parsed = JSON.parse(value || '[]');
 		if (!Array.isArray(parsed)) return [];
 
 		return parsed
 			.map((item) => ({
-				label: String(item?.label ?? '').trim(),
-				price: parsePrice(item?.price)
+				addon_id: String(item?.addon_id || '').trim(),
+				is_active: item?.is_active !== false
 			}))
-			.filter((item) => item.label && item.price > 0);
+			.filter((item) => item.addon_id);
 	} catch {
 		return [];
 	}
 }
 
+function generateSlug(text) {
+	return String(text ?? '')
+		.toLowerCase()
+		.trim()
+		.replace(/\s+/g, '-')
+		.replace(/[^\w-]+/g, '')
+		.replace(/--+/g, '-')
+		.replace(/^-+|-+$/g, '');
+}
+
+function parseNewAddons(value) {
+	try {
+		const parsed = JSON.parse(value || '[]');
+		if (!Array.isArray(parsed)) return [];
+
+		return parsed
+			.map((item) => {
+				const is_dark_color = Boolean(item?.is_dark_color);
+				return {
+					category: String(item?.category || '').trim(),
+					name: String(item?.name || '').trim(),
+					additional_price: parsePrice(item?.additional_price),
+					is_dark_color,
+					dark_color_surcharge: is_dark_color ? parsePrice(item?.dark_color_surcharge) : 0,
+					is_active: item?.is_active !== false
+				};
+			})
+			.filter((item) => item.category && item.name);
+	} catch {
+		return [];
+	}
+}
+
+async function createNewGlobalAddons(supabase, productId, newAddons) {
+	if (newAddons.length === 0) return null;
+
+	const { data: createdAddons, error } = await supabase
+		.from('global_addons')
+		.insert(newAddons)
+		.select('id');
+
+	if (error) return error;
+
+	const rows = (createdAddons ?? []).map((addon) => ({
+		product_id: productId,
+		addon_id: addon.id,
+		is_active: true
+	}));
+
+	if (rows.length === 0) return null;
+
+	const { error: relationError } = await supabase.from('product_addons').upsert(rows, {
+		onConflict: 'product_id,addon_id'
+	});
+
+	return relationError;
+}
+
+async function syncProductAddons(supabase, productId, addonStates) {
+	const submittedAddonIds = addonStates.map((item) => item.addon_id);
+
+	const { data: existingRows, error: existingError } = await supabase
+		.from('product_addons')
+		.select('addon_id')
+		.eq('product_id', productId);
+
+	if (existingError) return existingError;
+
+	const addonIdsToRemove = (existingRows ?? [])
+		.map((row) => row.addon_id)
+		.filter((addonId) => !submittedAddonIds.includes(addonId));
+
+	if (addonIdsToRemove.length > 0) {
+		const { error } = await supabase
+			.from('product_addons')
+			.delete()
+			.eq('product_id', productId)
+			.in('addon_id', addonIdsToRemove);
+
+		if (error) return error;
+	}
+
+	if (addonStates.length === 0) return null;
+
+	const uniqueStates = Array.from(
+		new Map(addonStates.map((item) => [item.addon_id, item])).values()
+	);
+	const rows = uniqueStates.map((item) => ({
+		product_id: productId,
+		addon_id: item.addon_id,
+		is_active: item.is_active
+	}));
+
+	const { error } = await supabase.from('product_addons').upsert(rows, {
+		onConflict: 'product_id,addon_id'
+	});
+	return error;
+}
+
 export const actions = {
+	createCategory: async ({ request, locals: { supabase } }) => {
+		const formData = await request.formData();
+		const name = String(formData.get('name') || '').trim();
+
+		if (!name) return { success: false, error: 'Nama kategori wajib diisi' };
+
+		const slug = generateSlug(name);
+		if (!slug) return { success: false, error: 'Slug kategori tidak valid' };
+
+		const { data: existingByName } = await supabase
+			.from('categories')
+			.select('id')
+			.ilike('name', name)
+			.limit(1);
+
+		if (existingByName && existingByName.length > 0) {
+			return { success: false, error: 'Kategori dengan nama ini sudah ada.' };
+		}
+
+		const { data: existingBySlug } = await supabase
+			.from('categories')
+			.select('id')
+			.eq('slug', slug)
+			.limit(1);
+
+		if (existingBySlug && existingBySlug.length > 0) {
+			return { success: false, error: 'Slug kategori sudah digunakan.' };
+		}
+
+		const { data: category, error } = await supabase
+			.from('categories')
+			.insert({ name, slug })
+			.select('*')
+			.single();
+
+		if (error) {
+			if (error.code === '23505') {
+				return { success: false, error: 'Kategori dengan nama atau slug ini sudah ada.' };
+			}
+			return { success: false, error: error.message };
+		}
+
+		return { success: true, category };
+	},
 	createProduct: async ({ request, locals: { supabase } }) => {
 		const formData = await request.formData();
 		const name = formData.get('name');
@@ -50,15 +212,9 @@ export const actions = {
 		const is_available = formData.get('is_available') === 'on';
 		const category_id = formData.get('category_id');
 		const images = formData.getAll('images');
-		
-		const size_prices = parseSubmittedSizePrices(formData.get('size_prices'));
-		const sizes = size_prices.map((item) => item.label).join(', ') || formData.get('sizes');
-		const colors = formData.get('colors');
-		const flavors = formData.get('flavors');
-		const crown_options = formData.get('crown_options');
-		const edible_glitter = formData.get('edible_glitter');
+		const addonStates = parseProductAddonStates(formData.get('product_addons'));
+		const newAddons = parseNewAddons(formData.get('new_addons'));
 		const handling_warning = formData.get('handling_warning');
-		const dark_color_surcharge = parsePrice(formData.get('dark_color_surcharge'));
 
 		if (!name || !base_price) {
 			return { success: false, error: 'Name and Base Price are required' };
@@ -73,14 +229,7 @@ export const actions = {
 				base_price: parseFloat(base_price),
 				is_available,
 				category_id: category_id || null,
-				sizes,
-				colors,
-				flavors,
-				crown_options,
-				edible_glitter,
-				handling_warning,
-				size_prices,
-				dark_color_surcharge
+				handling_warning
 			})
 			.select()
 			.single();
@@ -88,6 +237,12 @@ export const actions = {
 		if (productError) {
 			return { success: false, error: productError.message };
 		}
+
+		const addonError = await syncProductAddons(supabase, product.id, addonStates);
+		if (addonError) return { success: false, error: addonError.message };
+
+		const newAddonError = await createNewGlobalAddons(supabase, product.id, newAddons);
+		if (newAddonError) return { success: false, error: newAddonError.message };
 
 		// Handle images
 		if (images && images.length > 0 && images[0].size > 0) {
@@ -134,15 +289,9 @@ export const actions = {
 		const category_id = formData.get('category_id');
 		const images = formData.getAll('images');
 		const deletedImageIdsStr = formData.get('deleted_image_ids');
-		
-		const size_prices = parseSubmittedSizePrices(formData.get('size_prices'));
-		const sizes = size_prices.map((item) => item.label).join(', ') || formData.get('sizes');
-		const colors = formData.get('colors');
-		const flavors = formData.get('flavors');
-		const crown_options = formData.get('crown_options');
-		const edible_glitter = formData.get('edible_glitter');
+		const addonStates = parseProductAddonStates(formData.get('product_addons'));
+		const newAddons = parseNewAddons(formData.get('new_addons'));
 		const handling_warning = formData.get('handling_warning');
-		const dark_color_surcharge = parsePrice(formData.get('dark_color_surcharge'));
 
 		if (!id || !name || !base_price) {
 			return { success: false, error: 'ID, Name, and Base Price are required' };
@@ -157,20 +306,19 @@ export const actions = {
 				base_price: parseFloat(base_price),
 				is_available,
 				category_id: category_id || null,
-				sizes,
-				colors,
-				flavors,
-				crown_options,
-				edible_glitter,
-				handling_warning,
-				size_prices,
-				dark_color_surcharge
+				handling_warning
 			})
 			.eq('id', id);
 
 		if (productError) {
 			return { success: false, error: productError.message };
 		}
+
+		const addonError = await syncProductAddons(supabase, id, addonStates);
+		if (addonError) return { success: false, error: addonError.message };
+
+		const newAddonError = await createNewGlobalAddons(supabase, id, newAddons);
+		if (newAddonError) return { success: false, error: newAddonError.message };
 
 		// Delete images
 		if (deletedImageIdsStr) {

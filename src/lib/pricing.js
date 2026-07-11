@@ -46,6 +46,12 @@ export function normalizeSizePrices(product = {}) {
 }
 
 export function getStartFromPrice(product = {}) {
+	const addonSizes = getProductAddons(product).filter((addon) => addon.category === 'size');
+	if (addonSizes.length > 0) {
+		const prices = addonSizes.map((addon) => addon.price).filter((price) => price > 0);
+		if (prices.length > 0) return Math.min(...prices);
+	}
+
 	const sizePrices = normalizeSizePrices(product);
 	const prices = sizePrices.map((item) => item.price).filter((price) => price > 0);
 	return prices.length > 0 ? Math.min(...prices) : parsePrice(product?.base_price);
@@ -55,6 +61,53 @@ export function getSizePrice(product = {}, selectedSize = '') {
 	const sizePrices = normalizeSizePrices(product);
 	const match = sizePrices.find((item) => item.label === selectedSize);
 	return match?.price || getStartFromPrice(product);
+}
+
+export function normalizeAddon(addon = {}) {
+	const price = parsePrice(addon.additional_price ?? addon.price);
+	const darkColorSurcharge = parsePrice(addon.dark_color_surcharge);
+
+	return {
+		id: addon.id,
+		category: String(addon.category ?? '').trim(),
+		name: String(addon.name ?? addon.label ?? '').trim(),
+		price,
+		additional_price: price,
+		is_active: addon.is_active !== false,
+		product_addon_is_active: addon.product_addon_is_active !== false,
+		is_dark_color: Boolean(addon.is_dark_color),
+		dark_color_surcharge: darkColorSurcharge
+	};
+}
+
+export function getProductAddons(product = {}) {
+	const linkedAddons = Array.isArray(product?.product_addons)
+		? product.product_addons
+			.map((item) => {
+				const addon = item.global_addons ?? item;
+				return addon ? { ...addon, product_addon_is_active: item.is_active !== false } : null;
+			})
+			.filter(Boolean)
+		: [];
+	const globalAddons = Array.isArray(product?.global_addons) ? product.global_addons : [];
+	const source = linkedAddons.length > 0 ? linkedAddons : globalAddons;
+
+	return source
+		.map(normalizeAddon)
+		.filter((addon) => addon.category && addon.name && addon.is_active && addon.product_addon_is_active);
+}
+
+export function getAddonsByCategory(product = {}) {
+	return getProductAddons(product).reduce((groups, addon) => {
+		groups[addon.category] = [...(groups[addon.category] ?? []), addon];
+		return groups;
+	}, {});
+}
+
+export function getAddonPrice(product = {}, category = '', name = '') {
+	const addon = getAddonsByCategory(product)[category]?.find((item) => item.name === name);
+	if (!addon) return 0;
+	return addon.price + (addon.is_dark_color ? addon.dark_color_surcharge : 0);
 }
 
 export function isDarkColor(color = '') {

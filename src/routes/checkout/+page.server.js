@@ -80,7 +80,8 @@ export const actions = {
 				dark_color_surcharge: firstItem.dark_color_surcharge || 0,
 				cake_topper_fee: firstItem.cake_topper_fee || 0,
 				estimated_unit_price: firstItem.estimated_unit_price || firstItem.price_at_order || 0,
-				has_cake_topper: Boolean(firstItem.has_cake_topper)
+				has_cake_topper: Boolean(firstItem.has_cake_topper),
+				customized_options: firstItem.customized_options || null
 			})
 			.select('id')
 			.single();
@@ -111,7 +112,8 @@ export const actions = {
 			cake_topper_fee: item.cake_topper_fee || 0,
 			estimated_unit_price: item.estimated_unit_price || item.price_at_order || 0,
 			estimated_subtotal: item.estimated_subtotal || ((item.estimated_unit_price || item.price_at_order || 0) * (item.quantity || 1)),
-			has_cake_topper: Boolean(item.has_cake_topper)
+			has_cake_topper: Boolean(item.has_cake_topper),
+			customized_options: item.customized_options || null
 		}));
 
 		const { error: itemsError } = await supabase
