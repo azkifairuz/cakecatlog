@@ -16,7 +16,7 @@
 <div class="mx-auto w-full max-w-5xl space-y-6">
 	<div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
 		<div>
-			<div class="text-sm font-semibold uppercase tracking-[0.2em] text-[#8C5A35]">Footer User</div>
+			<div class="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Footer User</div>
 			<h1 class="mt-2 text-2xl font-bold text-[#4A3B32]">Info Toko</h1>
 			<p class="mt-2 max-w-2xl text-sm leading-relaxed text-[#4A3B32]/70">
 				Atur informasi pickup, alamat, dan WhatsApp yang muncul di footer halaman user.
@@ -64,9 +64,9 @@
 		}}
 		class="grid gap-6 lg:grid-cols-3"
 	>
-		<div class="space-y-4 rounded-xl border border-[#8C5A35]/10 bg-white p-5 shadow-sm">
+		<div class="space-y-4 rounded-xl border border-primary/10 bg-white p-5 shadow-sm">
 			<div class="flex items-center gap-3">
-				<div class="flex h-10 w-10 items-center justify-center rounded-full bg-[#FFFBF7] text-[#8C5A35] shadow-sm">
+				<div class="flex h-10 w-10 items-center justify-center rounded-full bg-[#FFFBF7] text-primary shadow-sm">
 					<Clock class="h-5 w-5" />
 				</div>
 				<div>
@@ -91,9 +91,9 @@
 			</div>
 		</div>
 
-		<div class="space-y-4 rounded-xl border border-[#8C5A35]/10 bg-white p-5 shadow-sm">
+		<div class="space-y-4 rounded-xl border border-primary/10 bg-white p-5 shadow-sm">
 			<div class="flex items-center gap-3">
-				<div class="flex h-10 w-10 items-center justify-center rounded-full bg-[#FFFBF7] text-[#8C5A35] shadow-sm">
+				<div class="flex h-10 w-10 items-center justify-center rounded-full bg-[#FFFBF7] text-primary shadow-sm">
 					<MapPin class="h-5 w-5" />
 				</div>
 				<div>
@@ -109,9 +109,9 @@
 			</div>
 		</div>
 
-		<div class="space-y-4 rounded-xl border border-[#8C5A35]/10 bg-white p-5 shadow-sm">
+		<div class="space-y-4 rounded-xl border border-primary/10 bg-white p-5 shadow-sm">
 			<div class="flex items-center gap-3">
-				<div class="flex h-10 w-10 items-center justify-center rounded-full bg-[#FFFBF7] text-[#8C5A35] shadow-sm">
+				<div class="flex h-10 w-10 items-center justify-center rounded-full bg-[#FFFBF7] text-primary shadow-sm">
 					<MessageCircle class="h-5 w-5" />
 				</div>
 				<div>
@@ -128,7 +128,7 @@
 		</div>
 
 		<div class="flex justify-end lg:col-span-3">
-			<Button type="submit" disabled={saving} class="h-12 rounded-xl bg-[#8C5A35] px-6 font-bold text-white hover:bg-[#724828]">
+			<Button type="submit" disabled={saving} class="h-12 rounded-xl bg-primary px-6 font-bold text-white hover:bg-[#724828]">
 				<Save class="h-4 w-4" />
 				{saving ? 'Menyimpan...' : 'Simpan Info Toko'}
 			</Button>

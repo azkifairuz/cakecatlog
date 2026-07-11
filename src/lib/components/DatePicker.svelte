@@ -43,13 +43,13 @@
 			<Button
 				variant="outline"
 				class={cn(
-					"justify-start text-left font-normal border-[#8C5A35]/20 bg-slate-50 hover:bg-slate-100 focus:border-[#8C5A35]",
+					"justify-start text-left font-normal border-primary/20 bg-slate-50 hover:bg-slate-100 focus:border-primary",
 					!value && "text-slate-500",
 					className
 				)}
 				{...props}
 			>
-				<CalendarIcon class="mr-2 h-4 w-4 text-[#8C5A35]/70" />
+				<CalendarIcon class="mr-2 h-4 w-4 text-primary/70" />
 				{dateValue ? df.format(dateValue.toDate(getLocalTimeZone())) : placeholder}
 			</Button>
 		{/snippet}

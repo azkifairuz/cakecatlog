@@ -1,4 +1,5 @@
 <script>
+	import { getImageUrl } from '$lib/image-url.js';
 	import { cart } from '$lib/stores/cart.svelte.js';
 	import { fly, fade } from 'svelte/transition';
 	import { getI18n } from '$lib/i18n.svelte.js';
@@ -38,12 +39,12 @@
 		transition:fly={{ x: '100%', duration: 300, opacity: 1 }}
 	>
 		<!-- Header -->
-		<div class="px-6 py-5 border-b border-[#8C5A35]/10 flex items-center justify-between bg-[#FFFBF7]">
+		<div class="px-6 py-5 border-b border-primary/10 flex items-center justify-between bg-[#FFFBF7]">
 			<h2 class="text-xl font-bold text-[#4A3B32] font-['Playfair_Display']">{i18n.t('cart.title')}</h2>
 			<button 
 				onclick={closeCart}
 				aria-label={i18n.t('cart.close')}
-				class="p-2 text-[#4A3B32]/50 hover:text-[#8C5A35] hover:bg-[#8C5A35]/10 rounded-full transition-colors"
+				class="p-2 text-[#4A3B32]/50 hover:text-primary hover:bg-primary/10 rounded-full transition-colors"
 			>
 				<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
 			</button>
@@ -53,13 +54,13 @@
 		<div class="flex-1 overflow-y-auto p-6 space-y-6">
 			{#if cart.items.length === 0}
 				<div class="h-full flex flex-col items-center justify-center text-center opacity-50">
-					<svg class="w-16 h-16 mb-4 text-[#8C5A35]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
+					<svg class="w-16 h-16 mb-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
 					<p class="text-lg font-medium text-[#4A3B32]">{i18n.t('cart.emptyTitle')}</p>
 					<p class="text-sm mt-2">{i18n.t('cart.emptyDescription')}</p>
 				</div>
 			{:else}
 				{#each cart.items as item (item.cartItemId)}
-					<div class="flex gap-4 p-4 rounded-2xl border border-[#8C5A35]/10 bg-slate-50 relative group">
+					<div class="flex gap-4 p-4 rounded-2xl border border-primary/10 bg-slate-50 relative group">
 						<button 
 							onclick={() => cart.removeItem(item.cartItemId)}
 							class="absolute -top-2 -right-2 w-8 h-8 bg-red-100 text-red-600 rounded-full flex items-center justify-center shadow-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-200"
@@ -68,9 +69,9 @@
 							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
 						</button>
 						
-						<div class="w-20 h-20 rounded-xl bg-white border border-[#8C5A35]/10 overflow-hidden flex-shrink-0">
+						<div class="w-20 h-20 rounded-xl bg-white border border-primary/10 overflow-hidden flex-shrink-0">
 							{#if item.primary_image}
-								<img src={item.primary_image} alt={item.product_name} class="w-full h-full object-cover" />
+								<img src={getImageUrl(item.primary_image, { width: 160, height: 160, quality: 75, resize: 'cover' })} alt={item.product_name} class="w-full h-full object-cover" loading="lazy" decoding="async" />
 							{:else}
 								<div class="w-full h-full flex items-center justify-center text-[#4A3B32]/30">
 									<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
@@ -84,7 +85,7 @@
 								{item.cake_size} &middot; {item.quantity}x
 							</p>
 							
-							<div class="text-xs text-[#8C5A35] mt-1 space-y-0.5">
+							<div class="text-xs text-primary mt-1 space-y-0.5">
 								{#if item.cake_flavor}<div>{i18n.t('cart.flavor')}: {item.cake_flavor}</div>{/if}
 								{#if item.cake_color}<div>{i18n.t('cart.color')}: {item.cake_color}</div>{/if}
 								{#if item.has_cake_topper}<div>{i18n.t('cart.cakeTopper')}: {i18n.t('cart.yes')}</div>{/if}
@@ -108,14 +109,14 @@
 
 		<!-- Footer -->
 		{#if cart.items.length > 0}
-			<div class="p-6 bg-[#FFFBF7] border-t border-[#8C5A35]/10 shadow-[0_-10px_20px_-10px_rgba(140,90,53,0.1)]">
+			<div class="p-6 bg-[#FFFBF7] border-t border-primary/10 shadow-[0_-10px_20px_-10px_rgba(140,90,53,0.1)]">
 				<div class="flex items-center justify-between mb-4">
 					<span class="text-[#4A3B32]/70 font-medium text-sm">{i18n.t('pricing.estimatedTotal')}</span>
-					<span class="text-2xl font-bold text-[#8C5A35]">{formatCurrency(cart.totalPrice)}</span>
+					<span class="text-2xl font-bold text-primary">{formatCurrency(cart.totalPrice)}</span>
 				</div>
 				<p class="mb-4 text-[11px] leading-relaxed text-[#4A3B32]/55">{i18n.t('pricing.finalInvoiceNote')}</p>
 				<a href="/checkout" onclick={closeCart} class="block">
-					<button class="w-full py-4 bg-[#8C5A35] text-white font-bold rounded-xl shadow-lg shadow-[#8C5A35]/20 hover:bg-[#724828] active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+					<button class="w-full py-4 bg-primary text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:bg-[#724828] active:scale-[0.98] transition-all flex items-center justify-center gap-2">
 						{i18n.t('cart.checkout')}
 						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
 					</button>

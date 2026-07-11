@@ -133,11 +133,11 @@
 <div class="space-y-6">
 	<div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
 		<div class="space-y-3">
-			<div class="text-sm font-semibold uppercase tracking-[0.2em] text-[#8C5A35]">Dashboard Admin</div>
+			<div class="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Dashboard Admin</div>
 			<h1 class="text-3xl font-bold text-[#4A3B32]">Ringkasan Penjualan</h1>
 			<p class="max-w-2xl text-sm text-[#4A3B32]/70">Lihat total omset, total penjualan, dan daftar pesanan belum diproses. Filter default harian, bisa diganti mingguan, bulanan, atau rentang tanggal.</p>
 		</div>
-		<Button onclick={exportToExcel} variant="outline" class="rounded-full px-5 py-3 text-sm font-semibold border-[#8C5A35]/30 text-[#8C5A35] hover:bg-[#8C5A35]/10 gap-2 shrink-0">
+		<Button onclick={exportToExcel} variant="outline" class="rounded-full px-5 py-3 text-sm font-semibold border-primary/30 text-primary hover:bg-primary/10 gap-2 shrink-0">
 			<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
 			Export Excel
 		</Button>
@@ -154,24 +154,24 @@
 			<!-- Search -->
 			<div class="relative w-full lg:flex-1 lg:min-w-[220px]">
 				<svg class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#4A3B32]/50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-				<Input type="text" placeholder="Cari pesanan..." bind:value={searchQuery} class="pl-11 h-12 w-full rounded-2xl bg-white border border-[#8C5A35]/20 focus:border-[#8C5A35] transition-colors" />
+				<Input type="text" placeholder="Cari pesanan..." bind:value={searchQuery} class="pl-11 h-12 w-full rounded-2xl bg-white border border-primary/20 focus:border-primary transition-colors" />
 			</div>
 
 			<!-- Filters -->
 			<div class="grid grid-cols-2 md:flex items-center gap-2 md:gap-3 w-full lg:w-auto">
-				<select bind:value={dateTypeFilter} class="h-12 w-full md:w-auto rounded-2xl bg-white border border-[#8C5A35]/20 px-3 text-sm font-medium text-[#4A3B32] focus:outline-none focus:border-[#8C5A35] focus:ring-2 focus:ring-slate-100">
+				<select bind:value={dateTypeFilter} class="h-12 w-full md:w-auto rounded-2xl bg-white border border-primary/20 px-3 text-sm font-medium text-[#4A3B32] focus:outline-none focus:border-primary focus:ring-2 focus:ring-slate-100">
 					<option value="delivery_date">Tgl Kirim</option>
 					<option value="created_at">Tgl Order</option>
 				</select>
 				
-				<select bind:value={dateMode} class="h-12 w-full md:w-auto rounded-2xl bg-white border border-[#8C5A35]/20 px-3 text-sm font-medium text-[#4A3B32] focus:outline-none focus:border-[#8C5A35] focus:ring-2 focus:ring-slate-100">
+				<select bind:value={dateMode} class="h-12 w-full md:w-auto rounded-2xl bg-white border border-primary/20 px-3 text-sm font-medium text-[#4A3B32] focus:outline-none focus:border-primary focus:ring-2 focus:ring-slate-100">
 					<option value="daily">Harian</option>
 					<option value="weekly">Mingguan</option>
 					<option value="monthly">Bulanan</option>
 					<option value="range">Range</option>
 				</select>
 				
-				<select bind:value={statusFilter} class="h-12 w-full md:w-auto col-span-2 md:col-span-1 rounded-2xl bg-white border border-[#8C5A35]/20 px-3 text-sm font-medium text-[#4A3B32] focus:outline-none focus:border-[#8C5A35] focus:ring-2 focus:ring-slate-100">
+				<select bind:value={statusFilter} class="h-12 w-full md:w-auto col-span-2 md:col-span-1 rounded-2xl bg-white border border-primary/20 px-3 text-sm font-medium text-[#4A3B32] focus:outline-none focus:border-primary focus:ring-2 focus:ring-slate-100">
 					<option value="All">Semua Status</option>
 					<option value="Pending">Pending</option>
 					<option value="Diproses">Diproses</option>
@@ -181,14 +181,14 @@
 				
 				{#if dateMode === 'range'}
 					<div class="flex col-span-2 md:w-auto gap-2">
-						<DatePicker bind:value={customStart} class="h-12 rounded-2xl px-3 text-sm font-medium w-full lg:w-[140px] border-[#8C5A35]/20 bg-white" placeholder="Awal" />
-						<DatePicker bind:value={customEnd} class="h-12 rounded-2xl px-3 text-sm font-medium w-full lg:w-[140px] border-[#8C5A35]/20 bg-white" placeholder="Akhir" />
+						<DatePicker bind:value={customStart} class="h-12 rounded-2xl px-3 text-sm font-medium w-full lg:w-[140px] border-primary/20 bg-white" placeholder="Awal" />
+						<DatePicker bind:value={customEnd} class="h-12 rounded-2xl px-3 text-sm font-medium w-full lg:w-[140px] border-primary/20 bg-white" placeholder="Akhir" />
 					</div>
 				{/if}
 			</div>
 
 			{#if searchQuery || statusFilter !== 'All' || dateMode !== 'daily' || dateTypeFilter !== 'delivery_date'}
-				<Button variant="outline" class="h-12 rounded-2xl px-5 text-sm font-semibold w-full lg:w-auto mt-1 lg:mt-0 border-[#8C5A35]/30 text-[#8C5A35] hover:bg-[#8C5A35]/10" onclick={() => {
+				<Button variant="outline" class="h-12 rounded-2xl px-5 text-sm font-semibold w-full lg:w-auto mt-1 lg:mt-0 border-primary/30 text-primary hover:bg-primary/10" onclick={() => {
 					searchQuery = '';
 					statusFilter = 'All';
 					dateMode = 'daily';
@@ -202,13 +202,13 @@
 		</div>
 		<div class="space-y-4">
 			<div class="grid gap-4 sm:grid-cols-2">
-				<div class="rounded-3xl border border-[#8C5A35]/20 bg-slate-50 p-4">
+				<div class="rounded-3xl border border-primary/20 bg-slate-50 p-4">
 					<p class="text-sm font-semibold text-[#4A3B32]/70">Total Omset (Selesai)</p>
 					<p class="mt-3 text-3xl font-bold text-[#4A3B32]">{formatCurrency(totalRevenue)}</p>
 					<p class="mt-2 text-sm text-[#4A3B32]/70">Total omset pesanan berstatus selesai.</p>
 				</div>
 
-				<div class="rounded-3xl border border-[#8C5A35]/20 bg-slate-50 p-4">
+				<div class="rounded-3xl border border-primary/20 bg-slate-50 p-4">
 					<p class="text-sm font-semibold text-[#4A3B32]/70">Total Penjualan</p>
 					<p class="mt-3 text-3xl font-bold text-[#4A3B32]">{totalSales}</p>
 					<p class="mt-2 text-sm text-[#4A3B32]/70">Jumlah order sesuai periode.</p>
@@ -216,19 +216,19 @@
 			</div>
 
 			<div class="grid gap-4 sm:grid-cols-3">
-				<div class="rounded-3xl border border-[#8C5A35]/20 bg-slate-50 p-4">
+				<div class="rounded-3xl border border-primary/20 bg-slate-50 p-4">
 					<p class="text-sm font-semibold text-[#4A3B32]/70">Pending</p>
 					<p class="mt-3 text-3xl font-bold text-[#4A3B32]">{pendingOrders.length}</p>
 					<p class="mt-2 text-sm text-[#4A3B32]/70">Pesanan belum diproses.</p>
 				</div>
 
-				<div class="rounded-3xl border border-[#8C5A35]/20 bg-slate-50 p-4">
+				<div class="rounded-3xl border border-primary/20 bg-slate-50 p-4">
 					<p class="text-sm font-semibold text-[#4A3B32]/70">Diproses</p>
 					<p class="mt-3 text-3xl font-bold text-[#4A3B32]">{processingOrders.length}</p>
 					<p class="mt-2 text-sm text-[#4A3B32]/70">Pesanan sedang dibuat.</p>
 				</div>
 
-				<div class="rounded-3xl border border-[#8C5A35]/20 bg-slate-50 p-4">
+				<div class="rounded-3xl border border-primary/20 bg-slate-50 p-4">
 					<p class="text-sm font-semibold text-[#4A3B32]/70">Selesai</p>
 					<p class="mt-3 text-3xl font-bold text-[#4A3B32]">{completedOrders.length}</p>
 					<p class="mt-2 text-sm text-[#4A3B32]/70">Pesanan sudah dikirim.</p>
@@ -237,8 +237,8 @@
 		</div>
 	</div>
 
-	<div class="rounded-[2rem] overflow-hidden border border-[#8C5A35]/20 bg-white shadow-sm">
-		<div class="flex flex-col gap-4 border-b border-[#8C5A35]/20 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
+	<div class="rounded-[2rem] overflow-hidden border border-primary/20 bg-white shadow-sm">
+		<div class="flex flex-col gap-4 border-b border-primary/20 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
 			<div>
 				<p class="text-sm font-semibold text-[#4A3B32]/70 uppercase tracking-widest">Pesanan Belum Diproses</p>
 				<h2 class="mt-2 text-2xl font-bold text-[#4A3B32]">Daftar Order Pending</h2>
@@ -269,7 +269,7 @@
 								{#if order.order_items && order.order_items.length > 0}
 									{order.order_items[0].products?.name ?? 'Unknown'}
 									{#if order.order_items.length > 1}
-										<br><span class="text-xs text-[#8C5A35] font-semibold">+{order.order_items.length - 1} produk lainnya</span>
+										<br><span class="text-xs text-primary font-semibold">+{order.order_items.length - 1} produk lainnya</span>
 									{/if}
 								{:else}
 									Data pesanan lama (Legacy)
@@ -299,7 +299,7 @@
 
 {#if isDrawerOpen && selectedOrder}
 	<div class="fixed inset-0 z-50 flex flex-col justify-end pointer-events-auto">
-		<button class="absolute inset-0 w-full h-full bg-[#8C5A35]/40 backdrop-blur-sm cursor-default" transition:fade={{ duration: 200 }} onclick={closeDrawer} aria-label="Close modal"></button>
+		<button class="absolute inset-0 w-full h-full bg-primary/40 backdrop-blur-sm cursor-default" transition:fade={{ duration: 200 }} onclick={closeDrawer} aria-label="Close modal"></button>
 		<div class="relative bg-white rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] p-6 pb-safe-12 w-full max-w-xl mx-auto" transition:fly={{ y: '100%', duration: 350, opacity: 1, easing: (t) => 1 - Math.pow(1 - t, 4) }}>
 			<div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6"></div>
 			<div class="flex justify-between items-start mb-6">
@@ -320,7 +320,7 @@
 						};
 					}}>
 						<input type="hidden" name="id" value={selectedOrder.id} />
-						<select name="status" class="w-full text-[15px] font-bold rounded-xl border-2 px-4 py-4 focus:outline-none focus:ring-2 focus:ring-[#8C5A35] transition-colors cursor-pointer shadow-sm {selectedOrder.status === 'Selesai' ? 'bg-green-50 text-green-700 border-green-200' : selectedOrder.status === 'Diproses' ? 'bg-blue-50 text-blue-700 border-blue-200' : selectedOrder.status === 'Batal/Refund' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-slate-50 text-[#4A3B32] border-[#8C5A35]/20'}" onchange={(e) => e.target.form.requestSubmit()}>
+						<select name="status" class="w-full text-[15px] font-bold rounded-xl border-2 px-4 py-4 focus:outline-none focus:ring-2 focus:ring-primary transition-colors cursor-pointer shadow-sm {selectedOrder.status === 'Selesai' ? 'bg-green-50 text-green-700 border-green-200' : selectedOrder.status === 'Diproses' ? 'bg-blue-50 text-blue-700 border-blue-200' : selectedOrder.status === 'Batal/Refund' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-slate-50 text-[#4A3B32] border-primary/20'}" onchange={(e) => e.target.form.requestSubmit()}>
 							<option value="Pending" selected={selectedOrder.status === 'Pending'}>Pending (Belum Diproses)</option>
 							<option value="Diproses" selected={selectedOrder.status === 'Diproses'}>Diproses (Sedang Dibuat)</option>
 							<option value="Selesai" selected={selectedOrder.status === 'Selesai'}>Selesai (Sudah Dikirim)</option>
@@ -328,7 +328,7 @@
 						</select>
 					</form>
 				</div>
-				<hr class="border-[#8C5A35]/10" />
+				<hr class="border-primary/10" />
 				<div class="space-y-3">
 					<Label class="text-[#4A3B32] font-bold text-[15px]">Input Total Harga</Label>
 					<form method="POST" action="?/updateAmount" use:enhance={() => {
@@ -339,12 +339,12 @@
 					}} class="flex flex-col gap-3">
 						<input type="hidden" name="id" value={selectedOrder.id} />
 						<div class="relative">
-							<PriceInput name="amount" placeholder="0" value={selectedOrder.amount || ''} class="w-full h-14 text-lg font-bold text-[#4A3B32] rounded-xl bg-slate-50 border-[#8C5A35]/20 focus-visible:ring-slate-800 shadow-inner" />
+							<PriceInput name="amount" placeholder="0" value={selectedOrder.amount || ''} class="w-full h-14 text-lg font-bold text-[#4A3B32] rounded-xl bg-slate-50 border-primary/20 focus-visible:ring-slate-800 shadow-inner" />
 						</div>
-						<Button type="submit" class="w-full h-14 rounded-xl bg-[#8C5A35] hover:bg-[#724828] active:scale-[0.98] transition-transform text-[16px] font-bold shadow-lg shadow-slate-900/20">Simpan Harga</Button>
+						<Button type="submit" class="w-full h-14 rounded-xl bg-primary hover:bg-[#724828] active:scale-[0.98] transition-transform text-[16px] font-bold shadow-lg shadow-slate-900/20">Simpan Harga</Button>
 					</form>
 				</div>
-				<hr class="border-[#8C5A35]/10" />
+				<hr class="border-primary/10" />
 				<div class="space-y-3">
 					<Label class="text-[#4A3B32] font-bold text-[15px]">Bukti Pembayaran</Label>
 					{#if selectedOrder.proof_of_transfer}
@@ -362,8 +362,8 @@
 						};
 					}} class="space-y-3">
 						<input type="hidden" name="id" value={selectedOrder.id} />
-						<input type="file" name="receipt" accept="image/*" class="w-full rounded-2xl border border-[#8C5A35]/20 bg-slate-50 px-4 py-3 text-sm text-[#4A3B32]/80 file:rounded-xl file:border file:border-[#8C5A35]/30 file:bg-white file:px-4 file:py-2" />
-						<Button type="submit" class="w-full h-14 rounded-xl bg-[#8C5A35] hover:bg-[#724828] text-white font-bold">Unggah Bukti</Button>
+						<input type="file" name="receipt" accept="image/*" class="w-full rounded-2xl border border-primary/20 bg-slate-50 px-4 py-3 text-sm text-[#4A3B32]/80 file:rounded-xl file:border file:border-primary/30 file:bg-white file:px-4 file:py-2" />
+						<Button type="submit" class="w-full h-14 rounded-xl bg-primary hover:bg-[#724828] text-white font-bold">Unggah Bukti</Button>
 					</form>
 				</div>
 			</div>

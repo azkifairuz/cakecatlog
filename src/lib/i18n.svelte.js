@@ -2,7 +2,7 @@ import { browser } from '$app/environment';
 import { getContext, setContext } from 'svelte';
 
 const I18N_CONTEXT = Symbol('i18n');
-const STORAGE_KEY = 'desertbyfir_locale';
+const STORAGE_KEY = 'dessertbyfir_locale';
 
 export const defaultLocale = 'id';
 
@@ -38,10 +38,10 @@ export const translations = {
 			slideLabel: 'Ke slide {number}'
 		},
 		home: {
-			aboutImageAlt: 'Kue dari desertbyfir',
+			aboutImageAlt: 'Kue dari dessertbyfir',
 			aboutTitle: 'Tentang Kami',
 			aboutParagraph1:
-				'desertbyfir adalah toko kue artisan yang berdedikasi untuk menciptakan karya seni yang dapat dinikmati. Kami percaya bahwa setiap perayaan layak mendapatkan kue yang tidak hanya cantik dipandang, tetapi juga luar biasa saat dirasakan.',
+				'dessertbyfir adalah toko kue artisan yang berdedikasi untuk menciptakan karya seni yang dapat dinikmati. Kami percaya bahwa setiap perayaan layak mendapatkan kue yang tidak hanya cantik dipandang, tetapi juga luar biasa saat dirasakan.',
 			aboutParagraph2:
 				'Setiap kue dibuat secara handmade oleh para pastry chef berpengalaman kami, menggunakan resep rahasia yang telah disempurnakan bertahun-tahun. Kepuasan Anda adalah prioritas utama kami.',
 			aboutCta: 'Lihat Koleksi Kami',
@@ -153,12 +153,12 @@ export const translations = {
 			save: 'Simpan ke Keranjang'
 		},
 		checkout: {
-			title: 'Checkout | desertbyfir',
+			title: 'Checkout | dessertbyfir',
 			back: 'Kembali Belanja',
 			deliveryOptionTitle: 'Pilih Metode Pesanan',
 			deliveryOptionDescription: 'Tentukan cara menerima pesanan sebelum mengisi data order.',
 			pickup: 'Pickup',
-			pickupDescription: 'Ambil sendiri di lokasi desertbyfir.',
+			pickupDescription: 'Ambil sendiri di lokasi dessertbyfir.',
 			delivery: 'Delivery',
 			deliveryDescription: 'Pesanan dikirim ke alamat tujuan.',
 			continueToOrder: 'Lanjut Isi Form',
@@ -178,7 +178,7 @@ export const translations = {
 			backHome: 'Kembali ke Beranda'
 		},
 		order: {
-			title: 'Order {name} | desertbyfir',
+			title: 'Order {name} | dessertbyfir',
 			detailTitle: 'Detail Pesanan',
 			detailDescription: 'Lengkapi data di bawah untuk memproses pesanan Anda.',
 			customerInfo: 'Informasi Pemesan',
@@ -229,10 +229,10 @@ export const translations = {
 			slideLabel: 'Go to slide {number}'
 		},
 		home: {
-			aboutImageAlt: 'Cake from desertbyfir',
+			aboutImageAlt: 'Cake from dessertbyfir',
 			aboutTitle: 'About Us',
 			aboutParagraph1:
-				'desertbyfir is an artisan cake shop dedicated to creating edible works of art. We believe every celebration deserves a cake that looks beautiful and tastes exceptional.',
+				'dessertbyfir is an artisan cake shop dedicated to creating edible works of art. We believe every celebration deserves a cake that looks beautiful and tastes exceptional.',
 			aboutParagraph2:
 				'Every cake is handmade by our experienced pastry chefs using secret recipes refined over the years. Your satisfaction is our top priority.',
 			aboutCta: 'View Our Collection',
@@ -344,12 +344,12 @@ export const translations = {
 			save: 'Save to Cart'
 		},
 		checkout: {
-			title: 'Checkout | desertbyfir',
+			title: 'Checkout | dessertbyfir',
 			back: 'Continue Shopping',
 			deliveryOptionTitle: 'Choose Order Method',
 			deliveryOptionDescription: 'Choose how you want to receive your order before filling in the order form.',
 			pickup: 'Pickup',
-			pickupDescription: 'Pick up your order at desertbyfir.',
+			pickupDescription: 'Pick up your order at dessertbyfir.',
 			delivery: 'Delivery',
 			deliveryDescription: 'Have your order sent to a destination address.',
 			continueToOrder: 'Continue to Form',
@@ -369,7 +369,7 @@ export const translations = {
 			backHome: 'Back to Home'
 		},
 		order: {
-			title: 'Order {name} | desertbyfir',
+			title: 'Order {name} | dessertbyfir',
 			detailTitle: 'Order Details',
 			detailDescription: 'Complete the details below so we can process your order.',
 			customerInfo: 'Customer Information',

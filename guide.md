@@ -1,5 +1,5 @@
 # Panduan Manual & Penjelasan Field Pembuatan Produk dan Addons
-Selamat datang di panduan manual sistem manajemen produk dan addons untuk platform **Desertbyfir**. Panduan ini disusun secara berurutan dari langkah pertama hingga hasil akhir di sisi pelanggan (User) untuk mempermudah Anda dalam memahami setiap field dan alur kerja.
+Selamat datang di panduan manual sistem manajemen produk dan addons untuk platform **dessertbyfir**. Panduan ini disusun secara berurutan dari langkah pertama hingga hasil akhir di sisi pelanggan (User) untuk mempermudah Anda dalam memahami setiap field dan alur kerja.
 
 ---
 

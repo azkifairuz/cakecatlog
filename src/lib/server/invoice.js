@@ -105,7 +105,7 @@ Tanggal      : ${formatDate(order.delivery_date)}
 Waktu        : ${order.delivery_time || '-'}
 Alamat       : ${order.address || '-'}`;
 
-	return `🧁 *INVOICE - desertbyfir*
+	return `🧁 *INVOICE - dessertbyfir*
 ${line}
 
 📋 *Detail Pesanan*
@@ -135,7 +135,7 @@ ${dashes}
 *TOTAL       : ${formatCurrency(order.amount)}*
 ${line}
 
-Terima kasih telah memesan di *desertbyfir* 🍰
+Terima kasih telah memesan di *dessertbyfir* 🍰
 Hubungi kami jika ada pertanyaan.`;
 }
 
@@ -153,7 +153,7 @@ export function generateInvoiceEmail(order) {
 	const deliveryLabel = getDeliveryLabel(order);
 	const vehicleText = getVehicleLabel(order);
 	const items = getInvoiceItems(order);
-	const subject = `Invoice desertbyfir #${order.order_number}`;
+	const subject = `Invoice dessertbyfir #${order.order_number}`;
 
 	const itemsHtml = items
 		.map(
@@ -193,7 +193,7 @@ export function generateInvoiceEmail(order) {
 				<div style="background:#ffffff;border:1px solid #f1e7dc;border-radius:18px;overflow:hidden;">
 					<div style="background:#8c5a35;color:#ffffff;padding:24px 28px;">
 						<p style="margin:0 0 6px;font-size:13px;letter-spacing:0.16em;text-transform:uppercase;opacity:0.85;">Invoice</p>
-						<h1 style="margin:0;font-family:Georgia,serif;font-size:30px;font-style:italic;">desertbyfir</h1>
+						<h1 style="margin:0;font-family:Georgia,serif;font-size:30px;font-style:italic;">dessertbyfir</h1>
 					</div>
 
 					<div style="padding:28px;">

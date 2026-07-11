@@ -1,5 +1,6 @@
 <script>
 	import { getI18n } from '$lib/i18n.svelte.js';
+	import { getImageUrl } from '$lib/image-url.js';
 
 	let { banners = [] } = $props();
 	const i18n = getI18n();
@@ -10,16 +11,6 @@
 		{ id: 'default-2', image_url: 'https://images.unsplash.com/photo-1557308536-ee471ef2c390?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80' }
 	];
 	let displayBanners = $derived(banners.length > 0 ? banners : fallbackBanners);
-
-	// Append optimization parameters to URL
-	function optimizeImageUrl(url) {
-		if (!url) return url;
-		// Check if it's already an unsplash or has query params
-		if (url.includes('?')) {
-			return `${url}&width=1920&quality=80`;
-		}
-		return `${url}?width=1920&quality=80`;
-	}
 
 	let currentIndex = $state(0);
 
@@ -43,11 +34,12 @@
 			<div class="absolute inset-0 bg-black/40 z-10"></div>
 			
 			<img 
-				src={optimizeImageUrl(banner.image_url)} 
+				src={getImageUrl(banner.image_url, { width: 1920, quality: 80, resize: 'cover' })} 
 				alt={i18n.t('hero.bannerAlt', { number: i + 1 })} 
 				class="w-full h-full object-cover object-center"
 				loading={i === 0 ? "eager" : "lazy"}
 				fetchpriority={i === 0 ? "high" : "auto"}
+				decoding="async"
 			/>
 		</div>
 	{/each}
@@ -58,7 +50,7 @@
 			{i18n.t('hero.eyebrow')}
 		</p>
 		<h1 class="font-pinyon text-6xl leading-none text-white drop-shadow-lg mb-8 md:text-8xl lg:text-9xl">
-			desertbyfir
+			dessertbyfir
 		</h1>
 		<p class="text-white/90 leading-relaxed max-w-lg mx-auto mb-10 text-base sm:text-lg drop-shadow-md">
 			{i18n.t('hero.description')}

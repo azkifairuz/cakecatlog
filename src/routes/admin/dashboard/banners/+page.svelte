@@ -4,6 +4,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
+	import { getImageUrl } from '$lib/image-url.js';
 	import { Plus, Trash2, GripVertical, Check, X, AlertCircle, Image } from 'lucide-svelte';
 	
 	let { data } = $props();
@@ -116,16 +117,16 @@
 					<form method="POST" action="?/upload" enctype="multipart/form-data" use:enhance={handleUpload} class="flex flex-col gap-4">
 						<div class="space-y-2">
 							<Label for="image">File Gambar</Label>
-							<Input id="image" name="image" type="file" accept="image/*" required class="cursor-pointer file:text-[#8C5A35] file:bg-[#8C5A35]/10 file:rounded-lg file:border-0 file:mr-4 file:px-4 file:py-2 file:font-semibold hover:file:bg-[#8C5A35]/20" />
+							<Input id="image" name="image" type="file" accept="image/*" required class="cursor-pointer file:text-primary file:bg-primary/10 file:rounded-lg file:border-0 file:mr-4 file:px-4 file:py-2 file:font-semibold hover:file:bg-primary/20" />
 							<p class="text-[11px] text-slate-500">Rekomendasi rasio 16:9 atau landscape lebar.</p>
 						</div>
 						
 						<div class="flex items-center gap-2 pt-2">
-							<input type="checkbox" id="is_active" name="is_active" class="rounded border-slate-300 text-[#8C5A35] focus:ring-[#8C5A35]" checked={activeCount < 5} />
+							<input type="checkbox" id="is_active" name="is_active" class="rounded border-slate-300 text-primary focus:ring-primary" checked={activeCount < 5} />
 							<Label for="is_active" class="text-sm cursor-pointer">Langsung Aktifkan</Label>
 						</div>
 
-						<Button type="submit" disabled={isUploading} class="w-full mt-2 bg-[#8C5A35] hover:bg-[#724828] text-white rounded-xl">
+						<Button type="submit" disabled={isUploading} class="w-full mt-2 bg-primary hover:bg-[#724828] text-white rounded-xl">
 							{#if isUploading}
 								<span class="animate-pulse">Mengunggah...</span>
 							{:else}
@@ -166,13 +167,13 @@
 											<Input 
 												type="number" 
 												bind:value={banner.display_order} 
-												class="h-8 w-full text-center px-1 font-semibold text-slate-700 focus-visible:ring-[#8C5A35]" 
+												class="h-8 w-full text-center px-1 font-semibold text-slate-700 focus-visible:ring-primary" 
 											/>
 										</div>
 
 										<!-- Thumbnail -->
 										<div class="h-20 w-36 shrink-0 rounded-lg overflow-hidden border border-slate-200 bg-slate-100">
-											<img src={banner.image_url} alt="Banner" class="w-full h-full object-cover" />
+											<img src={getImageUrl(banner.image_url, { width: 360, height: 200, quality: 75, resize: 'cover' })} alt="Banner" class="w-full h-full object-cover" loading="lazy" decoding="async" />
 										</div>
 
 										<!-- Status Toggle -->

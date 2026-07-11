@@ -95,7 +95,7 @@
 			/*
 			const waNumber = '6281234567890'; // Dummy number
 			
-			const text = `Halo Admin desertbyfir! Saya ingin konfirmasi pesanan saya:
+			const text = `Halo Admin dessertbyfir! Saya ingin konfirmasi pesanan saya:
 
 *Order:* Pemesanan Baru
 *Nama Pemesan:* ${orderData.customer_name}

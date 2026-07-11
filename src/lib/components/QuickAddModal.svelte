@@ -1,9 +1,9 @@
 <script>
 	import { fade, scale } from 'svelte/transition';
+	import { getImageUrl } from '$lib/image-url.js';
 	import { cart } from '$lib/stores/cart.svelte.js';
 	import { supabase } from '$lib/supabase';
 	import {
-		CAKE_TOPPER_FEE,
 		getAddonsByCategory,
 		getSizePrice,
 		getStartFromPrice,
@@ -46,7 +46,7 @@
 	let selectedGlitterAddon = $derived(glitters.find((addon) => addon.name === selectedGlitter) ?? null);
 	let selectedSizePrice = $derived(selectedSizeAddon ? selectedSizeAddon.price : selectedSize ? getSizePrice(product, selectedSize) : startFromPrice);
 	let darkColorSurcharge = $derived(selectedColorAddon?.is_dark_color ? parsePrice(selectedColorAddon.dark_color_surcharge) : 0);
-	let cakeTopperFee = $derived(hasCakeTopper ? parsePrice(cakeTopperAddon?.price || cakeTopperAddon?.additional_price || CAKE_TOPPER_FEE) : 0);
+	let cakeTopperFee = $derived(hasCakeTopper && cakeTopperAddon ? parsePrice(cakeTopperAddon.price) : 0);
 	let addonUnitPrice = $derived(parsePrice(selectedFlavorAddon?.price) + parsePrice(selectedColorAddon?.price) + parsePrice(selectedCrownAddon?.price) + parsePrice(selectedGlitterAddon?.price));
 	let estimatedUnitPrice = $derived(selectedSizePrice + addonUnitPrice + darkColorSurcharge + cakeTopperFee);
 	let estimatedSubtotal = $derived(estimatedUnitPrice * Math.max(Number(quantity) || 1, 1));
@@ -120,7 +120,9 @@
 				} : null,
 				crown: selectedCrownAddon ? { name: selectedCrownAddon.name, price: selectedCrownAddon.price } : null,
 				glitter: selectedGlitterAddon ? { name: selectedGlitterAddon.name, price: selectedGlitterAddon.price } : null,
-				cake_topper: { selected: hasCakeTopper, price: cakeTopperFee }
+				cake_topper: hasCakeTopper && cakeTopperAddon
+					? { selected: true, name: cakeTopperAddon.name, price: cakeTopperFee, addon_id: cakeTopperAddon.id }
+					: { selected: false, price: 0 }
 			};
 
 			const cartItem = {
@@ -134,7 +136,7 @@
 				cake_topper_fee: cakeTopperFee,
 				estimated_unit_price: estimatedUnitPrice,
 				estimated_subtotal: estimatedSubtotal,
-				has_cake_topper: hasCakeTopper,
+				has_cake_topper: hasCakeTopper && Boolean(cakeTopperAddon),
 				cake_size: formData.get('cake_size'),
 				quantity: Math.max(parseInt(formData.get('quantity')) || 1, 1),
 				cake_flavor: formData.get('cake_flavor') || 'Standard',
@@ -190,12 +192,12 @@
 				<!-- Product Summary -->
 				<div class="flex items-start gap-4">
 					{#if primaryImage}
-						<img src={primaryImage} alt={product.name} class="w-20 h-20 rounded-xl object-cover border border-slate-100" />
+						<img src={getImageUrl(primaryImage, { width: 160, height: 160, quality: 75, resize: 'cover' })} alt={product.name} class="w-20 h-20 rounded-xl object-cover border border-slate-100" loading="lazy" decoding="async" />
 					{/if}
 					<div>
 						<h4 class="font-bold text-[#4A3B32] text-lg leading-tight">{product.name}</h4>
 						<p class="mt-1 text-[10px] font-bold uppercase tracking-wider text-[#4A3B32]/45">{i18n.t('home.startFrom')}</p>
-						<p class="text-[#8C5A35] font-semibold">{formatCurrency(startFromPrice)}</p>
+						<p class="text-primary font-semibold">{formatCurrency(startFromPrice)}</p>
 					</div>
 				</div>
 
@@ -211,7 +213,7 @@
 					<div class="grid grid-cols-2 gap-4">
 						<div>
 							<label for="cake_size" class="block text-[12px] font-semibold text-[#4A3B32] mb-1.5 uppercase tracking-wide">{i18n.t('form.size')} <span class="text-red-400">{i18n.t('form.required')}</span></label>
-							<select id="cake_size" name="cake_size" required bind:value={selectedSize} class="w-full px-3 py-2.5 bg-slate-50 border border-[#8C5A35]/20 focus:bg-white rounded-xl text-sm appearance-none focus:outline-none focus:border-[#8C5A35]">
+							<select id="cake_size" name="cake_size" required bind:value={selectedSize} class="w-full px-3 py-2.5 bg-slate-50 border border-primary/20 focus:bg-white rounded-xl text-sm appearance-none focus:outline-none focus:border-primary">
 								<option value="" disabled>{i18n.t('form.choose')}</option>
 								{#each sizePriceOptions as sizeOption}
 									<option value={sizeOption.label}>{sizeOption.label} - {formatCurrency(sizeOption.price)}</option>
@@ -220,7 +222,7 @@
 						</div>
 						<div>
 							<label for="quantity" class="block text-[12px] font-semibold text-[#4A3B32] mb-1.5 uppercase tracking-wide">{i18n.t('form.quantity')} <span class="text-red-400">{i18n.t('form.required')}</span></label>
-							<input type="number" id="quantity" name="quantity" min="1" bind:value={quantity} required class="w-full px-3 py-2.5 bg-slate-50 border border-[#8C5A35]/20 focus:bg-white rounded-xl text-sm focus:outline-none focus:border-[#8C5A35] text-center" />
+							<input type="number" id="quantity" name="quantity" min="1" bind:value={quantity} required class="w-full px-3 py-2.5 bg-slate-50 border border-primary/20 focus:bg-white rounded-xl text-sm focus:outline-none focus:border-primary text-center" />
 						</div>
 					</div>
 
@@ -228,7 +230,7 @@
 						{#if flavors.length > 0}
 							<div>
 								<label for="cake_flavor" class="block text-[12px] font-semibold text-[#4A3B32] mb-1.5 uppercase tracking-wide">{i18n.t('form.flavor')}</label>
-								<select id="cake_flavor" name="cake_flavor" bind:value={selectedFlavor} class="w-full px-3 py-2.5 bg-slate-50 border border-[#8C5A35]/20 focus:bg-white rounded-xl text-sm appearance-none focus:outline-none focus:border-[#8C5A35]">
+								<select id="cake_flavor" name="cake_flavor" bind:value={selectedFlavor} class="w-full px-3 py-2.5 bg-slate-50 border border-primary/20 focus:bg-white rounded-xl text-sm appearance-none focus:outline-none focus:border-primary">
 									<option value="" selected>{i18n.t('form.chooseFlavor')}</option>
 									{#each flavors as flavor}<option value={flavor.name}>{flavor.name}{flavor.price > 0 ? ` (+${formatCurrency(flavor.price)})` : ''}</option>{/each}
 								</select>
@@ -237,7 +239,7 @@
 						{#if colors.length > 0}
 							<div>
 								<label for="cake_color" class="block text-[12px] font-semibold text-[#4A3B32] mb-1.5 uppercase tracking-wide">{i18n.t('form.color')}</label>
-								<select id="cake_color" name="cake_color" bind:value={selectedColor} class="w-full px-3 py-2.5 bg-slate-50 border border-[#8C5A35]/20 focus:bg-white rounded-xl text-sm appearance-none focus:outline-none focus:border-[#8C5A35]">
+								<select id="cake_color" name="cake_color" bind:value={selectedColor} class="w-full px-3 py-2.5 bg-slate-50 border border-primary/20 focus:bg-white rounded-xl text-sm appearance-none focus:outline-none focus:border-primary">
 									<option value="">{i18n.t('form.chooseColor')}</option>
 									{#each colors as color}
 										<option value={color.name}>{color.name}{color.price + (color.is_dark_color ? parsePrice(color.dark_color_surcharge) : 0) > 0 ? ` (+${formatCurrency(color.price + (color.is_dark_color ? parsePrice(color.dark_color_surcharge) : 0))})` : ''}</option>
@@ -248,7 +250,7 @@
 						{#if crowns.length > 0}
 							<div>
 								<label for="crown_option" class="block text-[12px] font-semibold text-[#4A3B32] mb-1.5 uppercase tracking-wide">{i18n.t('form.crown')}</label>
-								<select id="crown_option" name="crown_option" bind:value={selectedCrown} class="w-full px-3 py-2.5 bg-slate-50 border border-[#8C5A35]/20 focus:bg-white rounded-xl text-sm appearance-none focus:outline-none focus:border-[#8C5A35]">
+								<select id="crown_option" name="crown_option" bind:value={selectedCrown} class="w-full px-3 py-2.5 bg-slate-50 border border-primary/20 focus:bg-white rounded-xl text-sm appearance-none focus:outline-none focus:border-primary">
 									<option value="" selected>{i18n.t('form.chooseCrown')}</option>
 									{#each crowns as crown}<option value={crown.name}>{crown.name}{crown.price > 0 ? ` (+${formatCurrency(crown.price)})` : ''}</option>{/each}
 								</select>
@@ -257,7 +259,7 @@
 						{#if glitters.length > 0}
 							<div>
 								<label for="add_edible_glitter" class="block text-[12px] font-semibold text-[#4A3B32] mb-1.5 uppercase tracking-wide">{i18n.t('form.glitter')}</label>
-								<select id="add_edible_glitter" name="add_edible_glitter" bind:value={selectedGlitter} class="w-full px-3 py-2.5 bg-slate-50 border border-[#8C5A35]/20 focus:bg-white rounded-xl text-sm appearance-none focus:outline-none focus:border-[#8C5A35]">
+								<select id="add_edible_glitter" name="add_edible_glitter" bind:value={selectedGlitter} class="w-full px-3 py-2.5 bg-slate-50 border border-primary/20 focus:bg-white rounded-xl text-sm appearance-none focus:outline-none focus:border-primary">
 									<option value="" selected>{i18n.t('form.chooseGlitter')}</option>
 									{#each glitters as glitter}<option value={glitter.name}>{glitter.name}{glitter.price > 0 ? ` (+${formatCurrency(glitter.price)})` : ''}</option>{/each}
 								</select>
@@ -265,45 +267,47 @@
 						{:else}
 							<div>
 								<label for="add_edible_glitter" class="block text-[12px] font-semibold text-[#4A3B32] mb-1.5 uppercase tracking-wide">{i18n.t('form.extraGlitter')}</label>
-								<input type="text" id="add_edible_glitter" name="add_edible_glitter" placeholder={i18n.t('form.optional')} class="w-full px-3 py-2.5 bg-slate-50 border border-[#8C5A35]/20 focus:bg-white rounded-xl text-sm focus:outline-none focus:border-[#8C5A35]" />
+								<input type="text" id="add_edible_glitter" name="add_edible_glitter" placeholder={i18n.t('form.optional')} class="w-full px-3 py-2.5 bg-slate-50 border border-primary/20 focus:bg-white rounded-xl text-sm focus:outline-none focus:border-primary" />
 							</div>
 						{/if}
 					</div>
 
-					<div>
-						<label class="flex items-start gap-3 rounded-xl border border-[#8C5A35]/15 bg-[#FFFBF7] p-4">
-							<input type="checkbox" name="has_cake_topper" bind:checked={hasCakeTopper} class="mt-1 h-4 w-4 rounded border-[#8C5A35]/30 text-[#8C5A35]" />
-							<span>
-								<span class="block text-[12px] font-bold uppercase tracking-wide text-[#4A3B32]">{i18n.t('form.cakeTopper')}</span>
-								<span class="mt-0.5 block text-sm text-[#4A3B32]/65">{i18n.t('form.cakeTopperFee', { price: formatCurrency(cakeTopperAddon?.price ?? CAKE_TOPPER_FEE) })}</span>
-							</span>
-						</label>
-					</div>
+					{#if cakeTopperAddon}
+						<div>
+							<label class="flex items-start gap-3 rounded-xl border border-primary/15 bg-[#FFFBF7] p-4">
+								<input type="checkbox" name="has_cake_topper" bind:checked={hasCakeTopper} class="mt-1 h-4 w-4 rounded border-primary/30 text-primary" />
+								<span>
+									<span class="block text-[12px] font-bold uppercase tracking-wide text-[#4A3B32]">{cakeTopperAddon.name}</span>
+									<span class="mt-0.5 block text-sm text-[#4A3B32]/65">{i18n.t('form.cakeTopperFee', { price: formatCurrency(cakeTopperAddon.price) })}</span>
+								</span>
+							</label>
+						</div>
+					{/if}
 
 					<div>
 						<label for="gift_card_text" class="block text-[12px] font-semibold text-[#4A3B32] mb-1.5 uppercase tracking-wide">{i18n.t('form.giftCard')}</label>
-						<input type="text" id="gift_card_text" name="gift_card_text" placeholder={i18n.t('form.emptyGiftCard')} class="w-full px-3 py-2.5 bg-slate-50 border border-[#8C5A35]/20 focus:bg-white rounded-xl text-sm focus:outline-none focus:border-[#8C5A35]" />
+						<input type="text" id="gift_card_text" name="gift_card_text" placeholder={i18n.t('form.emptyGiftCard')} class="w-full px-3 py-2.5 bg-slate-50 border border-primary/20 focus:bg-white rounded-xl text-sm focus:outline-none focus:border-primary" />
 					</div>
 					<div>
 						<label for="add_on" class="block text-[12px] font-semibold text-[#4A3B32] mb-1.5 uppercase tracking-wide">{i18n.t('form.extraRequestCakeText')}</label>
-						<input type="text" id="add_on" name="add_on" placeholder={i18n.t('form.extraRequestPlaceholder')} class="w-full px-3 py-2.5 bg-slate-50 border border-[#8C5A35]/20 focus:bg-white rounded-xl text-sm focus:outline-none focus:border-[#8C5A35]" />
+						<input type="text" id="add_on" name="add_on" placeholder={i18n.t('form.extraRequestPlaceholder')} class="w-full px-3 py-2.5 bg-slate-50 border border-primary/20 focus:bg-white rounded-xl text-sm focus:outline-none focus:border-primary" />
 					</div>
 
 					<div>
 						<div class="block text-[12px] font-semibold text-[#4A3B32] mb-1.5 uppercase tracking-wide">{i18n.t('form.designReference')}</div>
-						<label class="flex flex-col items-center justify-center w-full h-24 border border-[#8C5A35]/20 border-dashed rounded-xl cursor-pointer bg-slate-50 hover:bg-[#8C5A35]/5 transition-all group overflow-hidden relative">
+						<label class="flex flex-col items-center justify-center w-full h-24 border border-primary/20 border-dashed rounded-xl cursor-pointer bg-slate-50 hover:bg-primary/5 transition-all group overflow-hidden relative">
 							<div class="flex flex-col items-center justify-center pt-5 pb-6 text-center px-4 z-10">
-								<svg class="w-6 h-6 mb-2 text-[#8C5A35]/50 group-hover:text-[#8C5A35] group-hover:scale-110 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+								<svg class="w-6 h-6 mb-2 text-primary/50 group-hover:text-primary group-hover:scale-110 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
 								<p class="text-[13px] text-[#4A3B32]/70 font-medium truncate w-full px-4">{fileName || i18n.t('form.noFileSelected')}</p>
 							</div>
 							<input type="file" name="reference_image" accept="image/*" class="opacity-0 absolute inset-0 w-full h-full cursor-pointer z-20" onchange={(e) => fileName = e.target.files[0] ? e.target.files[0].name : ''} />
 						</label>
 					</div>
 
-					<div class="rounded-2xl border border-[#8C5A35]/15 bg-[#FFFBF7] p-4">
+					<div class="rounded-2xl border border-primary/15 bg-[#FFFBF7] p-4">
 						<div class="mb-3 flex items-center justify-between">
 							<span class="text-[12px] font-bold uppercase tracking-wide text-[#4A3B32]/70">{i18n.t('pricing.estimateTitle')}</span>
-							<span class="text-lg font-black text-[#8C5A35]">{formatCurrency(estimatedSubtotal)}</span>
+							<span class="text-lg font-black text-primary">{formatCurrency(estimatedSubtotal)}</span>
 						</div>
 						<div class="space-y-1.5 text-xs text-[#4A3B32]/65">
 							<div class="flex justify-between gap-4">
@@ -322,7 +326,7 @@
 									<span class="font-semibold text-[#4A3B32]">{formatCurrency(cakeTopperFee)}</span>
 								</div>
 							{/if}
-							<div class="flex justify-between gap-4 border-t border-[#8C5A35]/10 pt-1.5">
+							<div class="flex justify-between gap-4 border-t border-primary/10 pt-1.5">
 								<span>{i18n.t('pricing.qty')}</span>
 								<span class="font-semibold text-[#4A3B32]">{Math.max(Number(quantity) || 1, 1)}x</span>
 							</div>
@@ -335,7 +339,7 @@
 			<!-- Footer -->
 			<div class="px-6 py-4 bg-white border-t border-slate-100 flex items-center justify-between sticky bottom-0 shrink-0">
 				<button type="button" onclick={closeModal} class="px-4 py-3 text-sm font-semibold text-[#4A3B32]/70 hover:text-[#4A3B32]">{i18n.t('quickAdd.cancel')}</button>
-				<button form="quick-add-form" type="submit" disabled={loading} class="px-6 py-3 bg-[#8C5A35] hover:bg-[#724828] text-white font-bold text-sm tracking-wide rounded-xl shadow-lg shadow-[#8C5A35]/20 flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed transition-all">
+				<button form="quick-add-form" type="submit" disabled={loading} class="px-6 py-3 bg-primary hover:bg-[#724828] text-white font-bold text-sm tracking-wide rounded-xl shadow-lg shadow-primary/20 flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed transition-all">
 					{#if loading}
 						<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
 					{:else}

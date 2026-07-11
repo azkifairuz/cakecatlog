@@ -9,6 +9,7 @@
 	import { Switch } from '$lib/components/ui/switch';
 	import { Textarea } from '$lib/components/ui/textarea';
 	import * as Card from '$lib/components/ui/card';
+	import { getImageUrl } from '$lib/image-url.js';
 	import { fly, fade } from 'svelte/transition';
 	import { getProductAddons, getStartFromPrice } from '$lib/pricing.js';
 
@@ -331,16 +332,16 @@
 							<div class="absolute z-30 mt-2 max-h-64 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-xl">
 								<button type="button" class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm hover:bg-slate-50" onclick={() => selectCategory(null)}>
 									<span class="text-slate-500">No Category</span>
-									{#if !selectedCategoryId}<span class="text-xs font-bold text-[#8C5A35]">Selected</span>{/if}
+									{#if !selectedCategoryId}<span class="text-xs font-bold text-primary">Selected</span>{/if}
 								</button>
 								{#each filteredCategories as category}
 									<button type="button" class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm hover:bg-slate-50" onclick={() => selectCategory(category)}>
 										<span class="font-medium text-slate-700">{category.name}</span>
-										{#if selectedCategoryId === category.id}<span class="text-xs font-bold text-[#8C5A35]">Selected</span>{/if}
+										{#if selectedCategoryId === category.id}<span class="text-xs font-bold text-primary">Selected</span>{/if}
 									</button>
 								{/each}
 								{#if canCreateCategory}
-									<button type="button" class="mt-1 flex w-full items-center gap-2 rounded-lg border border-dashed border-[#8C5A35]/30 bg-[#8C5A35]/5 px-3 py-2 text-left text-sm font-semibold text-[#8C5A35] hover:bg-[#8C5A35]/10" onclick={openCreateCategoryModal}>
+									<button type="button" class="mt-1 flex w-full items-center gap-2 rounded-lg border border-dashed border-primary/30 bg-primary/5 px-3 py-2 text-left text-sm font-semibold text-primary hover:bg-primary/10" onclick={openCreateCategoryModal}>
 										<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
 										Create "{categoryQuery.trim()}"
 									</button>
@@ -557,7 +558,7 @@
 						<!-- Existing Images -->
 						{#each existingImages as img, i}
 							<div class="relative aspect-square rounded-xl overflow-hidden border border-slate-200 group">
-								<img src={img.image_url} alt="Product" class="w-full h-full object-cover" />
+								<img src={getImageUrl(img.image_url, { width: 320, height: 320, quality: 75, resize: 'cover' })} alt="Product" class="w-full h-full object-cover" loading="lazy" decoding="async" />
 								<button type="button" onclick={() => removeExistingImage(img)} aria-label={`Hapus gambar produk ${i + 1}`} class="absolute top-1 right-1 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-sm">
 									<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
 								</button>
@@ -656,7 +657,7 @@
 			>
 				<input type="hidden" name="name" value={pendingCategoryName} />
 				<Button type="button" variant="outline" class="flex-1" disabled={isCreatingCategory} onclick={closeCreateCategoryModal}>Cancel</Button>
-				<Button type="submit" class="flex-1 bg-[#8C5A35] hover:bg-[#724828]" disabled={isCreatingCategory}>
+				<Button type="submit" class="flex-1 bg-primary hover:bg-[#724828]" disabled={isCreatingCategory}>
 					{isCreatingCategory ? 'Creating...' : 'Create Category'}
 				</Button>
 			</form>
@@ -683,7 +684,7 @@
 						{#if product.product_images && product.product_images.length > 0}
 							{@const primaryImg = product.product_images.find(img => img.is_primary) || product.product_images[0]}
 							<div class="w-12 h-12 rounded-lg overflow-hidden bg-slate-100 shadow-sm border border-slate-200">
-								<img src={primaryImg.image_url} alt={product.name} class="w-full h-full object-cover" />
+								<img src={getImageUrl(primaryImg.image_url, { width: 96, height: 96, quality: 75, resize: 'cover' })} alt={product.name} class="w-full h-full object-cover" loading="lazy" decoding="async" />
 							</div>
 						{:else}
 							<div class="w-12 h-12 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-[10px] font-medium text-slate-400">
@@ -777,7 +778,7 @@
 						<div class="flex gap-3 overflow-x-auto pb-2 snap-x">
 							{#each selectedProductDetail.product_images as img}
 								<div class="relative w-28 h-28 rounded-xl overflow-hidden shrink-0 snap-start border border-slate-200 shadow-sm">
-									<img src={img.image_url} alt="Product Galeri" class="w-full h-full object-cover" />
+									<img src={getImageUrl(img.image_url, { width: 224, height: 224, quality: 75, resize: 'cover' })} alt="Product Galeri" class="w-full h-full object-cover" loading="lazy" decoding="async" />
 									{#if img.is_primary}
 										<span class="absolute bottom-1 right-1 bg-slate-900/70 backdrop-blur-sm text-white text-[9px] px-2 py-0.5 rounded-full font-medium">Primary</span>
 									{/if}

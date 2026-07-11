@@ -27,7 +27,7 @@
 			aria-label={label}
 			class="peer sr-only"
 		/>
-		<span class="absolute inset-0 rounded-full bg-slate-300 transition-colors peer-checked:bg-[#8C5A35] peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[#8C5A35]"></span>
+		<span class="absolute inset-0 rounded-full bg-slate-300 transition-colors peer-checked:bg-primary peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary"></span>
 		<span class="absolute left-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform peer-checked:translate-x-5"></span>
 	</span>
 </label>

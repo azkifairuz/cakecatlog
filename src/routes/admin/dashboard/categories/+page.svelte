@@ -14,7 +14,7 @@
 
 <div class="flex items-center justify-between mb-6">
 	<h1 class="text-2xl font-bold text-[#4A3B32]">Kategori Kue</h1>
-	<Button onclick={() => isAdding = !isAdding} class="bg-[#8C5A35] hover:bg-[#724828] rounded-xl px-5">
+	<Button onclick={() => isAdding = !isAdding} class="bg-primary hover:bg-[#724828] rounded-xl px-5">
 		{isAdding ? 'Batal' : '+ Tambah Kategori'}
 	</Button>
 </div>
@@ -26,7 +26,7 @@
 {/if}
 
 {#if isAdding}
-	<Card.Root class="mb-8 border-[#8C5A35]/20 shadow-sm animate-in slide-in-from-top-4 fade-in duration-200">
+	<Card.Root class="mb-8 border-primary/20 shadow-sm animate-in slide-in-from-top-4 fade-in duration-200">
 		<Card.Content class="p-6">
 			<form method="POST" action="?/createCategory" use:enhance={() => {
 				creating = true;
@@ -40,10 +40,10 @@
 			}} class="space-y-4 max-w-md">
 				<div>
 					<Label for="name" class="font-bold text-[#4A3B32]">Nama Kategori</Label>
-					<Input type="text" id="name" name="name" placeholder="Contoh: Wedding Cake" required class="mt-2 h-12 rounded-xl bg-slate-50 border-[#8C5A35]/20" />
+					<Input type="text" id="name" name="name" placeholder="Contoh: Wedding Cake" required class="mt-2 h-12 rounded-xl bg-slate-50 border-primary/20" />
 					<p class="text-xs text-[#4A3B32]/70 mt-2">Slug akan dibuat secara otomatis berdasarkan nama ini.</p>
 				</div>
-				<Button type="submit" disabled={creating} class="w-full h-12 rounded-xl bg-[#8C5A35] hover:bg-[#724828] text-white font-bold transition-all shadow-md">
+				<Button type="submit" disabled={creating} class="w-full h-12 rounded-xl bg-primary hover:bg-[#724828] text-white font-bold transition-all shadow-md">
 					{creating ? 'Menyimpan...' : 'Simpan Kategori'}
 				</Button>
 			</form>
@@ -53,7 +53,7 @@
 
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
 	{#each data.categories as category (category.id)}
-		<Card.Root class="border-[#8C5A35]/20 shadow-sm hover:shadow-md transition-shadow">
+		<Card.Root class="border-primary/20 shadow-sm hover:shadow-md transition-shadow">
 			<Card.Content class="p-5 flex items-center justify-between gap-4">
 				<div class="flex flex-col">
 					<h3 class="font-bold text-lg text-[#4A3B32] leading-tight">{category.name}</h3>
@@ -81,7 +81,7 @@
 			</Card.Content>
 		</Card.Root>
 	{:else}
-		<div class="col-span-full py-16 text-center border-2 border-dashed border-[#8C5A35]/20 rounded-2xl bg-white">
+		<div class="col-span-full py-16 text-center border-2 border-dashed border-primary/20 rounded-2xl bg-white">
 			<div class="w-16 h-16 bg-slate-50 text-slate-300 rounded-full flex items-center justify-center mx-auto mb-4">
 				<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
 			</div>

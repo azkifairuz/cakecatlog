@@ -1,5 +1,3 @@
-export const CAKE_TOPPER_FEE = 150000;
-
 const DARK_COLOR_KEYWORDS = ['merah', 'hitam', 'navy', 'chocolate', 'forest green'];
 const FALLBACK_SIZES = ['8cm', '10cm', '12cm', 'Custom'];
 

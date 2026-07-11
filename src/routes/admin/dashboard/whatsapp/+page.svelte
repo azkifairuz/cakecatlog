@@ -53,15 +53,15 @@
 <div class="space-y-8 max-w-2xl mx-auto">
 	<!-- Header -->
 	<div class="space-y-2">
-		<div class="text-sm font-semibold uppercase tracking-[0.2em] text-[#8C5A35]">Integrasi</div>
+		<div class="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Integrasi</div>
 		<h1 class="text-3xl font-bold text-[#4A3B32]">WhatsApp Gateway</h1>
 		<p class="text-sm text-[#4A3B32]/70">Hubungkan WhatsApp Anda untuk mengirim invoice dan notifikasi pesanan ke pelanggan secara langsung.</p>
 	</div>
 
 	<!-- Status Card -->
-	<div class="bg-white rounded-3xl border border-[#8C5A35]/10 shadow-sm overflow-hidden">
+	<div class="bg-white rounded-3xl border border-primary/10 shadow-sm overflow-hidden">
 		<!-- Status Bar -->
-		<div class="flex items-center justify-between p-6 border-b border-[#8C5A35]/10">
+		<div class="flex items-center justify-between p-6 border-b border-primary/10">
 			<div class="flex items-center gap-3">
 				<div class="w-3 h-3 rounded-full {isConnected ? 'bg-green-500 animate-pulse' : 'bg-amber-400 animate-pulse'}"></div>
 				<div>
@@ -90,12 +90,12 @@
 						<svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
 					</div>
 					<h3 class="text-xl font-bold text-[#4A3B32] mb-2">WhatsApp Terhubung!</h3>
-					<p class="text-sm text-[#4A3B32]/70 max-w-sm">Anda dapat mengirim invoice ke pelanggan melalui halaman <a href="/admin/dashboard/orders" class="underline text-[#8C5A35] font-semibold">Daftar Pesanan</a>.</p>
+					<p class="text-sm text-[#4A3B32]/70 max-w-sm">Anda dapat mengirim invoice ke pelanggan melalui halaman <a href="/admin/dashboard/orders" class="underline text-primary font-semibold">Daftar Pesanan</a>.</p>
 				</div>
 			{:else if qrImage}
 				<!-- QR Code State -->
 				<div class="text-center">
-					<div class="bg-white p-4 rounded-2xl border-2 border-[#8C5A35]/20 inline-block mb-6 shadow-sm">
+					<div class="bg-white p-4 rounded-2xl border-2 border-primary/20 inline-block mb-6 shadow-sm">
 						<img src={qrImage} alt="WhatsApp QR Code" class="w-64 h-64" />
 					</div>
 					<h3 class="text-lg font-bold text-[#4A3B32] mb-3">Scan QR Code Ini</h3>

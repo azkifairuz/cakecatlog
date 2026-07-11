@@ -26,7 +26,9 @@ export const load = async ({ locals: { supabase } }) => {
 			)
 		`)
 		.eq('is_available', true)
-		.order('created_at', { ascending: false });
+		.order('created_at', { ascending: false })
+		.order('is_primary', { foreignTable: 'product_images', ascending: false })
+		.limit(1, { foreignTable: 'product_images' });
 
 	const { data: categories } = await supabase
 		.from('categories')
@@ -57,7 +59,9 @@ export const load = async ({ locals: { supabase } }) => {
 					is_active
 				)
 			)
-		`);
+		`)
+		.order('is_primary', { foreignTable: 'product_images', ascending: false })
+		.limit(1, { foreignTable: 'product_images' });
 
 	const { data: globalAddons } = await supabase
 		.from('global_addons')
