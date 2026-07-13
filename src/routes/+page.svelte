@@ -5,9 +5,7 @@
 	import { getImageUrl } from '$lib/image-url.js';
 	import { getStartFromPrice } from '$lib/pricing.js';
 	import { getI18n } from '$lib/i18n.svelte.js';
-	import { injectSpeedInsights } from '@vercel/speed-insights/sveltekit';
 
-	injectSpeedInsights();
 	let { data } = $props();
 	const i18n = getI18n();
 
