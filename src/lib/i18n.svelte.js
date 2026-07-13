@@ -59,7 +59,14 @@ export const translations = {
 			startFrom: 'Mulai dari',
 			addToCartTitle: 'Tambah ke Keranjang',
 			emptyCatalog: 'Belum ada produk di katalog.',
-			emptyCategory: 'Belum ada produk di kategori ini.'
+			emptyCategory: 'Belum ada produk di kategori ini.',
+			loadMore: 'Lihat Semua Katalog'
+		},
+		catalog: {
+			eyebrow: 'Katalog Lengkap',
+			title: 'Semua Koleksi Kue',
+			description:
+				'Jelajahi seluruh pilihan kue dessertbyfir dan pilih desain yang paling cocok untuk momen spesial Anda.'
 		},
 		topPicks: {
 			eyebrow: 'Pilihan Favorit',
@@ -250,7 +257,14 @@ export const translations = {
 			startFrom: 'Start from',
 			addToCartTitle: 'Add to Cart',
 			emptyCatalog: 'No products in the catalog yet.',
-			emptyCategory: 'No products in this category yet.'
+			emptyCategory: 'No products in this category yet.',
+			loadMore: 'View Full Catalog'
+		},
+		catalog: {
+			eyebrow: 'Full Catalog',
+			title: 'All Cake Collections',
+			description:
+				'Explore every dessertbyfir cake option and choose the design that fits your special moment best.'
 		},
 		topPicks: {
 			eyebrow: 'Customer Favorites',

@@ -2,6 +2,8 @@ import { createServerClient } from '@supabase/ssr';
 import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
 import { redirect } from '@sveltejs/kit';
 
+const PUBLIC_CACHE_CONTROL = 'public, max-age=0, s-maxage=60, stale-while-revalidate=300';
+
 export const handle = async ({ event, resolve }) => {
 	event.locals.supabase = createServerClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
 		cookies: {
@@ -44,11 +46,16 @@ export const handle = async ({ event, resolve }) => {
 		return { session, user };
 	};
 
-	// Get session safely
-	const { session, user } = await event.locals.safeGetSession();
+	const isAdminRoute = event.url.pathname.startsWith('/admin');
+	const isAdminLoginRoute = event.url.pathname === '/admin/login';
+	let session = null;
+
+	if (isAdminRoute) {
+		({ session } = await event.locals.safeGetSession());
+	}
 	
 	// Protect admin routes
-	if (event.url.pathname.startsWith('/admin') && event.url.pathname !== '/admin/login') {
+	if (isAdminRoute && !isAdminLoginRoute) {
 		if (!session) {
 			// Not authenticated, redirect to login
 			throw redirect(303, '/admin/login');
@@ -56,13 +63,26 @@ export const handle = async ({ event, resolve }) => {
 	}
 	
 	// Redirect logged-in users away from login page
-	if (event.url.pathname === '/admin/login' && session) {
+	if (isAdminLoginRoute && session) {
 		throw redirect(303, '/admin/dashboard');
 	}
 
-	return resolve(event, {
+	const response = await resolve(event, {
 		filterSerializedResponseHeaders(name) {
 			return name === 'content-range' || name === 'x-supabase-api-version';
 		},
 	});
+
+	if (event.request.method === 'GET' && isCacheablePublicPage(event.url.pathname)) {
+		response.headers.set('cache-control', PUBLIC_CACHE_CONTROL);
+	}
+
+	return response;
 };
+
+function isCacheablePublicPage(pathname) {
+	if (pathname === '/') return true;
+	if (pathname === '/catalog') return true;
+	if (pathname.startsWith('/product/')) return true;
+	return false;
+}

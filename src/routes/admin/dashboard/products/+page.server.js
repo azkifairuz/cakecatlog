@@ -1,44 +1,63 @@
 import { parsePrice } from '$lib/pricing.js';
 
-export const load = async ({ locals: { supabase } }) => {
-	const { data: products, error } = await supabase
-		.from('products')
-		.select(`
-			*,
-			category:categories (
-				name,
-				slug
-			),
-			product_images (
-				id,
-				image_url,
-				is_primary
-			),
-			product_addons (
-				addon_id,
-				is_active,
-				global_addons (
-					id,
-					category,
-					name,
-					additional_price,
-					is_dark_color,
-					dark_color_surcharge,
-					is_active
-				)
-			)
-		`)
-		.order('created_at', { ascending: false });
+const PRODUCTS_PER_PAGE = 10;
 
-	const { data: categories } = await supabase.from('categories').select('*').order('name');
-	const { data: globalAddons } = await supabase
-		.from('global_addons')
-		.select('*')
-		.order('category')
-		.order('name');
+export const load = async ({ locals: { supabase }, url }) => {
+	const pageParam = Number(url.searchParams.get('page') ?? '1');
+	const page = Number.isInteger(pageParam) && pageParam > 0 ? pageParam : 1;
+	const from = (page - 1) * PRODUCTS_PER_PAGE;
+	const to = from + PRODUCTS_PER_PAGE - 1;
+
+	const [productsResult, categoriesResult, globalAddonsResult] = await Promise.all([
+		supabase
+			.from('products')
+			.select(`
+				*,
+				category:categories (
+					name,
+					slug
+				),
+				product_images (
+					id,
+					image_url,
+					is_primary
+				),
+				product_addons (
+					addon_id,
+					is_active,
+					global_addons (
+						id,
+						category,
+						name,
+						additional_price,
+						is_dark_color,
+						dark_color_surcharge,
+						is_active
+					)
+				)
+			`, { count: 'exact' })
+			.order('created_at', { ascending: false })
+			.range(from, to),
+		supabase.from('categories').select('*').order('name'),
+		supabase.from('global_addons').select('*').order('category').order('name')
+	]);
+
+	const { data: products, count } = productsResult;
+	const { data: categories } = categoriesResult;
+	const { data: globalAddons } = globalAddonsResult;
+	const totalProducts = count ?? 0;
+	const totalPages = Math.max(1, Math.ceil(totalProducts / PRODUCTS_PER_PAGE));
 
 	return {
 		products: products ?? [],
+		pagination: {
+			page,
+			pageSize: PRODUCTS_PER_PAGE,
+			totalProducts,
+			totalPages,
+			from: totalProducts === 0 ? 0 : from + 1,
+			to: Math.min(to + 1, totalProducts)
+		},
 		categories: categories ?? [],
 		globalAddons: globalAddons ?? []
 	};

@@ -241,6 +241,14 @@
 		if (!amount) return '-';
 		return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount);
 	}
+
+	let pagination = $derived(data.pagination);
+	let canGoPrev = $derived(pagination.page > 1);
+	let canGoNext = $derived(pagination.page < pagination.totalPages);
+
+	function getPageHref(page) {
+		return `?page=${page}`;
+	}
 </script>
 
 <div class="flex items-center justify-between mb-4">
@@ -740,6 +748,34 @@
 			{/each}
 		</Table.Body>
 		</Table.Root>
+	</div>
+
+	<div class="flex flex-col gap-3 border-t border-slate-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+		<p class="text-sm text-slate-500">
+			Menampilkan <span class="font-semibold text-slate-700">{pagination.from}</span>-<span class="font-semibold text-slate-700">{pagination.to}</span>
+			dari <span class="font-semibold text-slate-700">{pagination.totalProducts}</span> produk
+		</p>
+		<div class="flex items-center justify-between gap-2 sm:justify-end">
+			<a
+				href={getPageHref(pagination.page - 1)}
+				aria-disabled={!canGoPrev}
+				tabindex={canGoPrev ? 0 : -1}
+				class="inline-flex h-9 items-center rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 {canGoPrev ? '' : 'pointer-events-none opacity-50'}"
+			>
+				Previous
+			</a>
+			<span class="min-w-24 text-center text-sm font-semibold text-slate-700">
+				Page {pagination.page} / {pagination.totalPages}
+			</span>
+			<a
+				href={getPageHref(pagination.page + 1)}
+				aria-disabled={!canGoNext}
+				tabindex={canGoNext ? 0 : -1}
+				class="inline-flex h-9 items-center rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 {canGoNext ? '' : 'pointer-events-none opacity-50'}"
+			>
+				Next
+			</a>
+		</div>
 	</div>
 </div>
 

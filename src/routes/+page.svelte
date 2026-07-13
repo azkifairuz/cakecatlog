@@ -179,6 +179,13 @@
 				</div>
 			{/each}
 		</div>
+		{#if data.products.length > 0}
+			<div class="mt-12 flex justify-center">
+				<a href="/catalog" class="inline-flex items-center justify-center rounded-full bg-primary px-8 py-3 text-sm font-bold tracking-wide text-white shadow-lg shadow-primary/15 transition-all hover:bg-[#724828] hover:shadow-xl">
+					{i18n.t('home.loadMore')}
+				</a>
+			</div>
+		{/if}
 	</div>
 </section>
 
