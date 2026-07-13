@@ -21,6 +21,14 @@
 	});
 </script>
 
+<svelte:head>
+	<title>dessertbyfir</title>
+	<meta
+		name="description"
+		content="dessertbyfir artisan cake shop untuk pesanan kue dan dessert premium."
+	/>
+</svelte:head>
+
 {#if !isAdminRoute}
 	<div class="min-h-screen flex flex-col font-['Plus_Jakarta_Sans'] bg-white">
 		<header class="w-full bg-white relative z-50">

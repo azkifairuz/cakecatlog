@@ -26,6 +26,7 @@ export const load = async ({ locals: { supabase } }) => {
 					)
 				)
 			`)
+			.eq('is_active', true)
 			.eq('is_available', true)
 			.order('created_at', { ascending: false })
 			.order('is_primary', { foreignTable: 'product_images', ascending: false })

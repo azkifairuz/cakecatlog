@@ -30,6 +30,10 @@
 	}
 </script>
 
+<svelte:head>
+	<title>dessertbyfir | Artisan Cake Shop</title>
+</svelte:head>
+
 <HeroCarousel banners={data.banners} />
 
 <TopPicksCarousel topPicks={data.topPicks} onQuickAdd={openQuickAdd} />

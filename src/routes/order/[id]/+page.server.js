@@ -7,6 +7,7 @@ export const load = async ({ params, locals: { supabase } }) => {
 		.from('products')
 		.select('*')
 		.eq('id', id)
+		.eq('is_active', true)
 		.single();
 
 	if (dbError || !product) {

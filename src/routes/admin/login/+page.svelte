@@ -9,6 +9,10 @@
 	let loading = $state(false);
 </script>
 
+<svelte:head>
+	<title>Admin Login | dessertbyfir</title>
+</svelte:head>
+
 <div class="flex items-center justify-center min-h-screen bg-muted/40 p-4">
 	<Card.Root class="w-full max-w-sm">
 		<Card.Header>

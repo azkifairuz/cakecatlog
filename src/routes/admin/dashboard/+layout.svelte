@@ -4,7 +4,22 @@
 	import { ChartBar, Info, ListPlus, LogOut, MessageCircle, Package, ShoppingCart, Tags, Image } from 'lucide-svelte';
 
 	let { children } = $props();
+	const pageTitles = {
+		'/admin/dashboard': 'Analytics',
+		'/admin/dashboard/orders': 'Orders',
+		'/admin/dashboard/products': 'Products',
+		'/admin/dashboard/addons': 'Addons',
+		'/admin/dashboard/banners': 'Banners',
+		'/admin/dashboard/site-info': 'Info Toko',
+		'/admin/dashboard/categories': 'Categories',
+		'/admin/dashboard/whatsapp': 'WhatsApp'
+	};
+	let pageTitle = $derived(pageTitles[$page.url.pathname] ?? 'Dashboard');
 </script>
+
+<svelte:head>
+	<title>{pageTitle} | dessertbyfir Admin</title>
+</svelte:head>
 
 <div class="flex min-h-screen w-full flex-col bg-slate-50 pb-16 sm:pb-0 font-sans text-[#4A3B32]">
 	<header class="hidden md:flex sticky top-0 z-30 h-16 items-center gap-6 border-b border-primary/10 bg-white px-6 shadow-sm">

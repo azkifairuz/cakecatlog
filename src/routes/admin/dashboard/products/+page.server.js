@@ -36,6 +36,7 @@ export const load = async ({ locals: { supabase }, url }) => {
 					)
 				)
 			`, { count: 'exact' })
+			.eq('is_active', true)
 			.order('created_at', { ascending: false })
 			.range(from, to),
 		supabase.from('categories').select('*').order('name'),
@@ -247,6 +248,7 @@ export const actions = {
 				description,
 				base_price: parseFloat(base_price),
 				is_available,
+				is_active: true,
 				category_id: category_id || null,
 				handling_warning
 			})
@@ -424,31 +426,12 @@ export const actions = {
 
 		if (!id) return { success: false, error: 'Missing ID' };
 
-		// Fetch images to delete from storage
-		const { data: images } = await supabase
-			.from('product_images')
-			.select('image_url')
-			.eq('product_id', id);
-		
-		if (images && images.length > 0) {
-			const paths = images.map(img => {
-				const url = new URL(img.image_url);
-				const parts = url.pathname.split('/');
-				// /storage/v1/object/public/products/product/filename.jpg
-				// Extract 'product/filename.jpg'
-				const pathIndex = parts.indexOf('products');
-				return parts.slice(pathIndex + 1).join('/');
-			});
-			
-			if (paths.length > 0) {
-				await supabase.storage.from('products').remove(paths);
-			}
-		}
-
-		const { error } = await supabase.from('products').delete().eq('id', id);
-
+		const { error } = await supabase
+			.from('products')
+			.update({ is_active: false })
+			.eq('id', id);
 		if (error) return { success: false, error: error.message };
-		return { success: true };
+		return { success: true, archived: true };
 	},
 	toggleAvailability: async ({ request, locals: { supabase } }) => {
 		const formData = await request.formData();

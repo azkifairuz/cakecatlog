@@ -23,7 +23,7 @@
 	});
 </script>
 
-<section class="relative w-full h-[100dvh] overflow-hidden bg-slate-900">
+<section class="relative w-full h-[100dvh] overflow-hidden bg-[#4A3B32]">
 	<!-- Carousel Backgrounds -->
 	{#each displayBanners as banner, i (banner.id)}
 		<div 
@@ -31,10 +31,10 @@
 			style="opacity: {currentIndex === i ? 1 : 0}; z-index: {currentIndex === i ? 10 : 0};"
 		>
 			<!-- Dark overlay for better text readability -->
-			<div class="absolute inset-0 bg-black/40 z-10"></div>
+			<div class="absolute inset-0 bg-black/35 z-10"></div>
 			
 			<img 
-				src={getImageUrl(banner.image_url, { width: 1920, quality: 80, resize: 'cover' })} 
+				src={getImageUrl(banner.image_url, { width: i === 0 ? 1280 : 1600, quality: i === 0 ? 68 : 75, resize: 'cover' })} 
 				alt={i18n.t('hero.bannerAlt', { number: i + 1 })} 
 				class="w-full h-full object-cover object-center"
 				loading={i === 0 ? "eager" : "lazy"}

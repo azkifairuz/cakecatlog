@@ -1,4 +1,5 @@
 const HOME_CATALOG_LIMIT = 8;
+const HOME_TOP_PICKS_LIMIT = 6;
 
 export const load = async ({ locals: { supabase } }) => {
 	const [productsResult, categoriesResult, bannersResult, topPicksResult, globalAddonsResult] =
@@ -29,6 +30,7 @@ export const load = async ({ locals: { supabase } }) => {
 						)
 					)
 				`)
+				.eq('is_active', true)
 				.eq('is_available', true)
 				.order('created_at', { ascending: false })
 				.order('is_primary', { foreignTable: 'product_images', ascending: false })
@@ -59,8 +61,10 @@ export const load = async ({ locals: { supabase } }) => {
 						)
 					)
 				`)
+				.eq('is_active', true)
 				.order('is_primary', { foreignTable: 'product_images', ascending: false })
-				.limit(1, { foreignTable: 'product_images' }),
+				.limit(1, { foreignTable: 'product_images' })
+				.limit(HOME_TOP_PICKS_LIMIT),
 			supabase
 				.from('global_addons')
 				.select('*')

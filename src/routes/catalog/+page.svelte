@@ -30,6 +30,10 @@
 	}
 </script>
 
+<svelte:head>
+	<title>{i18n.t('catalog.title')} | dessertbyfir</title>
+</svelte:head>
+
 <section class="bg-[#FFFBF7] py-14 sm:py-18">
 	<div class="container mx-auto px-6 text-center lg:px-12">
 		<p class="mb-3 text-xs font-bold uppercase tracking-[0.24em] text-primary">
