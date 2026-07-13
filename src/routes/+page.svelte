@@ -1,6 +1,8 @@
 <script>
 	import HeroCarousel from '$lib/components/HeroCarousel.svelte';
 	import TopPicksCarousel from '$lib/components/TopPicksCarousel.svelte';
+	import TopPicksSkeleton from '$lib/components/TopPicksSkeleton.svelte';
+	import CatalogSkeleton from '$lib/components/CatalogSkeleton.svelte';
 	import QuickAddModal from '$lib/components/QuickAddModal.svelte';
 	import { getImageUrl } from '$lib/image-url.js';
 	import { getStartFromPrice } from '$lib/pricing.js';
@@ -18,12 +20,6 @@
 	}
 
 	let selectedCategory = $state('All');
-	
-	let filteredProducts = $derived(
-		selectedCategory === 'All' 
-			? data.products 
-			: data.products.filter(p => p.category?.slug === selectedCategory)
-	);
 
 	function formatCurrency(amount) {
 		return new Intl.NumberFormat(i18n.locale === 'en' ? 'en-US' : 'id-ID', { style: 'currency', currency: 'IDR' }).format(amount);
@@ -34,9 +30,18 @@
 	<title>dessertbyfir | Artisan Cake Shop</title>
 </svelte:head>
 
-<HeroCarousel banners={data.banners} />
+{#await data.banners}
+  <div class="h-125 bg-[#FFFBF7] animate-pulse rounded-3xl"></div>
+{:then banners}
+  <HeroCarousel {banners} />
+{/await}
+<!-- Top picks -->
+{#await data.topPicks}
+  <TopPicksSkeleton />
+{:then topPicks}
+  <TopPicksCarousel {topPicks} onQuickAdd={openQuickAdd} />
+{/await}
 
-<TopPicksCarousel topPicks={data.topPicks} onQuickAdd={openQuickAdd} />
 
 <!-- ABOUT SECTION -->
 <section id="about" class="py-24 bg-white relative overflow-hidden">
@@ -104,6 +109,10 @@
 	</div>
 </section>
 
+
+{#await data.products}
+  <CatalogSkeleton />
+{:then products}
 <!-- CATALOG SECTION -->
 <section id="catalog" class="py-24 bg-white">
 	<div class="container mx-auto px-6 text-center mb-16">
@@ -137,7 +146,7 @@
 
 	<div class="container mx-auto px-4 sm:px-6 max-w-7xl">
 		<div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-6 sm:gap-x-6 sm:gap-y-12">
-			{#each filteredProducts as product}
+			{#each selectedCategory === 'All' ? products : products.filter((p) => p.category?.slug === selectedCategory) as product}
 				{@const primaryImg = product.product_images?.find(img => img.is_primary) || product.product_images?.[0]}
 				<div class="bg-white rounded-3xl p-3 sm:p-4 border border-slate-100 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_30px_-10px_rgba(140,90,53,0.15)] hover:-translate-y-1 transition-all duration-300 group flex flex-col h-full relative">
 					<!-- Card Link Cover (Makes the whole top part clickable) -->
@@ -183,7 +192,7 @@
 				</div>
 			{/each}
 		</div>
-		{#if data.products.length > 0}
+		{#if products.length > 0}
 			<div class="mt-12 flex justify-center">
 				<a href="/catalog" class="inline-flex items-center justify-center rounded-full bg-primary px-8 py-3 text-sm font-bold tracking-wide text-white shadow-lg shadow-primary/15 transition-all hover:bg-[#724828] hover:shadow-xl">
 					{i18n.t('home.loadMore')}
@@ -192,5 +201,7 @@
 		{/if}
 	</div>
 </section>
+{/await}
+
 
 <QuickAddModal bind:isOpen={isQuickAddOpen} product={selectedProduct} />
