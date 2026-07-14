@@ -138,15 +138,16 @@
 			</div>
 		</div>
 
-		<!-- Manage Banners -->
-		<div class="lg:col-span-2 space-y-4">
-			<form method="POST" action="?/update_all" use:enhance={handleUpdateAll}>
-				<input type="hidden" name="banners" value={JSON.stringify(banners)} />
-				
+			<!-- Manage Banners -->
+			<div class="lg:col-span-2 space-y-4">
+				<form id="banners-update-form" method="POST" action="?/update_all" use:enhance={handleUpdateAll} class="hidden">
+					<input type="hidden" name="banners" value={JSON.stringify(banners)} />
+				</form>
+
 				<div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
 					<div class="p-5 border-b border-slate-100 flex items-center justify-between">
 						<h3 class="font-bold text-slate-800">Daftar Banner</h3>
-						<Button type="submit" size="sm" disabled={isSaving || activeCount < 2 || activeCount > 5} class="bg-slate-900 hover:bg-slate-800 text-white rounded-full px-5">
+						<Button form="banners-update-form" type="submit" size="sm" disabled={isSaving || activeCount < 2 || activeCount > 5} class="bg-slate-900 hover:bg-slate-800 text-white rounded-full px-5">
 							{isSaving ? 'Menyimpan...' : 'Simpan Urutan & Status'}
 						</Button>
 					</div>
@@ -205,7 +206,6 @@
 						{/if}
 					</div>
 				</div>
-			</form>
+			</div>
 		</div>
 	</div>
-</div>

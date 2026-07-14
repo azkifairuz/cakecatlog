@@ -3,6 +3,7 @@ import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/publi
 import { redirect } from '@sveltejs/kit';
 
 const PUBLIC_CACHE_CONTROL = 'public, max-age=0, s-maxage=60, stale-while-revalidate=300';
+const NO_STORE_CACHE_CONTROL = 'no-store, max-age=0';
 
 export const handle = async ({ event, resolve }) => {
 	event.locals.supabase = createServerClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
@@ -73,15 +74,18 @@ export const handle = async ({ event, resolve }) => {
 		},
 	});
 
-	if (event.request.method === 'GET' && isCacheablePublicPage(event.url.pathname)) {
-		response.headers.set('cache-control', PUBLIC_CACHE_CONTROL);
+	if (event.request.method === 'GET') {
+		if (event.url.pathname === '/') {
+			response.headers.set('cache-control', NO_STORE_CACHE_CONTROL);
+		} else if (isCacheablePublicPage(event.url.pathname)) {
+			response.headers.set('cache-control', PUBLIC_CACHE_CONTROL);
+		}
 	}
 
 	return response;
 };
 
 function isCacheablePublicPage(pathname) {
-	if (pathname === '/') return true;
 	if (pathname === '/catalog') return true;
 	if (pathname.startsWith('/product/')) return true;
 	return false;

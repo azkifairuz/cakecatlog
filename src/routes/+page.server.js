@@ -142,10 +142,17 @@ export const load = async ({ locals: { supabase } }) => {
   // Non-critical: stream ini, jangan di-await
   const bannersPromise = supabase
     .from('hero_banners')
-    .select('id, image_url, title, subtitle, cta_text, cta_url, display_order')
+    .select('id, image_url, display_order')
     .eq('is_active', true)
     .order('display_order')
-    .then(r => r.data ?? []);
+    .then((r) => {
+      if (r.error) {
+        console.error('Failed to load hero banners', r.error);
+        return [];
+      }
+
+      return r.data ?? [];
+    });
 
   const productsPromise = supabase
     .from('products')
@@ -160,7 +167,7 @@ export const load = async ({ locals: { supabase } }) => {
   const topPicksPromise = supabase
     .from('top_selling_products')
     .select(TOP_PICKS_SELECT)
-	.eq('is_active',true)
+	  .eq('is_active',true)
     .eq('is_available', true)
     .order('total_orders', { ascending: false })
     .order('is_primary', { foreignTable: 'product_images', ascending: false })
