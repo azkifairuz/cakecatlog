@@ -1,4 +1,5 @@
 import { parsePrice } from '$lib/pricing.js';
+import { fail } from '@sveltejs/kit';
 
 const PRODUCTS_PER_PAGE = 10;
 
@@ -179,6 +180,55 @@ async function syncProductAddons(supabase, productId, addonStates) {
 	return error;
 }
 
+function getProductPayload({
+	name,
+	description,
+	base_price,
+	is_available,
+	category_id,
+	handling_warning
+}) {
+	const payload = {
+		name,
+		description,
+		base_price: parsePrice(base_price),
+		is_available,
+		category_id: category_id || null
+	};
+
+	if (handling_warning) {
+		payload.handling_warning = handling_warning;
+	}
+
+	return payload;
+}
+
+function isMissingHandlingWarningColumn(error) {
+	return error?.code === 'PGRST204' && String(error?.message || '').includes('handling_warning');
+}
+
+async function insertProduct(supabase, payload) {
+	let { data, error } = await supabase.from('products').insert(payload).select().single();
+
+	if (isMissingHandlingWarningColumn(error)) {
+		const { handling_warning: _handlingWarning, ...fallbackPayload } = payload;
+		({ data, error } = await supabase.from('products').insert(fallbackPayload).select().single());
+	}
+
+	return { data, error };
+}
+
+async function updateProductRow(supabase, id, payload) {
+	let { error } = await supabase.from('products').update(payload).eq('id', id);
+
+	if (isMissingHandlingWarningColumn(error)) {
+		const { handling_warning: _handlingWarning, ...fallbackPayload } = payload;
+		({ error } = await supabase.from('products').update(fallbackPayload).eq('id', id));
+	}
+
+	return error;
+}
+
 export const actions = {
 	createCategory: async ({ request, locals: { supabase } }) => {
 		const formData = await request.formData();
@@ -237,33 +287,31 @@ export const actions = {
 		const handling_warning = formData.get('handling_warning');
 
 		if (!name || !base_price) {
-			return { success: false, error: 'Name and Base Price are required' };
+			return fail(400, { success: false, error: 'Name and Base Price are required' });
 		}
 
-		// Insert product
-		const { data: product, error: productError } = await supabase
-			.from('products')
-			.insert({
+		const { data: product, error: productError } = await insertProduct(supabase, {
+			...getProductPayload({
 				name,
 				description,
-				base_price: parseFloat(base_price),
+				base_price,
 				is_available,
-				is_active: true,
-				category_id: category_id || null,
+				category_id,
 				handling_warning
-			})
-			.select()
-			.single();
+			}),
+			is_active: true
+		});
 
 		if (productError) {
-			return { success: false, error: productError.message };
+			console.error('Create product error:', productError);
+			return fail(500, { success: false, error: productError.message });
 		}
 
 		const addonError = await syncProductAddons(supabase, product.id, addonStates);
-		if (addonError) return { success: false, error: addonError.message };
+		if (addonError) return fail(500, { success: false, error: addonError.message });
 
 		const newAddonError = await createNewGlobalAddons(supabase, product.id, newAddons);
-		if (newAddonError) return { success: false, error: newAddonError.message };
+		if (newAddonError) return fail(500, { success: false, error: newAddonError.message });
 
 		// Handle images
 		if (images && images.length > 0 && images[0].size > 0) {
@@ -315,31 +363,32 @@ export const actions = {
 		const handling_warning = formData.get('handling_warning');
 
 		if (!id || !name || !base_price) {
-			return { success: false, error: 'ID, Name, and Base Price are required' };
+			return fail(400, { success: false, error: 'ID, Name, and Base Price are required' });
 		}
 
-		// Update product
-		const { error: productError } = await supabase
-			.from('products')
-			.update({
+		const productError = await updateProductRow(
+			supabase,
+			id,
+			getProductPayload({
 				name,
 				description,
-				base_price: parseFloat(base_price),
+				base_price,
 				is_available,
-				category_id: category_id || null,
+				category_id,
 				handling_warning
 			})
-			.eq('id', id);
+		);
 
 		if (productError) {
-			return { success: false, error: productError.message };
+			console.error('Update product error:', productError);
+			return fail(500, { success: false, error: productError.message });
 		}
 
 		const addonError = await syncProductAddons(supabase, id, addonStates);
-		if (addonError) return { success: false, error: addonError.message };
+		if (addonError) return fail(500, { success: false, error: addonError.message });
 
 		const newAddonError = await createNewGlobalAddons(supabase, id, newAddons);
-		if (newAddonError) return { success: false, error: newAddonError.message };
+		if (newAddonError) return fail(500, { success: false, error: newAddonError.message });
 
 		// Delete images
 		if (deletedImageIdsStr) {

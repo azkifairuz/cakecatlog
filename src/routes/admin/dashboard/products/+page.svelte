@@ -292,7 +292,7 @@
 				return async ({ update, result }) => {
 					await update();
 					isSubmitting = false;
-					if (result.type !== 'failure' && result.type !== 'error') {
+					if (result.type === 'success' && result.data?.success) {
 						isFormOpen = false;
 						editingProduct = null;
 						newImages = [];

@@ -35,12 +35,13 @@
 	let glitters = $derived(addonsByCategory.glitter?.length ? addonsByCategory.glitter : parseCommaOptions(product?.edible_glitter).map((name) => ({ name, price: 0 })));
 	let cakeTopperAddon = $derived(addonsByCategory.cake_topper?.[0] ?? null);
 	let startFromPrice = $derived(getStartFromPrice(product));
-	let selectedSizeAddon = $derived(sizePriceOptions.find((option) => option.label === selectedSize)?.addon ?? null);
+	let selectedSizeOption = $derived(sizePriceOptions.find((option) => option.label === selectedSize) ?? null);
+	let selectedSizeAddon = $derived(selectedSizeOption?.addon ?? null);
 	let selectedColorAddon = $derived(colors.find((addon) => addon.name === selectedColor) ?? null);
 	let selectedFlavorAddon = $derived(flavors.find((addon) => addon.name === selectedFlavor) ?? null);
 	let selectedCrownAddon = $derived(crowns.find((addon) => addon.name === selectedCrown) ?? null);
 	let selectedGlitterAddon = $derived(glitters.find((addon) => addon.name === selectedGlitter) ?? null);
-	let selectedSizePrice = $derived(selectedSizeAddon ? selectedSizeAddon.price : selectedSize ? getSizePrice(product, selectedSize) : startFromPrice);
+	let selectedSizePrice = $derived(selectedSizeOption ? selectedSizeOption.price : selectedSize ? getSizePrice(product, selectedSize) : startFromPrice);
 	let darkColorSurcharge = $derived(selectedColorAddon?.is_dark_color ? parsePrice(selectedColorAddon.dark_color_surcharge) : 0);
 	let cakeTopperFee = $derived(hasCakeTopper && cakeTopperAddon ? parsePrice(cakeTopperAddon.price) : 0);
 	let addonUnitPrice = $derived(parsePrice(selectedFlavorAddon?.price) + parsePrice(selectedColorAddon?.price) + parsePrice(selectedCrownAddon?.price) + parsePrice(selectedGlitterAddon?.price));
