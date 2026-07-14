@@ -34,6 +34,7 @@
 	let newImages = $state([]);
 	let existingImages = $state([]);
 	let deletedImageIds = $state([]);
+	let primaryImageKey = $state('');
 	let productAddonStates = $state({});
 	let newAddonRows = $state([]);
 
@@ -48,6 +49,7 @@
 		newImages = [];
 		existingImages = [];
 		deletedImageIds = [];
+		primaryImageKey = '';
 		productAddonStates = {};
 		customizeAddons = false;
 		newAddonRows = [];
@@ -64,6 +66,11 @@
 		newImages = [];
 		existingImages = product.product_images ? [...product.product_images] : [];
 		deletedImageIds = [];
+		primaryImageKey = product.product_images?.find((image) => image.is_primary)?.id
+			? `existing:${product.product_images.find((image) => image.is_primary).id}`
+			: product.product_images?.[0]?.id
+				? `existing:${product.product_images[0].id}`
+				: '';
 		productAddonStates = Object.fromEntries(
 			(product.product_addons ?? []).map((item) => [
 				item.addon_id,
@@ -102,6 +109,9 @@
 			const reader = new FileReader();
 			reader.onload = (e) => {
 				newImages = [...newImages, { file, previewUrl: e.target.result }];
+				if (!primaryImageKey && existingImages.length === 0 && newImages.length === 1) {
+					primaryImageKey = 'new:0';
+				}
 			};
 			reader.readAsDataURL(file);
 		});
@@ -110,12 +120,30 @@
 	}
 
 	function removeNewImage(index) {
+		const removedKey = `new:${index}`;
 		newImages = newImages.filter((_, i) => i !== index);
+		if (primaryImageKey === removedKey) {
+			primaryImageKey = existingImages[0]?.id
+				? `existing:${existingImages[0].id}`
+				: newImages[0]
+					? 'new:0'
+					: '';
+		} else if (primaryImageKey.startsWith('new:')) {
+			const selectedIndex = Number(primaryImageKey.split(':')[1]);
+			if (selectedIndex > index) primaryImageKey = `new:${selectedIndex - 1}`;
+		}
 	}
 
 	function removeExistingImage(image) {
 		existingImages = existingImages.filter(img => img.id !== image.id);
 		deletedImageIds = [...deletedImageIds, image.id];
+		if (primaryImageKey === `existing:${image.id}`) {
+			primaryImageKey = existingImages[0]?.id
+				? `existing:${existingImages[0].id}`
+				: newImages[0]
+					? 'new:0'
+					: '';
+		}
 	}
 
 	function openDetail(product) {
@@ -278,6 +306,7 @@
 				formData.set('category_id', selectedCategoryId);
 				formData.set('product_addons', JSON.stringify(serializeProductAddonStates()));
 				formData.set('new_addons', JSON.stringify(serializeNewAddons()));
+				formData.set('primary_image_key', primaryImageKey);
 				
 				// Append files from state
 				newImages.forEach(img => {
@@ -298,6 +327,7 @@
 						newImages = [];
 						existingImages = [];
 						deletedImageIds = [];
+						primaryImageKey = '';
 						selectedCategoryId = '';
 						categoryQuery = '';
 					}
@@ -565,28 +595,32 @@
 					<div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
 						<!-- Existing Images -->
 						{#each existingImages as img, i}
+							{@const imageKey = `existing:${img.id}`}
 							<div class="relative aspect-square rounded-xl overflow-hidden border border-slate-200 group">
 								<img src={getImageUrl(img.image_url, { width: 320, height: 320, quality: 75, resize: 'cover' })} alt="Product" class="w-full h-full object-cover" loading="lazy" decoding="async" />
 								<button type="button" onclick={() => removeExistingImage(img)} aria-label={`Hapus gambar produk ${i + 1}`} class="absolute top-1 right-1 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-sm">
 									<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
 								</button>
-								{#if i === 0 && newImages.length === 0}
-									<span class="absolute bottom-1 left-1 bg-slate-900/70 backdrop-blur-sm text-white text-[9px] px-2 py-0.5 rounded-full font-medium">Primary</span>
-								{/if}
+								<label class="absolute bottom-1 left-1 flex cursor-pointer items-center gap-1 rounded-full px-2 py-1 text-[9px] font-bold shadow-sm transition-colors {primaryImageKey === imageKey ? 'bg-slate-900/80 text-white' : 'bg-white/85 text-slate-700 hover:bg-white'}">
+									<input type="radio" name="primary_image_choice" value={imageKey} checked={primaryImageKey === imageKey} onchange={() => primaryImageKey = imageKey} class="h-3 w-3 border-slate-300 text-primary focus:ring-primary" />
+									Primary
+								</label>
 							</div>
 						{/each}
 
 						<!-- New Images -->
 						{#each newImages as img, i}
+							{@const imageKey = `new:${i}`}
 							<div class="relative aspect-square rounded-xl overflow-hidden border border-blue-200 group">
 								<img src={img.previewUrl} alt="New Preview" class="w-full h-full object-cover" />
 								<button type="button" onclick={() => removeNewImage(i)} aria-label={`Hapus gambar baru ${i + 1}`} class="absolute top-1 right-1 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-sm">
 									<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
 								</button>
 								<span class="absolute top-1 left-1 bg-blue-500 text-white text-[9px] px-1.5 py-0.5 rounded font-bold uppercase">Baru</span>
-								{#if existingImages.length === 0 && i === 0}
-									<span class="absolute bottom-1 left-1 bg-slate-900/70 backdrop-blur-sm text-white text-[9px] px-2 py-0.5 rounded-full font-medium">Primary</span>
-								{/if}
+								<label class="absolute bottom-1 left-1 flex cursor-pointer items-center gap-1 rounded-full px-2 py-1 text-[9px] font-bold shadow-sm transition-colors {primaryImageKey === imageKey ? 'bg-slate-900/80 text-white' : 'bg-white/85 text-slate-700 hover:bg-white'}">
+									<input type="radio" name="primary_image_choice" value={imageKey} checked={primaryImageKey === imageKey} onchange={() => primaryImageKey = imageKey} class="h-3 w-3 border-slate-300 text-primary focus:ring-primary" />
+									Primary
+								</label>
 							</div>
 						{/each}
 
@@ -599,7 +633,7 @@
 							</Label>
 						{/if}
 					</div>
-					<p class="text-[11px] text-muted-foreground mt-1">Gambar pertama otomatis menjadi gambar utama.</p>
+					<p class="text-[11px] text-muted-foreground mt-1">Pilih satu gambar sebagai primary untuk thumbnail katalog dan produk.</p>
 				</div>
 				
 				<div class="flex items-center gap-2 md:col-span-2 mt-2">

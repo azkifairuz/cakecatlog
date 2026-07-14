@@ -229,6 +229,84 @@ async function updateProductRow(supabase, id, payload) {
 	return error;
 }
 
+function parsePrimaryImageKey(value) {
+	const [type, rawIndexOrId] = String(value || '').split(':');
+	if ((type !== 'existing' && type !== 'new') || !rawIndexOrId) return null;
+	return { type, value: rawIndexOrId };
+}
+
+async function uploadProductImages(supabase, productId, images, primaryImageKey) {
+	const selectedPrimary = parsePrimaryImageKey(primaryImageKey);
+	const validImages = (images ?? []).filter((file) => file?.size > 0);
+	if (validImages.length === 0) return { error: null };
+
+	const uploadPromises = validImages.map(async (file, i) => {
+		const fileExt = file.name.split('.').pop();
+		const fileName = `${productId}-${Math.random()}.${fileExt}`;
+		const filePath = `product/${fileName}`;
+
+		const { error: uploadError } = await supabase.storage.from('products').upload(filePath, file);
+		if (uploadError) return null;
+
+		const { data: publicUrlData } = supabase.storage.from('products').getPublicUrl(filePath);
+		return {
+			product_id: productId,
+			image_url: publicUrlData.publicUrl,
+			is_primary: selectedPrimary?.type === 'new'
+				? Number(selectedPrimary.value) === i
+				: i === 0 && !selectedPrimary
+		};
+	});
+
+	const results = await Promise.all(uploadPromises);
+	const imageInserts = results.filter(Boolean);
+	if (imageInserts.length === 0) return { error: null };
+
+	const { data: insertedImages, error } = await supabase
+		.from('product_images')
+		.insert(imageInserts)
+		.select('id, is_primary');
+
+	return { insertedImages: insertedImages ?? [], error };
+}
+
+async function applyPrimaryImage(supabase, productId, primaryImageKey) {
+	const selectedPrimary = parsePrimaryImageKey(primaryImageKey);
+
+	if (selectedPrimary?.type === 'existing') {
+		const { error: clearError } = await supabase
+			.from('product_images')
+			.update({ is_primary: false })
+			.eq('product_id', productId);
+		if (clearError) return clearError;
+
+		const { error: setError } = await supabase
+			.from('product_images')
+			.update({ is_primary: true })
+			.eq('product_id', productId)
+			.eq('id', selectedPrimary.value);
+		if (setError) return setError;
+	}
+
+	const { data: currentImages, error: currentImagesError } = await supabase
+		.from('product_images')
+		.select('id, is_primary')
+		.eq('product_id', productId)
+		.order('created_at', { ascending: true });
+
+	if (currentImagesError) return currentImagesError;
+
+	if (currentImages?.length && !currentImages.some((img) => img.is_primary)) {
+		const { error } = await supabase
+			.from('product_images')
+			.update({ is_primary: true })
+			.eq('id', currentImages[0].id);
+		return error;
+	}
+
+	return null;
+}
+
 export const actions = {
 	createCategory: async ({ request, locals: { supabase } }) => {
 		const formData = await request.formData();
@@ -282,6 +360,7 @@ export const actions = {
 		const is_available = formData.get('is_available') === 'on';
 		const category_id = formData.get('category_id');
 		const images = formData.getAll('images');
+		const primaryImageKey = formData.get('primary_image_key');
 		const addonStates = parseProductAddonStates(formData.get('product_addons'));
 		const newAddons = parseNewAddons(formData.get('new_addons'));
 		const handling_warning = formData.get('handling_warning');
@@ -313,38 +392,11 @@ export const actions = {
 		const newAddonError = await createNewGlobalAddons(supabase, product.id, newAddons);
 		if (newAddonError) return fail(500, { success: false, error: newAddonError.message });
 
-		// Handle images
-		if (images && images.length > 0 && images[0].size > 0) {
-			const uploadPromises = images.map(async (file, i) => {
-				const fileExt = file.name.split('.').pop();
-				const fileName = `${product.id}-${Math.random()}.${fileExt}`;
-				const filePath = `product/${fileName}`; // Changed to bucket 'products', folder 'product'
+		const { error: uploadImagesError } = await uploadProductImages(supabase, product.id, images, primaryImageKey);
+		if (uploadImagesError) return fail(500, { success: false, error: uploadImagesError.message });
 
-				const { error: uploadError } = await supabase.storage
-					.from('products')
-					.upload(filePath, file);
-
-				if (!uploadError) {
-					const { data: publicUrlData } = supabase.storage
-						.from('products')
-						.getPublicUrl(filePath);
-
-					return {
-						product_id: product.id,
-						image_url: publicUrlData.publicUrl,
-						is_primary: i === 0 // First image is primary
-					};
-				}
-				return null;
-			});
-
-			const results = await Promise.all(uploadPromises);
-			const imageInserts = results.filter(res => res !== null);
-
-			if (imageInserts.length > 0) {
-				await supabase.from('product_images').insert(imageInserts);
-			}
-		}
+		const primaryError = await applyPrimaryImage(supabase, product.id, primaryImageKey);
+		if (primaryError) return fail(500, { success: false, error: primaryError.message });
 
 		return { success: true };
 	},
@@ -357,6 +409,7 @@ export const actions = {
 		const is_available = formData.get('is_available') === 'on';
 		const category_id = formData.get('category_id');
 		const images = formData.getAll('images');
+		const primaryImageKey = formData.get('primary_image_key');
 		const deletedImageIdsStr = formData.get('deleted_image_ids');
 		const addonStates = parseProductAddonStates(formData.get('product_addons'));
 		const newAddons = parseNewAddons(formData.get('new_addons'));
@@ -417,55 +470,11 @@ export const actions = {
 			}
 		}
 
-		// Upload new images
-		if (images && images.length > 0 && images[0].size > 0) {
-			const uploadPromises = images.map(async (file) => {
-				const fileExt = file.name.split('.').pop();
-				const fileName = `${id}-${Math.random()}.${fileExt}`;
-				const filePath = `product/${fileName}`;
+		const { error: uploadImagesError } = await uploadProductImages(supabase, id, images, primaryImageKey);
+		if (uploadImagesError) return fail(500, { success: false, error: uploadImagesError.message });
 
-				const { error: uploadError } = await supabase.storage
-					.from('products')
-					.upload(filePath, file);
-
-				if (!uploadError) {
-					const { data: publicUrlData } = supabase.storage
-						.from('products')
-						.getPublicUrl(filePath);
-
-					return {
-						product_id: id,
-						image_url: publicUrlData.publicUrl,
-						is_primary: false // default to false initially
-					};
-				}
-				return null;
-			});
-
-			const results = await Promise.all(uploadPromises);
-			const imageInserts = results.filter(res => res !== null);
-
-			if (imageInserts.length > 0) {
-				await supabase.from('product_images').insert(imageInserts);
-			}
-		}
-
-		// Ensure one image is primary
-		const { data: currentImages } = await supabase
-			.from('product_images')
-			.select('id, is_primary')
-			.eq('product_id', id)
-			.order('created_at', { ascending: true });
-
-		if (currentImages && currentImages.length > 0) {
-			const hasPrimary = currentImages.some(img => img.is_primary);
-			if (!hasPrimary) {
-				await supabase
-					.from('product_images')
-					.update({ is_primary: true })
-					.eq('id', currentImages[0].id);
-			}
-		}
+		const primaryError = await applyPrimaryImage(supabase, id, primaryImageKey);
+		if (primaryError) return fail(500, { success: false, error: primaryError.message });
 
 		return { success: true };
 	},
