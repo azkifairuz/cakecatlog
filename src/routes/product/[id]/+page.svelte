@@ -5,9 +5,9 @@
 	import { cart } from '$lib/stores/cart.svelte.js';
 	import {
 		getAddonsByCategory,
+		getSizePriceOptions,
 		getSizePrice,
 		getStartFromPrice,
-		normalizeSizePrices,
 		parseCommaOptions,
 		parsePrice
 	} from '$lib/pricing.js';
@@ -31,11 +31,7 @@
 	}
 
 	let addonsByCategory = $derived(getAddonsByCategory(product));
-	let sizePriceOptions = $derived(
-		addonsByCategory.size?.length
-			? addonsByCategory.size.map((addon) => ({ label: addon.name, price: addon.price, addon }))
-			: normalizeSizePrices(product)
-	);
+	let sizePriceOptions = $derived(getSizePriceOptions(product));
 	let colors = $derived(addonsByCategory.color?.length ? addonsByCategory.color : parseCommaOptions(product.colors).map((name) => ({ name, price: 0 })));
 	let flavors = $derived(addonsByCategory.flavor?.length ? addonsByCategory.flavor : parseCommaOptions(product.flavors).map((name) => ({ name, price: 0 })));
 	let crowns = $derived(addonsByCategory.crown?.length ? addonsByCategory.crown : parseCommaOptions(product.crown_options).map((name) => ({ name, price: 0 })));

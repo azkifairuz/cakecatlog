@@ -44,21 +44,28 @@ export function normalizeSizePrices(product = {}) {
 }
 
 export function getStartFromPrice(product = {}) {
-	const addonSizes = getProductAddons(product).filter((addon) => addon.category === 'size');
-	if (addonSizes.length > 0) {
-		const prices = addonSizes.map((addon) => addon.price).filter((price) => price > 0);
-		if (prices.length > 0) return Math.min(...prices);
-	}
-
-	const sizePrices = normalizeSizePrices(product);
-	const prices = sizePrices.map((item) => item.price).filter((price) => price > 0);
-	return prices.length > 0 ? Math.min(...prices) : parsePrice(product?.base_price);
+	return parsePrice(product?.base_price);
 }
 
 export function getSizePrice(product = {}, selectedSize = '') {
 	const sizePrices = normalizeSizePrices(product);
 	const match = sizePrices.find((item) => item.label === selectedSize);
 	return match?.price || getStartFromPrice(product);
+}
+
+export function getSizePriceOptions(product = {}) {
+	const addonSizes = getProductAddons(product).filter((addon) => addon.category === 'size');
+	if (addonSizes.length > 0) {
+		const basePrice = parsePrice(product?.base_price);
+		return addonSizes.map((addon) => ({
+			label: addon.name,
+			price: basePrice + addon.price,
+			additional_price: addon.price,
+			addon
+		}));
+	}
+
+	return normalizeSizePrices(product);
 }
 
 export function normalizeAddon(addon = {}) {
