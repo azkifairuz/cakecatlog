@@ -7,6 +7,7 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import { Switch } from '$lib/components/ui/switch';
+	import Loading from '$lib/components/Loading.svelte';
 	import PriceInput from '$lib/components/PriceInput.svelte';
 
 	let { data, form } = $props();
@@ -14,6 +15,8 @@
 	let isActive = $state(true);
 	let isDarkColor = $state(false);
 	let isDrawerOpen = $state(false);
+	let isSubmitting = $state(false);
+	let lockedCategory = $state('');
 
 	let categoryQuery = $state('');
 	let isCategoryDropdownOpen = $state(false);
@@ -64,6 +67,7 @@
 		editingAddon = addon;
 		isActive = addon.is_active !== false;
 		isDarkColor = Boolean(addon.is_dark_color);
+		lockedCategory = '';
 		categoryQuery = addon.category || '';
 		isDrawerOpen = true;
 	}
@@ -73,10 +77,20 @@
 		isDrawerOpen = true;
 	}
 
+	function startCreateForCategory(category) {
+		resetFormState();
+		lockedCategory = category;
+		categoryQuery = category;
+		isCategoryDropdownOpen = false;
+		isDrawerOpen = true;
+	}
+
 	function resetFormState() {
 		editingAddon = null;
 		isActive = true;
 		isDarkColor = false;
+		isSubmitting = false;
+		lockedCategory = '';
 		categoryQuery = '';
 		isDrawerOpen = false;
 		isCategoryDropdownOpen = false;
@@ -134,8 +148,13 @@
 			<Card.Root class="border-slate-200 shadow-sm">
 				<Card.Header>
 					<div class="flex items-center justify-between gap-3">
-						<Card.Title class="capitalize">{category}</Card.Title>
-						<Badge variant="outline">{addons.length} item</Badge>
+						<div class="min-w-0">
+							<Card.Title class="capitalize">{category}</Card.Title>
+							<Badge variant="outline" class="mt-2">{addons.length} item</Badge>
+						</div>
+						<Button type="button" variant="outline" size="sm" class="shrink-0" onclick={() => startCreateForCategory(category)}>
+							+ Addon
+						</Button>
 					</div>
 				</Card.Header>
 				<Card.Content class="space-y-3">
@@ -236,12 +255,22 @@
 		<button class="absolute inset-0 w-full h-full bg-slate-900/40 backdrop-blur-sm cursor-default" transition:fade={{duration: 200}} onclick={closeDrawer} aria-label="Close modal"></button>
 		
 		<div class="relative bg-white rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] p-6 pb-safe-12 w-full max-w-2xl mx-auto flex flex-col max-h-[90vh]" transition:fly={{ y: '100%', duration: 350, opacity: 1, easing: (t) => 1 - Math.pow(1 - t, 4) }}>
+			{#if isSubmitting}
+				<Loading
+					variant="overlay"
+					label={editingAddon ? 'Menyimpan addon' : 'Membuat addon'}
+					description="Mohon tunggu, data addon sedang diproses."
+					class="rounded-t-3xl"
+				/>
+			{/if}
 			<div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6 shrink-0"></div>
 			
 			<div class="flex justify-between items-start mb-6 shrink-0">
 				<div>
 					<h3 class="text-2xl font-bold text-slate-800 mb-1">{editingAddon ? 'Edit Addon' : 'Tambah Addon'}</h3>
-					<p class="text-sm text-slate-500">Gunakan category untuk mengelompokkan pilihan di admin dan user.</p>
+					<p class="text-sm text-slate-500">
+						{lockedCategory ? `Addon baru akan masuk ke category ${lockedCategory}.` : 'Gunakan category untuk mengelompokkan pilihan di admin dan user.'}
+					</p>
 				</div>
 				<button onclick={closeDrawer} aria-label="Tutup" class="p-2 -mr-2 text-slate-400 hover:text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-full transition-colors">
 					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -253,9 +282,14 @@
 					method="POST"
 					action={editingAddon ? '?/updateAddon' : '?/createAddon'}
 					use:enhance={() => {
+						isSubmitting = true;
 						return async ({ update, result }) => {
-							await update();
-							if (result.type !== 'failure' && result.type !== 'error') resetFormState();
+							try {
+								await update();
+								if (result.type !== 'failure' && result.type !== 'error') resetFormState();
+							} finally {
+								isSubmitting = false;
+							}
 						};
 					}}
 					class="grid gap-4 md:grid-cols-2"
@@ -272,21 +306,30 @@
 								type="text"
 								placeholder="Cari atau ketik category baru"
 								bind:value={categoryQuery}
-								onfocus={() => (isCategoryDropdownOpen = true)}
-								oninput={() => (isCategoryDropdownOpen = true)}
-								class="bg-slate-50 focus:bg-white"
+								readonly={Boolean(lockedCategory)}
+								onfocus={() => {
+									if (!lockedCategory) isCategoryDropdownOpen = true;
+								}}
+								oninput={() => {
+									if (!lockedCategory) isCategoryDropdownOpen = true;
+								}}
+								class="bg-slate-50 focus:bg-white {lockedCategory ? 'cursor-not-allowed pr-24 text-slate-500' : ''}"
 								autocomplete="off"
 							/>
-							<button
-								type="button"
-								class="absolute inset-y-0 right-2 flex items-center px-2 text-slate-400 hover:text-slate-700"
-								onclick={() => (isCategoryDropdownOpen = !isCategoryDropdownOpen)}
-								aria-label="Toggle category dropdown"
-							>
-								<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-							</button>
+							{#if lockedCategory}
+								<span class="absolute inset-y-0 right-3 flex items-center text-[10px] font-bold uppercase tracking-wide text-slate-400">Locked</span>
+							{:else}
+								<button
+									type="button"
+									class="absolute inset-y-0 right-2 flex items-center px-2 text-slate-400 hover:text-slate-700"
+									onclick={() => (isCategoryDropdownOpen = !isCategoryDropdownOpen)}
+									aria-label="Toggle category dropdown"
+								>
+									<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+								</button>
+							{/if}
 
-							{#if isCategoryDropdownOpen}
+							{#if isCategoryDropdownOpen && !lockedCategory}
 								<button type="button" class="fixed inset-0 z-20 h-full w-full cursor-default" aria-label="Close dropdown" onclick={() => (isCategoryDropdownOpen = false)}></button>
 								<div class="absolute z-30 mt-2 max-h-48 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-xl">
 									{#each filteredCategories as cat}
@@ -344,7 +387,13 @@
 						<input type="hidden" name="dark_color_surcharge" value="0" />
 					{/if}
 					<div class="md:col-span-2 pt-4 flex gap-3 sticky bottom-0 bg-white shadow-[0_-10px_20px_white]">
-						<Button type="submit" class="w-full">{editingAddon ? 'Simpan Addon' : 'Tambah Addon'}</Button>
+						<Button type="submit" class="w-full" disabled={isSubmitting}>
+							{#if isSubmitting}
+								<Loading label="Menyimpan..." size="sm" class="text-white" />
+							{:else}
+								{editingAddon ? 'Simpan Addon' : 'Tambah Addon'}
+							{/if}
+						</Button>
 					</div>
 				</form>
 			</div>

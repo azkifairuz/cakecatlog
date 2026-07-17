@@ -15,6 +15,22 @@ export function parsePrice(value) {
 }
 
 export function normalizeSizePrices(product = {}) {
+	const variants = Array.isArray(product?.product_variants) ? product.product_variants : [];
+	const normalizedVariants = variants
+		.filter((variant) => variant?.is_active !== false)
+		.sort((a, b) => Number(a?.display_order ?? 0) - Number(b?.display_order ?? 0))
+		.map((variant) => ({
+			id: variant.id,
+			label: String(variant?.name ?? '').trim(),
+			price: parsePrice(variant?.price),
+			variant
+		}))
+		.filter((item) => item.label && item.price > 0);
+
+	if (normalizedVariants.length > 0) {
+		return normalizedVariants;
+	}
+
 	const rawSizePrices = product?.size_prices;
 	const sizePrices = Array.isArray(rawSizePrices)
 		? rawSizePrices
@@ -44,6 +60,11 @@ export function normalizeSizePrices(product = {}) {
 }
 
 export function getStartFromPrice(product = {}) {
+	const sizePrices = normalizeSizePrices(product);
+	if (sizePrices.length > 0) {
+		return Math.min(...sizePrices.map((item) => item.price));
+	}
+
 	return parsePrice(product?.base_price);
 }
 
@@ -54,6 +75,9 @@ export function getSizePrice(product = {}, selectedSize = '') {
 }
 
 export function getSizePriceOptions(product = {}) {
+	const variantSizes = normalizeSizePrices(product).filter((item) => item.variant);
+	if (variantSizes.length > 0) return variantSizes;
+
 	const addonSizes = getProductAddons(product).filter((addon) => addon.category === 'size');
 	if (addonSizes.length > 0) {
 		const basePrice = parsePrice(product?.base_price);

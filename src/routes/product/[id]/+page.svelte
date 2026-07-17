@@ -1,6 +1,9 @@
 <script>
 	import * as Carousel from '$lib/components/ui/carousel';
+	import * as Select from '$lib/components/ui/select';
+	import SelectValue from '$lib/components/ui/select/select-value.svelte';
 	import { getImageUrl } from '$lib/image-url.js';
+	import Loading from '$lib/components/Loading.svelte';
 	import { supabase } from '$lib/supabase';
 	import { cart } from '$lib/stores/cart.svelte.js';
 	import {
@@ -37,11 +40,11 @@
 	let crowns = $derived(addonsByCategory.crown?.length ? addonsByCategory.crown : parseCommaOptions(product.crown_options).map((name) => ({ name, price: 0 })));
 	let glitters = $derived(addonsByCategory.glitter?.length ? addonsByCategory.glitter : parseCommaOptions(product.edible_glitter).map((name) => ({ name, price: 0 })));
 	let cakeTopperAddon = $derived(addonsByCategory.cake_topper?.[0] ?? null);
-	let selectedSize = $state('');
-	let selectedColor = $state('');
-	let selectedFlavor = $state('');
-	let selectedCrown = $state('');
-	let selectedGlitter = $state('');
+	let selectedSize = $state(undefined);
+	let selectedColor = $state(undefined);
+	let selectedFlavor = $state(undefined);
+	let selectedCrown = $state(undefined);
+	let selectedGlitter = $state(undefined);
 	let quantity = $state(1);
 	let hasCakeTopper = $state(false);
 	let startFromPrice = $derived(getStartFromPrice(product));
@@ -100,7 +103,7 @@
 
 			// Construct cart item
 			const customizedOptions = {
-				size: selectedSize ? { name: selectedSize, price: selectedSizePrice } : null,
+				size: selectedSize ? { name: selectedSize, price: selectedSizePrice, variant_id: selectedSizeOption?.id ?? null } : null,
 				flavor: selectedFlavorAddon ? { name: selectedFlavorAddon.name, price: selectedFlavorAddon.price } : null,
 				color: selectedColorAddon ? {
 					name: selectedColorAddon.name,
@@ -115,6 +118,7 @@
 			};
 			const cartItem = {
 				product_id: product.id,
+				product_variant_id: selectedSizeOption?.id ?? null,
 				product_name: product.name,
 				primary_image: sortedImages[0]?.image_url || null,
 				price_at_order: estimatedUnitPrice,
@@ -245,17 +249,18 @@
 					<div class="grid grid-cols-2 gap-4">
 						<div>
 							<label for="cake_size" class="block text-[13px] font-semibold text-[#4A3B32] mb-1.5 uppercase tracking-wide">{i18n.t('form.size')} <span class="text-red-400">{i18n.t('form.required')}</span></label>
-							<div class="relative">
-								<select id="cake_size" name="cake_size" required bind:value={selectedSize} class="w-full px-4 py-3 bg-slate-50 border border-primary/20 focus:bg-white rounded-xl text-[15px] appearance-none focus:outline-none focus:border-primary transition-all text-[#4A3B32]">
-									<option value="" disabled>{i18n.t('form.choose')}</option>
+							<Select.Root type="single" name="cake_size" required bind:value={selectedSize}>
+								<Select.Trigger id="cake_size" class="h-12 w-full rounded-xl border-primary/20 bg-slate-50 px-4 text-[15px] text-[#4A3B32] hover:bg-white focus-visible:ring-primary/15">
+									<SelectValue placeholder={i18n.t('form.choose')} />
+								</Select.Trigger>
+								<Select.Content class="rounded-xl border-primary/10 bg-white text-[#4A3B32] shadow-xl shadow-primary/10">
 									{#each sizePriceOptions as sizeOption}
-										<option value={sizeOption.label}>{sizeOption.label} - {formatCurrency(sizeOption.price)}</option>
+										<Select.Item value={sizeOption.label} label={`${sizeOption.label} - ${formatCurrency(sizeOption.price)}`}>
+											{sizeOption.label} - {formatCurrency(sizeOption.price)}
+										</Select.Item>
 									{/each}
-								</select>
-								<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-primary/50">
-									<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-								</div>
-							</div>
+								</Select.Content>
+							</Select.Root>
 						</div>
 						<div>
 							<label for="quantity" class="block text-[13px] font-semibold text-[#4A3B32] mb-1.5 uppercase tracking-wide">{i18n.t('form.quantity')} <span class="text-red-400">{i18n.t('form.required')}</span></label>
@@ -267,68 +272,65 @@
 						{#if flavors.length > 0}
 							<div>
 								<label for="cake_flavor" class="block text-[13px] font-semibold text-[#4A3B32] mb-1.5 uppercase tracking-wide">{i18n.t('form.flavor')}</label>
-								<div class="relative">
-									<select id="cake_flavor" name="cake_flavor" bind:value={selectedFlavor} class="w-full px-4 py-3 bg-slate-50 border border-primary/20 focus:bg-white rounded-xl text-[15px] appearance-none focus:outline-none focus:border-primary transition-all text-[#4A3B32]">
-										<option value="" selected>{i18n.t('form.chooseFlavor')}</option>
+								<Select.Root type="single" name="cake_flavor" bind:value={selectedFlavor} allowDeselect>
+									<Select.Trigger id="cake_flavor" class="h-12 w-full rounded-xl border-primary/20 bg-slate-50 px-4 text-[15px] text-[#4A3B32] hover:bg-white focus-visible:ring-primary/15">
+										<SelectValue placeholder={i18n.t('form.chooseFlavor')} />
+									</Select.Trigger>
+									<Select.Content class="rounded-xl border-primary/10 bg-white text-[#4A3B32] shadow-xl shadow-primary/10">
 										{#each flavors as flavor}
-											<option value={flavor.name}>{flavor.name}{flavor.price > 0 ? ` (+${formatCurrency(flavor.price)})` : ''}</option>
+											<Select.Item value={flavor.name} label={flavor.name}>{flavor.name}{flavor.price > 0 ? ` (+${formatCurrency(flavor.price)})` : ''}</Select.Item>
 										{/each}
-									</select>
-									<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-primary/50">
-										<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-									</div>
-								</div>
+									</Select.Content>
+								</Select.Root>
 							</div>
 						{/if}
 
 						{#if colors.length > 0}
 							<div>
 								<label for="cake_color" class="block text-[13px] font-semibold text-[#4A3B32] mb-1.5 uppercase tracking-wide">{i18n.t('form.color')}</label>
-								<div class="relative">
-									<select id="cake_color" name="cake_color" bind:value={selectedColor} class="w-full px-4 py-3 bg-slate-50 border border-primary/20 focus:bg-white rounded-xl text-[15px] appearance-none focus:outline-none focus:border-primary transition-all text-[#4A3B32]">
-										<option value="">{i18n.t('form.chooseColor')}</option>
+								<Select.Root type="single" name="cake_color" bind:value={selectedColor} allowDeselect>
+									<Select.Trigger id="cake_color" class="h-12 w-full rounded-xl border-primary/20 bg-slate-50 px-4 text-[15px] text-[#4A3B32] hover:bg-white focus-visible:ring-primary/15">
+										<SelectValue placeholder={i18n.t('form.chooseColor')} />
+									</Select.Trigger>
+									<Select.Content class="rounded-xl border-primary/10 bg-white text-[#4A3B32] shadow-xl shadow-primary/10">
 										{#each colors as color}
-											<option value={color.name}>{color.name}{color.price + (color.is_dark_color ? parsePrice(color.dark_color_surcharge) : 0) > 0 ? ` (+${formatCurrency(color.price + (color.is_dark_color ? parsePrice(color.dark_color_surcharge) : 0))})` : ''}</option>
+											{@const colorPrice = color.price + (color.is_dark_color ? parsePrice(color.dark_color_surcharge) : 0)}
+											<Select.Item value={color.name} label={color.name}>{color.name}{colorPrice > 0 ? ` (+${formatCurrency(colorPrice)})` : ''}</Select.Item>
 										{/each}
-									</select>
-									<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-primary/50">
-										<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-									</div>
-								</div>
+									</Select.Content>
+								</Select.Root>
 							</div>
 						{/if}
 
 						{#if crowns.length > 0}
 							<div>
 								<label for="crown_option" class="block text-[13px] font-semibold text-[#4A3B32] mb-1.5 uppercase tracking-wide">{i18n.t('form.crown')}</label>
-								<div class="relative">
-									<select id="crown_option" name="crown_option" bind:value={selectedCrown} class="w-full px-4 py-3 bg-slate-50 border border-primary/20 focus:bg-white rounded-xl text-[15px] appearance-none focus:outline-none focus:border-primary transition-all text-[#4A3B32]">
-										<option value="" selected>{i18n.t('form.chooseCrown')}</option>
+								<Select.Root type="single" name="crown_option" bind:value={selectedCrown} allowDeselect>
+									<Select.Trigger id="crown_option" class="h-12 w-full rounded-xl border-primary/20 bg-slate-50 px-4 text-[15px] text-[#4A3B32] hover:bg-white focus-visible:ring-primary/15">
+										<SelectValue placeholder={i18n.t('form.chooseCrown')} />
+									</Select.Trigger>
+									<Select.Content class="rounded-xl border-primary/10 bg-white text-[#4A3B32] shadow-xl shadow-primary/10">
 										{#each crowns as crown}
-											<option value={crown.name}>{crown.name}{crown.price > 0 ? ` (+${formatCurrency(crown.price)})` : ''}</option>
+											<Select.Item value={crown.name} label={crown.name}>{crown.name}{crown.price > 0 ? ` (+${formatCurrency(crown.price)})` : ''}</Select.Item>
 										{/each}
-									</select>
-									<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-primary/50">
-										<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-									</div>
-								</div>
+									</Select.Content>
+								</Select.Root>
 							</div>
 						{/if}
 
 						{#if glitters.length > 0}
 							<div>
 								<label for="add_edible_glitter" class="block text-[13px] font-semibold text-[#4A3B32] mb-1.5 uppercase tracking-wide">{i18n.t('form.glitter')}</label>
-								<div class="relative">
-									<select id="add_edible_glitter" name="add_edible_glitter" bind:value={selectedGlitter} class="w-full px-4 py-3 bg-slate-50 border border-primary/20 focus:bg-white rounded-xl text-[15px] appearance-none focus:outline-none focus:border-primary transition-all text-[#4A3B32]">
-										<option value="" selected>{i18n.t('form.chooseGlitter')}</option>
+								<Select.Root type="single" name="add_edible_glitter" bind:value={selectedGlitter} allowDeselect>
+									<Select.Trigger id="add_edible_glitter" class="h-12 w-full rounded-xl border-primary/20 bg-slate-50 px-4 text-[15px] text-[#4A3B32] hover:bg-white focus-visible:ring-primary/15">
+										<SelectValue placeholder={i18n.t('form.chooseGlitter')} />
+									</Select.Trigger>
+									<Select.Content class="rounded-xl border-primary/10 bg-white text-[#4A3B32] shadow-xl shadow-primary/10">
 										{#each glitters as glitter}
-											<option value={glitter.name}>{glitter.name}{glitter.price > 0 ? ` (+${formatCurrency(glitter.price)})` : ''}</option>
+											<Select.Item value={glitter.name} label={glitter.name}>{glitter.name}{glitter.price > 0 ? ` (+${formatCurrency(glitter.price)})` : ''}</Select.Item>
 										{/each}
-									</select>
-									<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-primary/50">
-										<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-									</div>
-								</div>
+									</Select.Content>
+								</Select.Root>
 							</div>
 						{:else}
 							<div>
@@ -412,7 +414,7 @@
 						class="w-full py-4 mt-6 bg-primary text-white rounded-full font-bold text-[15px] hover:bg-[#724828] active:scale-[0.98] transition-all shadow-lg shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
 					>
 						{#if loading}
-							<span class="animate-spin inline-block w-5 h-5 border-2 border-white/30 border-t-white rounded-full"></span>
+							<Loading label="" size="sm" class="text-white" />
 						{:else}
 							<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
 						{/if}

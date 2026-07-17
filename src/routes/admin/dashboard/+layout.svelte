@@ -94,7 +94,7 @@
 		</div>
 	</aside> -->
 
-	<div class="flex flex-col xl:gap-4 xl:py-4 xl:justify-center ">
+	<div class="flex min-w-0 flex-1 flex-col xl:gap-4 xl:py-4 xl:justify-center ">
 		<header class="sticky top-0 z-30 flex h-14 items-center gap-4 border-b border-primary/10 bg-white px-4 md:hidden shadow-sm">
 			<div class="flex font-bold text-primary font-['Playfair_Display'] text-lg">
 				<span>dessertbyfir Admin</span>
@@ -107,7 +107,7 @@
 				</form>
 			</div>
 		</header>
-		<main class="grid flex-1 items-start gap-4 p-4 xl:px-6 xl:py-0 md:gap-8 overflow-x-hidden mb-20 xl:mb-0">
+		<main class="grid min-w-0 flex-1 items-start gap-4 overflow-x-hidden p-3 pb-24 sm:p-4 md:gap-8 xl:mb-0 xl:px-6 xl:py-0">
 			{@render children()}
 		</main>
 	</div>

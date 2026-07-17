@@ -4,6 +4,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
+	import Loading from '$lib/components/Loading.svelte';
 	import PriceInput from '$lib/components/PriceInput.svelte';
 	import { Label } from '$lib/components/ui/label';
 	import { Switch } from '$lib/components/ui/switch';
@@ -35,6 +36,7 @@
 	let existingImages = $state([]);
 	let deletedImageIds = $state([]);
 	let primaryImageKey = $state('');
+	let productVariants = $state([]);
 	let productAddonStates = $state({});
 	let newAddonRows = $state([]);
 
@@ -50,6 +52,9 @@
 		existingImages = [];
 		deletedImageIds = [];
 		primaryImageKey = '';
+		productVariants = [
+			{ id: '', name: '', price: '', is_active: true, display_order: 0 }
+		];
 		productAddonStates = {};
 		customizeAddons = false;
 		newAddonRows = [];
@@ -71,6 +76,17 @@
 			: product.product_images?.[0]?.id
 				? `existing:${product.product_images[0].id}`
 				: '';
+		productVariants = product.product_variants?.length
+			? [...product.product_variants]
+				.sort((a, b) => Number(a.display_order ?? 0) - Number(b.display_order ?? 0))
+				.map((variant, index) => ({
+					id: variant.id,
+					name: variant.name ?? '',
+					price: variant.price ?? '',
+					is_active: variant.is_active !== false,
+					display_order: variant.display_order ?? index
+				}))
+			: [{ id: '', name: '', price: product.base_price ?? '', is_active: true, display_order: 0 }];
 		productAddonStates = Object.fromEntries(
 			(product.product_addons ?? []).map((item) => [
 				item.addon_id,
@@ -146,6 +162,35 @@
 		}
 	}
 
+	function addProductVariant() {
+		productVariants = [
+			...productVariants,
+			{
+				id: '',
+				name: '',
+				price: '',
+				is_active: true,
+				display_order: productVariants.length
+			}
+		];
+	}
+
+	function removeProductVariant(index) {
+		productVariants = productVariants.filter((_, i) => i !== index);
+	}
+
+	function serializeProductVariants() {
+		return productVariants
+			.map((variant, index) => ({
+				id: variant.id || null,
+				name: variant.name?.trim() ?? '',
+				price: variant.price,
+				is_active: variant.is_active !== false,
+				display_order: Number(variant.display_order ?? index)
+			}))
+			.filter((variant) => variant.name && variant.price !== '' && variant.price !== null);
+	}
+
 	function openDetail(product) {
 		selectedProductDetail = product;
 		isDrawerOpen = true;
@@ -157,7 +202,6 @@
 	}
 
 	let addonSearchQuery = $state('');
-	let addonViewMode = $state('card'); // 'card' or 'table'
 
 	let filteredGlobalAddons = $derived(
 		data.globalAddons.filter(addon => 
@@ -172,6 +216,18 @@
 			return groups;
 		}, {})
 	);
+	function getCategoryOverrideCount(addons) {
+		return addons.filter((addon) => productAddonStates[addon.id] !== undefined).length;
+	}
+
+	function getCategoryActiveOverrideCount(addons) {
+		return addons.filter((addon) => productAddonStates[addon.id] === 'active').length;
+	}
+
+	function getCategoryInactiveOverrideCount(addons) {
+		return addons.filter((addon) => productAddonStates[addon.id] === 'inactive').length;
+	}
+
 	let filteredCategories = $derived(
 		categories.filter((category) =>
 			category.name.toLowerCase().includes(categoryQuery.trim().toLowerCase())
@@ -298,12 +354,21 @@
 			<Card.Title class="text-xl text-slate-800">{editingProduct ? 'Edit Product' : 'Add New Product'}</Card.Title>
 			<Card.Description>Fill in the details for this cake in your catalog.</Card.Description>
 		</Card.Header>
-		<Card.Content class="pt-6">
+		<Card.Content class="relative pt-6">
+			{#if isSubmitting}
+				<Loading
+					variant="overlay"
+					label={editingProduct ? 'Menyimpan perubahan produk' : 'Membuat produk baru'}
+					description="Mohon tunggu, gambar dan detail produk sedang diproses."
+					class="rounded-b-xl"
+				/>
+			{/if}
 			<form method="POST" action={editingProduct ? '?/updateProduct' : '?/createProduct'} enctype="multipart/form-data" use:enhance={({ formData }) => {
 				isSubmitting = true;
 				// Prevent default file input from sending if any
 				formData.delete('images_upload');
 				formData.set('category_id', selectedCategoryId);
+				formData.set('product_variants', JSON.stringify(serializeProductVariants()));
 				formData.set('product_addons', JSON.stringify(serializeProductAddonStates()));
 				formData.set('new_addons', JSON.stringify(serializeNewAddons()));
 				formData.set('primary_image_key', primaryImageKey);
@@ -319,17 +384,21 @@
 				}
 
 				return async ({ update, result }) => {
-					await update();
-					isSubmitting = false;
-					if (result.type === 'success' && result.data?.success) {
-						isFormOpen = false;
-						editingProduct = null;
-						newImages = [];
-						existingImages = [];
-						deletedImageIds = [];
-						primaryImageKey = '';
-						selectedCategoryId = '';
-						categoryQuery = '';
+					try {
+						await update();
+						if (result.type === 'success' && result.data?.success) {
+							isFormOpen = false;
+							editingProduct = null;
+							newImages = [];
+							existingImages = [];
+							deletedImageIds = [];
+							primaryImageKey = '';
+							productVariants = [];
+							selectedCategoryId = '';
+							categoryQuery = '';
+						}
+					} finally {
+						isSubmitting = false;
 					}
 				};
 			}} class="grid gap-5 md:grid-cols-2">
@@ -398,6 +467,52 @@
 				<div class="space-y-2 relative">
 					<Label for="base_price">Harga Dasar (Rp) <span class="text-red-500">*</span></Label>
 					<PriceInput id="base_price" name="base_price" required={true} value={editingProduct?.base_price ?? ''} class="bg-slate-50 focus:bg-white" />
+				</div>
+
+				<div class="grid gap-3 md:col-span-2 rounded-xl border border-primary/10 bg-white p-4">
+					<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+						<div>
+							<h3 class="text-sm font-semibold text-slate-800">Ukuran & Harga</h3>
+							<p class="text-xs text-muted-foreground">Harga size disimpan per produk. Harga terendah dipakai sebagai start from di katalog.</p>
+						</div>
+						<Button type="button" variant="outline" size="sm" onclick={addProductVariant}>+ Size</Button>
+					</div>
+
+					<div class="space-y-3">
+						{#each productVariants as variant, index}
+							<div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+								<input type="hidden" value={variant.id} />
+								<div class="grid gap-2 md:grid-cols-[1fr_1fr_96px_auto] md:items-end">
+									<div class="grid gap-1.5">
+										<Label>Nama size</Label>
+										<Input bind:value={variant.name} placeholder="Contoh: 10cm" class="bg-white" />
+									</div>
+									<div class="grid gap-1.5">
+										<Label>Harga size</Label>
+										<PriceInput bind:value={variant.price} placeholder="Harga" class="bg-white" />
+									</div>
+									<div class="grid gap-1.5">
+										<Label>Urutan</Label>
+										<Input type="number" bind:value={variant.display_order} min="0" class="bg-white" />
+									</div>
+									<div class="flex items-center justify-between gap-2 md:justify-end">
+										<label class="flex items-center gap-2 text-sm font-medium text-slate-700">
+											<input type="checkbox" bind:checked={variant.is_active} class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary" />
+											Aktif
+										</label>
+										<Button type="button" variant="ghost" size="icon" class="text-red-500 hover:bg-red-50" onclick={() => removeProductVariant(index)} aria-label={`Hapus size ${index + 1}`}>
+											<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+										</Button>
+									</div>
+								</div>
+							</div>
+						{/each}
+						{#if productVariants.length === 0}
+							<div class="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-center text-sm text-slate-500">
+								Belum ada size. Tambahkan minimal satu size agar user bisa memilih ukuran.
+							</div>
+						{/if}
+					</div>
 				</div>
 				
 				<div class="grid gap-2 md:col-span-2">
@@ -479,108 +594,64 @@
 								{/if}
 							</div>
 							<div>
-								<div class="flex items-center justify-between mb-2">
+								<div class="mb-3 flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
 									<div>
 										<h3 class="text-sm font-semibold text-slate-800">Product Addons</h3>
-										<p class="text-xs text-muted-foreground">Pilih Default untuk mengikuti konfigurasi global, Aktif untuk menampilkan, atau Nonaktif untuk menyembunyikan addon.</p>
+										<p class="text-xs text-muted-foreground">Default mengikuti global. Buka category hanya jika perlu override untuk produk ini.</p>
 									</div>
-								</div>
-								
-								<div class="mb-4 flex flex-col sm:flex-row justify-between items-center gap-3 bg-white p-2 rounded-lg border border-slate-200">
 									<div class="relative w-full sm:max-w-xs">
 										<svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-										<Input bind:value={addonSearchQuery} placeholder="Cari nama atau kategori..." class="pl-8 bg-slate-50 border-slate-200 h-8 text-xs" />
-									</div>
-									<div class="flex items-center gap-2 border-l border-slate-200 pl-3">
-										<span class="text-[10px] font-medium text-slate-500 uppercase tracking-wider">Tampilan:</span>
-										<div class="flex bg-slate-100 p-0.5 rounded-md">
-											<button type="button" class="p-1 rounded transition-colors {addonViewMode === 'card' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-400 hover:text-slate-600'}" onclick={() => addonViewMode = 'card'} aria-label="Card View">
-												<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
-											</button>
-											<button type="button" class="p-1 rounded transition-colors {addonViewMode === 'table' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-400 hover:text-slate-600'}" onclick={() => addonViewMode = 'table'} aria-label="Table View">
-												<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
-											</button>
-										</div>
+										<Input bind:value={addonSearchQuery} placeholder="Cari addon atau category..." class="pl-8 bg-slate-50 border-slate-200 h-9 text-xs" />
 									</div>
 								</div>
-								
-								{#if addonViewMode === 'card'}
-									<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-										{#each Object.entries(groupedGlobalAddons) as [category, addons]}
-											<div class="rounded-xl border border-slate-100 bg-slate-50 p-3">
-												<p class="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">{category}</p>
-												<div class="space-y-2">
-													{#each addons as addon}
-														<div class="rounded-lg bg-white p-2 text-sm border border-slate-100">
-															<div class="flex items-start justify-between gap-3">
-																<div>
-																<span class="block font-semibold text-slate-700">{addon.name}</span>
-																<span class="text-xs text-slate-500">{formatCurrency(addon.additional_price)}{addon.is_active ? '' : ' · nonaktif'}</span>
-																</div>
-																<span class="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase {productAddonStates[addon.id] === 'active' ? 'bg-emerald-50 text-emerald-700' : productAddonStates[addon.id] === 'inactive' ? 'bg-red-50 text-red-700' : 'bg-slate-100 text-slate-500'}">
-																	{productAddonStates[addon.id] ?? 'default'}
-																</span>
-															</div>
-															<div class="mt-2 grid grid-cols-3 gap-1 rounded-lg bg-slate-100 p-1">
-																<button type="button" class="rounded-md px-2 py-1 text-xs font-semibold {productAddonStates[addon.id] === undefined ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}" onclick={() => setProductAddonState(addon.id, 'default')}>Default</button>
-																<button type="button" class="rounded-md px-2 py-1 text-xs font-semibold {productAddonStates[addon.id] === 'active' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500'}" onclick={() => setProductAddonState(addon.id, 'active')}>Aktif</button>
-																<button type="button" class="rounded-md px-2 py-1 text-xs font-semibold {productAddonStates[addon.id] === 'inactive' ? 'bg-white text-red-700 shadow-sm' : 'text-slate-500'}" onclick={() => setProductAddonState(addon.id, 'inactive')}>Nonaktif</button>
-															</div>
-														</div>
-													{/each}
+
+								<div class="space-y-3">
+									{#each Object.entries(groupedGlobalAddons) as [category, addons]}
+										{@const overrideCount = getCategoryOverrideCount(addons)}
+										<details class="group rounded-xl border border-slate-200 bg-white shadow-sm" open={overrideCount > 0 || addonSearchQuery.trim() !== ''}>
+											<summary class="flex cursor-pointer list-none items-center justify-between gap-3 rounded-xl px-3 py-3 transition-colors hover:bg-slate-50">
+												<div class="min-w-0">
+													<div class="flex flex-wrap items-center gap-2">
+														<span class="font-semibold capitalize text-slate-800">{category}</span>
+														<span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-500">{addons.length} addon</span>
+														{#if overrideCount > 0}
+															<span class="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase text-primary">{overrideCount} override</span>
+														{/if}
+													</div>
+													<p class="mt-1 text-xs text-slate-500">
+														{getCategoryActiveOverrideCount(addons)} dipaksa aktif, {getCategoryInactiveOverrideCount(addons)} disembunyikan, sisanya global default.
+													</p>
 												</div>
+												<svg class="h-4 w-4 shrink-0 text-slate-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+											</summary>
+
+											<div class="space-y-2 border-t border-slate-100 p-3">
+												{#each addons as addon}
+													<div class="rounded-lg border border-slate-100 bg-slate-50 p-2 text-sm">
+														<div class="flex items-start justify-between gap-3">
+															<div class="min-w-0">
+																<span class="block font-semibold text-slate-700">{addon.name}</span>
+																<span class="text-xs text-slate-500">{formatCurrency(addon.additional_price)}{addon.is_active ? '' : ' · global nonaktif'}</span>
+															</div>
+															<span class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase {productAddonStates[addon.id] === 'active' ? 'bg-emerald-50 text-emerald-700' : productAddonStates[addon.id] === 'inactive' ? 'bg-red-50 text-red-700' : 'bg-slate-100 text-slate-500'}">
+																{productAddonStates[addon.id] ?? 'default'}
+															</span>
+														</div>
+														<div class="mt-2 grid grid-cols-3 gap-1 rounded-lg bg-white p-1">
+															<button type="button" class="rounded-md px-2 py-1 text-xs font-semibold {productAddonStates[addon.id] === undefined ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-500 hover:bg-slate-50'}" onclick={() => setProductAddonState(addon.id, 'default')}>Default</button>
+															<button type="button" class="rounded-md px-2 py-1 text-xs font-semibold {productAddonStates[addon.id] === 'active' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-500 hover:bg-emerald-50 hover:text-emerald-700'}" onclick={() => setProductAddonState(addon.id, 'active')}>Aktif</button>
+															<button type="button" class="rounded-md px-2 py-1 text-xs font-semibold {productAddonStates[addon.id] === 'inactive' ? 'bg-red-600 text-white shadow-sm' : 'text-slate-500 hover:bg-red-50 hover:text-red-700'}" onclick={() => setProductAddonState(addon.id, 'inactive')}>Nonaktif</button>
+														</div>
+													</div>
+												{/each}
 											</div>
-										{/each}
-										{#if Object.keys(groupedGlobalAddons).length === 0}
-											<div class="md:col-span-2 rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-center text-slate-500">
-												Tidak ada addon yang cocok dengan pencarian.
-											</div>
-										{/if}
-									</div>
-								{:else}
-									<div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-										<div class="overflow-x-auto">
-											<table class="w-full text-left text-sm text-slate-600">
-												<thead class="bg-slate-50/50 text-[10px] uppercase text-slate-500 border-b border-slate-200">
-													<tr>
-														<th class="px-3 py-2 font-semibold">Addon</th>
-														<th class="px-3 py-2 font-semibold text-center w-24">Status</th>
-														<th class="px-3 py-2 font-semibold">Tindakan</th>
-													</tr>
-												</thead>
-												<tbody class="divide-y divide-slate-100">
-													{#each filteredGlobalAddons as addon}
-														<tr class="hover:bg-slate-50/50">
-															<td class="px-3 py-2">
-																<p class="font-semibold text-slate-800 text-xs">{addon.name}</p>
-																<div class="flex items-center gap-1.5 mt-0.5">
-																	<span class="capitalize text-[9px] font-bold text-slate-500 border border-slate-200 px-1 py-0.5 rounded bg-white">{addon.category}</span>
-																	<span class="text-[10px] text-slate-500">{formatCurrency(addon.additional_price)}</span>
-																</div>
-															</td>
-															<td class="px-3 py-2 text-center align-middle">
-																<span class="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase {productAddonStates[addon.id] === 'active' ? 'bg-emerald-50 text-emerald-700' : productAddonStates[addon.id] === 'inactive' ? 'bg-red-50 text-red-700' : 'bg-slate-100 text-slate-500'}">
-																	{productAddonStates[addon.id] ?? 'default'}
-																</span>
-															</td>
-															<td class="px-3 py-2">
-																<div class="flex rounded-lg bg-slate-100 p-0.5 w-fit">
-																	<button type="button" class="rounded px-2 py-1 text-[10px] font-semibold {productAddonStates[addon.id] === undefined ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}" onclick={() => setProductAddonState(addon.id, 'default')}>Default</button>
-																	<button type="button" class="rounded px-2 py-1 text-[10px] font-semibold {productAddonStates[addon.id] === 'active' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}" onclick={() => setProductAddonState(addon.id, 'active')}>Aktif</button>
-																	<button type="button" class="rounded px-2 py-1 text-[10px] font-semibold {productAddonStates[addon.id] === 'inactive' ? 'bg-white text-red-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}" onclick={() => setProductAddonState(addon.id, 'inactive')}>Nonaktif</button>
-																</div>
-															</td>
-														</tr>
-													{:else}
-														<tr>
-															<td colspan="3" class="px-3 py-6 text-center text-xs text-slate-500">Tidak ada addon yang cocok dengan pencarian.</td>
-														</tr>
-													{/each}
-												</tbody>
-											</table>
+										</details>
+									{:else}
+										<div class="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-center text-sm text-slate-500">
+											Tidak ada addon yang cocok dengan pencarian.
 										</div>
-									</div>
-								{/if}
+									{/each}
+								</div>
 							</div>
 						</div>
 					{/if}
@@ -598,7 +669,7 @@
 							{@const imageKey = `existing:${img.id}`}
 							<div class="relative aspect-square rounded-xl overflow-hidden border border-slate-200 group">
 								<img src={getImageUrl(img.image_url, { width: 320, height: 320, quality: 75, resize: 'cover' })} alt="Product" class="w-full h-full object-cover" loading="lazy" decoding="async" />
-								<button type="button" onclick={() => removeExistingImage(img)} aria-label={`Hapus gambar produk ${i + 1}`} class="absolute top-1 right-1 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-sm">
+								<button type="button" onclick={() => removeExistingImage(img)} aria-label={`Hapus gambar produk ${i + 1}`} class="absolute top-1 right-1 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-xs shadow-sm">
 									<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
 								</button>
 								<label class="absolute bottom-1 left-1 flex cursor-pointer items-center gap-1 rounded-full px-2 py-1 text-[9px] font-bold shadow-sm transition-colors {primaryImageKey === imageKey ? 'bg-slate-900/80 text-white' : 'bg-white/85 text-slate-700 hover:bg-white'}">
@@ -613,7 +684,7 @@
 							{@const imageKey = `new:${i}`}
 							<div class="relative aspect-square rounded-xl overflow-hidden border border-blue-200 group">
 								<img src={img.previewUrl} alt="New Preview" class="w-full h-full object-cover" />
-								<button type="button" onclick={() => removeNewImage(i)} aria-label={`Hapus gambar baru ${i + 1}`} class="absolute top-1 right-1 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-sm">
+								<button type="button" onclick={() => removeNewImage(i)} aria-label={`Hapus gambar baru ${i + 1}`} class="absolute top-1 right-1 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-xs shadow-sm">
 									<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
 								</button>
 								<span class="absolute top-1 left-1 bg-blue-500 text-white text-[9px] px-1.5 py-0.5 rounded font-bold uppercase">Baru</span>
@@ -645,7 +716,7 @@
 					<Button type="button" variant="outline" class="flex-1 md:flex-none cursor-pointer active:scale-95 transition-transform" onclick={() => isFormOpen = false} disabled={isSubmitting}>Cancel</Button>
 					<Button type="submit" class="flex-1 md:flex-none bg-slate-800 hover:bg-slate-900 hover:shadow-md cursor-pointer active:scale-95 transition-all" disabled={isSubmitting}>
 						{#if isSubmitting}
-							Menyimpan...
+							<Loading label="Menyimpan..." size="sm" class="text-white" />
 						{:else}
 							{editingProduct ? 'Simpan Perubahan' : 'Save Product'}
 						{/if}

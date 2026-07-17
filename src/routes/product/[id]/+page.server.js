@@ -14,6 +14,13 @@ export const load = async ({ params, locals: { supabase } }) => {
 				image_url,
 				is_primary
 			),
+			product_variants (
+				id,
+				name,
+				price,
+				is_active,
+				display_order
+			),
 			product_addons (
 				addon_id,
 				is_active,

@@ -23,6 +23,13 @@ export const load = async ({ locals: { supabase }, url }) => {
 					image_url,
 					is_primary
 				),
+				product_variants (
+					id,
+					name,
+					price,
+					is_active,
+					display_order
+				),
 				product_addons (
 					addon_id,
 					is_active,
@@ -112,6 +119,65 @@ function parseNewAddons(value) {
 	} catch {
 		return [];
 	}
+}
+
+function parseProductVariants(value) {
+	try {
+		const parsed = JSON.parse(value || '[]');
+		if (!Array.isArray(parsed)) return [];
+
+		return parsed
+			.map((item, index) => ({
+				id: item?.id ? String(item.id) : null,
+				name: String(item?.name || '').trim(),
+				price: parsePrice(item?.price),
+				is_active: item?.is_active !== false,
+				display_order: Number.isFinite(Number(item?.display_order)) ? Number(item.display_order) : index
+			}))
+			.filter((item) => item.name && item.price > 0);
+	} catch {
+		return [];
+	}
+}
+
+async function syncProductVariants(supabase, productId, variants) {
+	const submittedIds = variants.map((variant) => variant.id).filter(Boolean);
+
+	const { data: existingRows, error: existingError } = await supabase
+		.from('product_variants')
+		.select('id')
+		.eq('product_id', productId);
+
+	if (existingError) return existingError;
+
+	const variantIdsToRemove = (existingRows ?? [])
+		.map((row) => row.id)
+		.filter((id) => !submittedIds.includes(id));
+
+	if (variantIdsToRemove.length > 0) {
+		const { error } = await supabase
+			.from('product_variants')
+			.delete()
+			.eq('product_id', productId)
+			.in('id', variantIdsToRemove);
+		if (error) return error;
+	}
+
+	if (variants.length === 0) return null;
+
+	const rows = variants.map((variant) => ({
+		...(variant.id ? { id: variant.id } : {}),
+		product_id: productId,
+		name: variant.name,
+		price: variant.price,
+		is_active: variant.is_active,
+		display_order: variant.display_order
+	}));
+
+	const { error } = await supabase.from('product_variants').upsert(rows, {
+		onConflict: 'id'
+	});
+	return error;
 }
 
 async function createNewGlobalAddons(supabase, productId, newAddons) {
@@ -361,6 +427,7 @@ export const actions = {
 		const category_id = formData.get('category_id');
 		const images = formData.getAll('images');
 		const primaryImageKey = formData.get('primary_image_key');
+		const productVariants = parseProductVariants(formData.get('product_variants'));
 		const addonStates = parseProductAddonStates(formData.get('product_addons'));
 		const newAddons = parseNewAddons(formData.get('new_addons'));
 		const handling_warning = formData.get('handling_warning');
@@ -385,6 +452,9 @@ export const actions = {
 			console.error('Create product error:', productError);
 			return fail(500, { success: false, error: productError.message });
 		}
+
+		const variantError = await syncProductVariants(supabase, product.id, productVariants);
+		if (variantError) return fail(500, { success: false, error: variantError.message });
 
 		const addonError = await syncProductAddons(supabase, product.id, addonStates);
 		if (addonError) return fail(500, { success: false, error: addonError.message });
@@ -411,6 +481,7 @@ export const actions = {
 		const images = formData.getAll('images');
 		const primaryImageKey = formData.get('primary_image_key');
 		const deletedImageIdsStr = formData.get('deleted_image_ids');
+		const productVariants = parseProductVariants(formData.get('product_variants'));
 		const addonStates = parseProductAddonStates(formData.get('product_addons'));
 		const newAddons = parseNewAddons(formData.get('new_addons'));
 		const handling_warning = formData.get('handling_warning');
@@ -436,6 +507,9 @@ export const actions = {
 			console.error('Update product error:', productError);
 			return fail(500, { success: false, error: productError.message });
 		}
+
+		const variantError = await syncProductVariants(supabase, id, productVariants);
+		if (variantError) return fail(500, { success: false, error: variantError.message });
 
 		const addonError = await syncProductAddons(supabase, id, addonStates);
 		if (addonError) return fail(500, { success: false, error: addonError.message });

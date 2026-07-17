@@ -4,6 +4,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
+	import Loading from '$lib/components/Loading.svelte';
 	import { getImageUrl } from '$lib/image-url.js';
 	import { Plus, Trash2, GripVertical, Check, X, AlertCircle, Image } from 'lucide-svelte';
 	
@@ -23,14 +24,17 @@
 	function handleUpload() {
 		isUploading = true;
 		return async ({ result, update }) => {
-			isUploading = false;
-			if (result.type === 'success') {
-				toast.success('Banner berhasil diunggah!');
-				update();
-			} else if (result.type === 'failure') {
-				toast.error(result.data?.error || 'Gagal mengunggah banner.');
-			} else {
-				update();
+			try {
+				if (result.type === 'success') {
+					toast.success('Banner berhasil diunggah!');
+					update();
+				} else if (result.type === 'failure') {
+					toast.error(result.data?.error || 'Gagal mengunggah banner.');
+				} else {
+					update();
+				}
+			} finally {
+				isUploading = false;
 			}
 		};
 	}
@@ -49,12 +53,15 @@
 
 		isSaving = true;
 		return async ({ result, update }) => {
-			isSaving = false;
-			if (result.type === 'success') {
-				toast.success('Perubahan berhasil disimpan!');
-				update();
-			} else if (result.type === 'failure') {
-				toast.error(result.data?.error || 'Gagal menyimpan perubahan.');
+			try {
+				if (result.type === 'success') {
+					toast.success('Perubahan berhasil disimpan!');
+					update();
+				} else if (result.type === 'failure') {
+					toast.error(result.data?.error || 'Gagal menyimpan perubahan.');
+				}
+			} finally {
+				isSaving = false;
 			}
 		};
 	}
@@ -109,7 +116,15 @@
 	<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 		<!-- Upload New Banner -->
 		<div class="lg:col-span-1">
-			<div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden sticky top-6">
+			<div class="relative bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden sticky top-6">
+				{#if isUploading}
+					<Loading
+						variant="overlay"
+						label="Mengunggah banner"
+						description="Mohon tunggu, gambar banner sedang diunggah."
+						class="rounded-2xl"
+					/>
+				{/if}
 				<div class="p-5 border-b border-slate-100">
 					<h3 class="font-bold text-slate-800">Tambah Banner Baru</h3>
 				</div>
@@ -128,7 +143,7 @@
 
 						<Button type="submit" disabled={isUploading} class="w-full mt-2 bg-primary hover:bg-[#724828] text-white rounded-xl">
 							{#if isUploading}
-								<span class="animate-pulse">Mengunggah...</span>
+								<Loading label="Mengunggah..." size="sm" class="text-white" />
 							{:else}
 								<Plus class="h-4 w-4 mr-2" /> Unggah Banner
 							{/if}
@@ -144,11 +159,23 @@
 					<input type="hidden" name="banners" value={JSON.stringify(banners)} />
 				</form>
 
-				<div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+				<div class="relative bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+					{#if isSaving}
+						<Loading
+							variant="overlay"
+							label="Menyimpan banner"
+							description="Urutan dan status banner sedang diperbarui."
+							class="rounded-2xl"
+						/>
+					{/if}
 					<div class="p-5 border-b border-slate-100 flex items-center justify-between">
 						<h3 class="font-bold text-slate-800">Daftar Banner</h3>
 						<Button form="banners-update-form" type="submit" size="sm" disabled={isSaving || activeCount < 2 || activeCount > 5} class="bg-slate-900 hover:bg-slate-800 text-white rounded-full px-5">
-							{isSaving ? 'Menyimpan...' : 'Simpan Urutan & Status'}
+							{#if isSaving}
+								<Loading label="Menyimpan..." size="sm" class="text-white" />
+							{:else}
+								Simpan Urutan & Status
+							{/if}
 						</Button>
 					</div>
 					

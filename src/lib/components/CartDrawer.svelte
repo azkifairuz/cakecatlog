@@ -2,6 +2,7 @@
 	import { getImageUrl } from '$lib/image-url.js';
 	import { cart } from '$lib/stores/cart.svelte.js';
 	import { fly, fade } from 'svelte/transition';
+	import { cubicOut } from 'svelte/easing';
 	import { getI18n } from '$lib/i18n.svelte.js';
 
 	const i18n = getI18n();
@@ -25,7 +26,7 @@
 	<!-- Backdrop -->
 	<div 
 		class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 transition-opacity"
-		transition:fade={{ duration: 200 }}
+		transition:fade={{ duration: 180 }}
 		onclick={closeCart}
 		onkeydown={handleBackdropKey}
 		role="button"
@@ -36,7 +37,7 @@
 	<!-- Drawer -->
 	<div 
 		class="fixed inset-y-0 right-0 w-full max-w-md bg-white shadow-2xl z-50 flex flex-col"
-		transition:fly={{ x: '100%', duration: 300, opacity: 1 }}
+		transition:fly={{ x: '100%', duration: 280, opacity: 1, easing: cubicOut }}
 	>
 		<!-- Header -->
 		<div class="px-6 py-5 border-b border-primary/10 flex items-center justify-between bg-[#FFFBF7]">
@@ -59,11 +60,14 @@
 					<p class="text-sm mt-2">{i18n.t('cart.emptyDescription')}</p>
 				</div>
 			{:else}
-				{#each cart.items as item (item.cartItemId)}
-					<div class="flex gap-4 p-4 rounded-2xl border border-primary/10 bg-slate-50 relative group">
+				{#each cart.items as item, index (item.cartItemId)}
+					<div
+						class="flex gap-4 p-4 rounded-2xl border border-primary/10 bg-slate-50 relative group"
+						in:fly={{ y: 8, duration: 200, delay: Math.min(index, 5) * 35, easing: cubicOut }}
+					>
 						<button 
 							onclick={() => cart.removeItem(item.cartItemId)}
-							class="absolute -top-2 -right-2 w-8 h-8 bg-red-100 text-red-600 rounded-full flex items-center justify-center shadow-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-200"
+							class="absolute -top-2 -right-2 w-8 h-8 bg-red-100 text-red-600 rounded-full flex items-center justify-center shadow-sm transition-[background-color,opacity,transform] duration-150 ease-out hover:bg-red-200 active:scale-[0.9] sm:opacity-0 sm:group-hover:opacity-100"
 							title={i18n.t('cart.removeItem')}
 						>
 							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -116,7 +120,7 @@
 				</div>
 				<p class="mb-4 text-[11px] leading-relaxed text-[#4A3B32]/55">{i18n.t('pricing.finalInvoiceNote')}</p>
 				<a href="/checkout" onclick={closeCart} class="block">
-					<button class="w-full py-4 bg-primary text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:bg-[#724828] active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+					<button class="w-full py-4 bg-primary text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:bg-[#724828] active:scale-[0.97] transition-[background-color,transform,box-shadow] duration-150 ease-out flex items-center justify-center gap-2">
 						{i18n.t('cart.checkout')}
 						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
 					</button>

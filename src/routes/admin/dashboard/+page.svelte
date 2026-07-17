@@ -130,14 +130,14 @@
 	}
 </script>
 
-<div class="space-y-6">
-	<div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-		<div class="space-y-3">
-			<div class="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Dashboard Admin</div>
-			<h1 class="text-3xl font-bold text-[#4A3B32]">Ringkasan Penjualan</h1>
-			<p class="max-w-2xl text-sm text-[#4A3B32]/70">Lihat total omset, total penjualan, dan daftar pesanan belum diproses. Filter default harian, bisa diganti mingguan, bulanan, atau rentang tanggal.</p>
+<div class="mx-auto w-full max-w-7xl space-y-5 sm:space-y-6">
+	<div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+		<div class="min-w-0 space-y-2">
+			<div class="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary sm:text-sm sm:tracking-[0.2em]">Dashboard Admin</div>
+			<h1 class="text-2xl font-bold leading-tight text-[#4A3B32] sm:text-3xl">Ringkasan Penjualan</h1>
+			<p class="max-w-2xl text-sm leading-relaxed text-[#4A3B32]/70">Lihat total omset, total penjualan, dan daftar pesanan belum diproses. Filter default harian, bisa diganti mingguan, bulanan, atau rentang tanggal.</p>
 		</div>
-		<Button onclick={exportToExcel} variant="outline" class="rounded-full px-5 py-3 text-sm font-semibold border-primary/30 text-primary hover:bg-primary/10 gap-2 shrink-0">
+		<Button onclick={exportToExcel} variant="outline" class="h-11 w-full rounded-xl border-primary/30 px-4 text-sm font-semibold text-primary hover:bg-primary/10 active:scale-[0.98] sm:w-auto sm:rounded-full sm:px-5 gap-2">
 			<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
 			Export Excel
 		</Button>
@@ -150,15 +150,16 @@
 	{/if}
 
 	<div class="flex flex-col gap-5">
-		<div class="flex flex-col lg:flex-row items-center justify-between gap-3 bg-transparent px-0">
+		<div class="rounded-2xl border border-primary/10 bg-white p-3 shadow-sm sm:p-4">
+			<div class="grid gap-3 lg:grid-cols-[minmax(220px,1fr)_auto] lg:items-start">
 			<!-- Search -->
-			<div class="relative w-full lg:flex-1 lg:min-w-[220px]">
+			<div class="relative w-full">
 				<svg class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#4A3B32]/50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
 				<Input type="text" placeholder="Cari pesanan..." bind:value={searchQuery} class="pl-11 h-12 w-full rounded-2xl bg-white border border-primary/20 focus:border-primary transition-colors" />
 			</div>
 
 			<!-- Filters -->
-			<div class="grid grid-cols-2 md:flex items-center gap-2 md:gap-3 w-full lg:w-auto">
+			<div class="grid w-full grid-cols-2 gap-2 sm:grid-cols-4 lg:w-auto lg:grid-cols-[120px_120px_160px_auto]">
 				<select bind:value={dateTypeFilter} class="h-12 w-full md:w-auto rounded-2xl bg-white border border-primary/20 px-3 text-sm font-medium text-[#4A3B32] focus:outline-none focus:border-primary focus:ring-2 focus:ring-slate-100">
 					<option value="delivery_date">Tgl Kirim</option>
 					<option value="created_at">Tgl Order</option>
@@ -171,7 +172,7 @@
 					<option value="range">Range</option>
 				</select>
 				
-				<select bind:value={statusFilter} class="h-12 w-full md:w-auto col-span-2 md:col-span-1 rounded-2xl bg-white border border-primary/20 px-3 text-sm font-medium text-[#4A3B32] focus:outline-none focus:border-primary focus:ring-2 focus:ring-slate-100">
+				<select bind:value={statusFilter} class="col-span-2 h-12 w-full rounded-2xl bg-white border border-primary/20 px-3 text-sm font-medium text-[#4A3B32] focus:outline-none focus:border-primary focus:ring-2 focus:ring-slate-100 sm:col-span-1">
 					<option value="All">Semua Status</option>
 					<option value="Pending">Pending</option>
 					<option value="Diproses">Diproses</option>
@@ -180,15 +181,14 @@
 				</select>
 				
 				{#if dateMode === 'range'}
-					<div class="flex col-span-2 md:w-auto gap-2">
-						<DatePicker bind:value={customStart} class="h-12 rounded-2xl px-3 text-sm font-medium w-full lg:w-[140px] border-primary/20 bg-white" placeholder="Awal" />
-						<DatePicker bind:value={customEnd} class="h-12 rounded-2xl px-3 text-sm font-medium w-full lg:w-[140px] border-primary/20 bg-white" placeholder="Akhir" />
+					<div class="col-span-2 grid gap-2 sm:col-span-4 sm:grid-cols-2 lg:col-span-4">
+						<DatePicker bind:value={customStart} class="h-12 min-w-0 rounded-2xl px-3 text-sm font-medium border-primary/20 bg-white" placeholder="Awal" />
+						<DatePicker bind:value={customEnd} class="h-12 min-w-0 rounded-2xl px-3 text-sm font-medium border-primary/20 bg-white" placeholder="Akhir" />
 					</div>
 				{/if}
-			</div>
 
 			{#if searchQuery || statusFilter !== 'All' || dateMode !== 'daily' || dateTypeFilter !== 'delivery_date'}
-				<Button variant="outline" class="h-12 rounded-2xl px-5 text-sm font-semibold w-full lg:w-auto mt-1 lg:mt-0 border-primary/30 text-primary hover:bg-primary/10" onclick={() => {
+				<Button variant="outline" class="col-span-2 h-12 rounded-2xl px-5 text-sm font-semibold w-full border-primary/30 text-primary hover:bg-primary/10 sm:col-span-4 lg:col-span-4" onclick={() => {
 					searchQuery = '';
 					statusFilter = 'All';
 					dateMode = 'daily';
@@ -199,56 +199,106 @@
 					Reset
 				</Button>
 			{/if}
+			</div>
+			</div>
 		</div>
 		<div class="space-y-4">
 			<div class="grid gap-4 sm:grid-cols-2">
-				<div class="rounded-3xl border border-primary/20 bg-slate-50 p-4">
+				<div class="rounded-2xl border border-primary/15 bg-white p-4 shadow-sm sm:p-5">
 					<p class="text-sm font-semibold text-[#4A3B32]/70">Total Omset (Selesai)</p>
-					<p class="mt-3 text-3xl font-bold text-[#4A3B32]">{formatCurrency(totalRevenue)}</p>
+					<p class="mt-2 break-words text-2xl font-bold leading-tight text-[#4A3B32] sm:text-3xl">{formatCurrency(totalRevenue)}</p>
 					<p class="mt-2 text-sm text-[#4A3B32]/70">Total omset pesanan berstatus selesai.</p>
 				</div>
 
-				<div class="rounded-3xl border border-primary/20 bg-slate-50 p-4">
+				<div class="rounded-2xl border border-primary/15 bg-white p-4 shadow-sm sm:p-5">
 					<p class="text-sm font-semibold text-[#4A3B32]/70">Total Penjualan</p>
-					<p class="mt-3 text-3xl font-bold text-[#4A3B32]">{totalSales}</p>
+					<p class="mt-2 text-2xl font-bold leading-tight text-[#4A3B32] sm:text-3xl">{totalSales}</p>
 					<p class="mt-2 text-sm text-[#4A3B32]/70">Jumlah order sesuai periode.</p>
 				</div>
 			</div>
 
-			<div class="grid gap-4 sm:grid-cols-3">
-				<div class="rounded-3xl border border-primary/20 bg-slate-50 p-4">
+			<div class="grid gap-3 sm:grid-cols-3 sm:gap-4">
+				<div class="rounded-2xl border border-primary/15 bg-white p-4 shadow-sm">
 					<p class="text-sm font-semibold text-[#4A3B32]/70">Pending</p>
-					<p class="mt-3 text-3xl font-bold text-[#4A3B32]">{pendingOrders.length}</p>
+					<p class="mt-2 text-2xl font-bold text-[#4A3B32] sm:text-3xl">{pendingOrders.length}</p>
 					<p class="mt-2 text-sm text-[#4A3B32]/70">Pesanan belum diproses.</p>
 				</div>
 
-				<div class="rounded-3xl border border-primary/20 bg-slate-50 p-4">
+				<div class="rounded-2xl border border-primary/15 bg-white p-4 shadow-sm">
 					<p class="text-sm font-semibold text-[#4A3B32]/70">Diproses</p>
-					<p class="mt-3 text-3xl font-bold text-[#4A3B32]">{processingOrders.length}</p>
+					<p class="mt-2 text-2xl font-bold text-[#4A3B32] sm:text-3xl">{processingOrders.length}</p>
 					<p class="mt-2 text-sm text-[#4A3B32]/70">Pesanan sedang dibuat.</p>
 				</div>
 
-				<div class="rounded-3xl border border-primary/20 bg-slate-50 p-4">
+				<div class="rounded-2xl border border-primary/15 bg-white p-4 shadow-sm">
 					<p class="text-sm font-semibold text-[#4A3B32]/70">Selesai</p>
-					<p class="mt-3 text-3xl font-bold text-[#4A3B32]">{completedOrders.length}</p>
+					<p class="mt-2 text-2xl font-bold text-[#4A3B32] sm:text-3xl">{completedOrders.length}</p>
 					<p class="mt-2 text-sm text-[#4A3B32]/70">Pesanan sudah dikirim.</p>
 				</div>
 			</div>
 		</div>
 	</div>
 
-	<div class="rounded-[2rem] overflow-hidden border border-primary/20 bg-white shadow-sm">
-		<div class="flex flex-col gap-4 border-b border-primary/20 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
-			<div>
-				<p class="text-sm font-semibold text-[#4A3B32]/70 uppercase tracking-widest">Pesanan Belum Diproses</p>
-				<h2 class="mt-2 text-2xl font-bold text-[#4A3B32]">Daftar Order Pending</h2>
-				<p class="mt-1 text-sm text-[#4A3B32]/70">Menampilkan {pendingOrders.length} pesanan pada rentang tanggal {startDate} sampai {endDate}.</p>
+	<div class="overflow-hidden rounded-2xl border border-primary/15 bg-white shadow-sm sm:rounded-[1.5rem]">
+		<div class="flex flex-col gap-3 border-b border-primary/15 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-5">
+			<div class="min-w-0">
+				<p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#4A3B32]/70 sm:text-sm sm:tracking-widest">Pesanan Belum Diproses</p>
+				<h2 class="mt-1 text-xl font-bold leading-tight text-[#4A3B32] sm:mt-2 sm:text-2xl">Daftar Order Pending</h2>
+				<p class="mt-1 text-sm leading-relaxed text-[#4A3B32]/70">Menampilkan {pendingOrders.length} pesanan pada rentang tanggal {startDate} sampai {endDate}.</p>
 			</div>
-			<div class="rounded-3xl bg-slate-50 px-4 py-3 text-sm text-[#4A3B32]/80">Mode: {dateMode === 'range' ? 'Custom Range' : dateMode}</div>
+			<div class="w-fit rounded-full bg-slate-50 px-3 py-2 text-xs font-semibold text-[#4A3B32]/80 sm:px-4 sm:py-3 sm:text-sm">Mode: {dateMode === 'range' ? 'Custom Range' : dateMode}</div>
 		</div>
 
-		<div class="overflow-x-auto">
-			<table class="min-w-full text-left text-sm text-[#4A3B32]">
+		<div class="grid gap-3 p-3 md:hidden">
+			{#each pendingOrders as order}
+				<article class="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+					<div class="flex items-start justify-between gap-3">
+						<div class="min-w-0">
+							<p class="text-xs font-semibold uppercase tracking-wide text-primary">#{order.order_number}</p>
+							<h3 class="mt-1 truncate text-base font-bold text-[#4A3B32]">{order.customer_name}</h3>
+						</div>
+						<p class="shrink-0 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-700">Pending</p>
+					</div>
+					<div class="mt-4 grid grid-cols-2 gap-3 text-sm">
+						<div>
+							<p class="text-xs font-semibold text-[#4A3B32]/50">Produk</p>
+							<p class="mt-1 line-clamp-2 font-medium text-[#4A3B32]">
+								{#if order.order_items && order.order_items.length > 0}
+									{order.order_items[0].products?.name ?? 'Unknown'}
+									{#if order.order_items.length > 1}
+										<span class="text-primary">+{order.order_items.length - 1} lainnya</span>
+									{/if}
+								{:else}
+									Data lama
+								{/if}
+							</p>
+						</div>
+						<div>
+							<p class="text-xs font-semibold text-[#4A3B32]/50">Tanggal Kirim</p>
+							<p class="mt-1 font-medium text-[#4A3B32]">{formatDate(order.delivery_date)}</p>
+						</div>
+						<div>
+							<p class="text-xs font-semibold text-[#4A3B32]/50">Qty</p>
+							<p class="mt-1 font-medium text-[#4A3B32]">{order.order_items ? order.order_items.length : order.quantity} item</p>
+						</div>
+						<div>
+							<p class="text-xs font-semibold text-[#4A3B32]/50">Total</p>
+							<p class="mt-1 font-bold text-[#4A3B32]">{formatCurrency(order.amount)}</p>
+						</div>
+					</div>
+					<Button variant="outline" size="sm" class="mt-4 h-10 w-full rounded-xl text-sm font-semibold active:scale-[0.98]" onclick={() => openDrawer(order)}>
+						Kelola
+					</Button>
+				</article>
+			{:else}
+				<div class="rounded-2xl border border-dashed border-slate-200 px-4 py-10 text-center text-sm text-[#4A3B32]/70">
+					Tidak ada pesanan pending pada periode ini.
+				</div>
+			{/each}
+		</div>
+
+		<div class="hidden overflow-x-auto md:block">
+			<table class="min-w-205 w-full text-left text-sm text-[#4A3B32]">
 				<thead class="bg-slate-50 text-[#4A3B32]/70 text-xs uppercase tracking-wide">
 					<tr>
 						<th class="px-4 py-4">No Order</th>
@@ -300,18 +350,18 @@
 {#if isDrawerOpen && selectedOrder}
 	<div class="fixed inset-0 z-50 flex flex-col justify-end pointer-events-auto">
 		<button class="absolute inset-0 w-full h-full bg-primary/40 backdrop-blur-sm cursor-default" transition:fade={{ duration: 200 }} onclick={closeDrawer} aria-label="Close modal"></button>
-		<div class="relative bg-white rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] p-6 pb-safe-12 w-full max-w-xl mx-auto" transition:fly={{ y: '100%', duration: 350, opacity: 1, easing: (t) => 1 - Math.pow(1 - t, 4) }}>
-			<div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6"></div>
-			<div class="flex justify-between items-start mb-6">
-				<div>
-					<h3 class="text-xl font-bold text-[#4A3B32] mb-1">Kelola Pesanan</h3>
-					<p class="text-sm font-medium text-[#4A3B32]/70">#{selectedOrder.order_number} • {selectedOrder.customer_name}</p>
+		<div class="relative mx-auto flex max-h-[92vh] w-full max-w-xl flex-col rounded-t-3xl bg-white p-4 pb-safe-8 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] sm:p-6 sm:pb-safe-12" transition:fly={{ y: '100%', duration: 280, opacity: 1, easing: (t) => 1 - Math.pow(1 - t, 4) }}>
+			<div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-5 sm:mb-6"></div>
+			<div class="mb-5 flex min-w-0 items-start justify-between gap-3 sm:mb-6">
+				<div class="min-w-0">
+					<h3 class="text-lg font-bold text-[#4A3B32] mb-1 sm:text-xl">Kelola Pesanan</h3>
+					<p class="truncate text-sm font-medium text-[#4A3B32]/70">#{selectedOrder.order_number} • {selectedOrder.customer_name}</p>
 				</div>
-				<button onclick={closeDrawer} aria-label="Close modal" class="p-2 -mr-2 text-[#4A3B32]/50 hover:text-[#4A3B32]/80 bg-slate-50 hover:bg-slate-50 rounded-full transition-colors">
+				<button onclick={closeDrawer} aria-label="Close modal" class="shrink-0 p-2 -mr-2 text-[#4A3B32]/50 hover:text-[#4A3B32]/80 bg-slate-50 hover:bg-slate-50 rounded-full transition-colors active:scale-[0.96]">
 					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
 				</button>
 			</div>
-			<div class="space-y-6 overflow-y-auto max-h-[70vh] pb-8 px-1">
+			<div class="min-h-0 flex-1 space-y-5 overflow-y-auto pb-6 px-1 sm:space-y-6 sm:pb-8">
 				<div class="space-y-3">
 					<Label class="text-[#4A3B32] font-bold text-[15px]">Status Pesanan</Label>
 					<form method="POST" action="?/updateStatus" use:enhance={() => {
@@ -348,12 +398,12 @@
 				<div class="space-y-3">
 					<Label class="text-[#4A3B32] font-bold text-[15px]">Bukti Pembayaran</Label>
 					{#if selectedOrder.proof_of_transfer}
-						<div class="flex items-center justify-between p-4 bg-emerald-50 border border-emerald-100 rounded-xl">
+						<div class="flex flex-col gap-3 p-4 bg-emerald-50 border border-emerald-100 rounded-xl sm:flex-row sm:items-center sm:justify-between">
 							<span class="text-sm font-semibold text-emerald-800 flex items-center gap-2">
 								<svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
 								Bukti Tersimpan
 							</span>
-							<a href={selectedOrder.proof_of_transfer} target="_blank" class="text-sm text-emerald-700 hover:text-emerald-900 underline font-bold px-3 py-1.5 bg-emerald-100/50 rounded-lg transition-colors">Lihat Foto</a>
+							<a href={selectedOrder.proof_of_transfer} target="_blank" class="w-fit text-sm text-emerald-700 hover:text-emerald-900 underline font-bold px-3 py-1.5 bg-emerald-100/50 rounded-lg transition-colors">Lihat Foto</a>
 						</div>
 					{/if}
 					<form method="POST" action="?/uploadReceipt" enctype="multipart/form-data" use:enhance={() => {

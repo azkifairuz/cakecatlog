@@ -1,6 +1,9 @@
 <script>
 	import { supabase } from '$lib/supabase';
+	import { goto } from '$app/navigation';
 	import { getI18n } from '$lib/i18n.svelte.js';
+	import { getSizePriceOptions, parsePrice } from '$lib/pricing.js';
+	import Loading from '$lib/components/Loading.svelte';
 
 
 	let { data } = $props();
@@ -12,7 +15,8 @@
 		return str.split(',').map(s => s.trim()).filter(Boolean);
 	}
 
-	let sizes = $derived(parseOptions(product.sizes));
+	let sizePriceOptions = $derived(getSizePriceOptions(product));
+	let sizes = $derived(sizePriceOptions.length ? sizePriceOptions : parseOptions(product.sizes).map((name) => ({ label: name, price: parsePrice(product.base_price) })));
 	let colors = $derived(parseOptions(product.colors));
 	let flavors = $derived(parseOptions(product.flavors));
 	let crowns = $derived(parseOptions(product.crown_options));
@@ -21,10 +25,31 @@
 	let loading = $state(false);
 	let errorMsg = $state('');
 	let fileName = $state('');
-	let showSuccessModal = $state(false);
+	let selectedSize = $state('');
+	let quantity = $state(1);
+	let selectedSizeOption = $derived(sizePriceOptions.find((option) => option.label === selectedSize) ?? null);
+	let selectedSizePrice = $derived(selectedSizeOption?.price ?? parsePrice(product.base_price));
+	let estimatedSubtotal = $derived(selectedSizePrice * Math.max(Number(quantity) || 1, 1));
+	const optionalOrderColumns = [
+		'product_variant_id',
+		'estimated_subtotal',
+		'size_price',
+		'estimated_unit_price',
+		'customized_options'
+	];
 
 	const d = new Date();
 	const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+	function isSchemaCacheColumnError(error) {
+		return error?.code === 'PGRST204' || String(error?.message || '').includes('schema cache');
+	}
+
+	function withoutOptionalColumns(payload) {
+		const copy = { ...payload };
+		for (const column of optionalOrderColumns) delete copy[column];
+		return copy;
+	}
 
 	async function handleSubmit(event) {
 		event.preventDefault();
@@ -67,6 +92,7 @@
 			// 2. Insert to orders table
 			const orderData = {
 				product_id: product.id,
+				product_variant_id: selectedSizeOption?.id ?? null,
 				customer_name: formData.get('customer_name'),
 				phone_number: formData.get('phone_number'),
 				address: formData.get('address'),
@@ -82,41 +108,48 @@
 				cake_text: formData.get('add_on'),
 				gift_card_text: formData.get('gift_card_text'),
 				reference_image_url,
-				status: 'Pending'
+				status: 'Pending',
+				amount: estimatedSubtotal,
+				estimated_subtotal: estimatedSubtotal,
+				size_price: selectedSizePrice,
+				estimated_unit_price: selectedSizePrice,
+				customized_options: {
+					size: selectedSize ? { name: selectedSize, price: selectedSizePrice, variant_id: selectedSizeOption?.id ?? null } : null
+				}
 			};
 
-			const { error: insertError } = await supabase
+			let { data: insertedOrder, error: insertError } = await supabase
 				.from('orders')
-				.insert(orderData);
+				.insert(orderData)
+				.select('id')
+				.single();
+
+			if (isSchemaCacheColumnError(insertError)) {
+				({ data: insertedOrder, error: insertError } = await supabase
+					.from('orders')
+					.insert(withoutOptionalColumns(orderData))
+					.select('id')
+					.single());
+			}
 
 			if (insertError) throw insertError;
 
-			// 3. Generate WA Link & Redirect (Disabled for now)
-			/*
-			const waNumber = '6281234567890'; // Dummy number
-			
-			const text = `Halo Admin dessertbyfir! Saya ingin konfirmasi pesanan saya:
+			if (!insertedOrder?.id) {
+				throw new Error('Order berhasil dibuat, tetapi ID order tidak ditemukan.');
+			}
 
-*Order:* Pemesanan Baru
-*Nama Pemesan:* ${orderData.customer_name}
-*Produk:* ${product.name}
-*Ukuran:* ${orderData.cake_size}
-*Jumlah:* ${orderData.quantity}
-*Tanggal Kirim:* ${orderData.delivery_date || '-'}
-*Jam Kirim:* ${orderData.delivery_time || '-'}
-*Alamat:* ${orderData.address}
-*Glitter:* ${orderData.add_edible_glitter || '-'}
-*Giftcard:* ${orderData.gift_card_text || '-'}
-*Add-on/Request:* ${orderData.cake_text || '-'}
-
-Mohon info total harga dan instruksi pembayaran. Terima kasih!`;
-
-			const waUrl = `https://wa.me/${waNumber}?text=${encodeURIComponent(text)}`;
-			window.location.href = waUrl;
-			*/
+			try {
+				await fetch('/api/send-order-confirmation-email', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ orderId: insertedOrder.id })
+				});
+			} catch (emailError) {
+				console.error('Order confirmation email failed:', emailError);
+			}
 
 			loading = false;
-			showSuccessModal = true;
+			goto(`/order/receipt/${insertedOrder.id}`);
 
 		} catch (err) {
 			console.error(err);
@@ -138,7 +171,15 @@ Mohon info total harga dan instruksi pembayaran. Terima kasih!`;
 			<p class="text-slate-500 text-sm mt-1.5">{i18n.t('order.detailDescription')}</p>
 		</div>
 
-		<form onsubmit={handleSubmit} class="p-6 space-y-8">
+		<form onsubmit={handleSubmit} class="relative p-6 space-y-8">
+			{#if loading}
+				<Loading
+					variant="overlay"
+					label={i18n.t('order.sendOrder')}
+					description="Mohon tunggu, pesanan sedang diproses."
+					class="rounded-2xl"
+				/>
+			{/if}
 			{#if errorMsg}
 				<div class="bg-red-50 text-red-600 p-4 rounded-xl text-sm font-medium border border-red-100">
 					{errorMsg}
@@ -189,11 +230,11 @@ Mohon info total harga dan instruksi pembayaran. Terima kasih!`;
 						<div>
 							<label for="cake_size" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">{i18n.t('form.size')} <span class="text-red-400">{i18n.t('form.required')}</span></label>
 							<div class="relative">
-								<select id="cake_size" name="cake_size" required class="w-full px-4 py-3.5 bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl text-[15px] appearance-none focus:outline-none focus:border-slate-800 transition-all text-slate-700">
+								<select id="cake_size" name="cake_size" required bind:value={selectedSize} class="w-full px-4 py-3.5 bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl text-[15px] appearance-none focus:outline-none focus:border-slate-800 transition-all text-slate-700">
 									<option value="" disabled selected>{i18n.t('form.choose')}</option>
 									{#if sizes.length > 0}
 										{#each sizes as size}
-											<option value={size}>{size}</option>
+											<option value={size.label}>{size.label} - {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(size.price)}</option>
 										{/each}
 									{:else}
 										<option value="8cm">8 cm</option>
@@ -221,7 +262,14 @@ Mohon info total harga dan instruksi pembayaran. Terima kasih!`;
 						</div>
 						<div>
 							<label for="quantity" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">{i18n.t('form.quantity')} <span class="text-red-400">{i18n.t('form.required')}</span></label>
-							<input type="number" id="quantity" name="quantity" min="1" value="1" required class="w-full px-4 py-3.5 bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl text-[15px] focus:outline-none focus:border-slate-800 transition-all text-center" />
+							<input type="number" id="quantity" name="quantity" min="1" bind:value={quantity} required class="w-full px-4 py-3.5 bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl text-[15px] focus:outline-none focus:border-slate-800 transition-all text-center" />
+						</div>
+					</div>
+
+					<div class="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
+						<div class="flex items-center justify-between">
+							<span class="font-semibold text-slate-600">Estimasi harga</span>
+							<span class="font-bold text-slate-900">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(estimatedSubtotal)}</span>
 						</div>
 					</div>
 
@@ -369,7 +417,7 @@ Mohon info total harga dan instruksi pembayaran. Terima kasih!`;
 			<div class="pt-6 pb-6">
 				<button type="submit" disabled={loading} class="w-full py-4 bg-slate-900 hover:bg-slate-800 active:scale-[0.99] text-white font-semibold text-[16px] tracking-wide rounded-xl transition-all shadow-lg shadow-slate-900/20 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed disabled:active:scale-100">
 					{#if loading}
-						<span class="animate-spin inline-block w-5 h-5 border-2 border-white/30 border-t-white rounded-full"></span>
+						<Loading label="" size="sm" class="text-white" />
 					{/if}
 					{i18n.t('order.sendOrder')}
 				</button>
@@ -377,20 +425,3 @@ Mohon info total harga dan instruksi pembayaran. Terima kasih!`;
 		</form>
 	</div>
 </div>
-
-{#if showSuccessModal}
-	<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-		<div class="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-8 text-center animate-in fade-in zoom-in duration-200">
-			<div class="w-20 h-20 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto mb-5 border-[6px] border-green-50/50">
-				<svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
-				</svg>
-			</div>
-			<h3 class="text-2xl font-bold text-slate-800 mb-2">{i18n.t('order.successTitle')}</h3>
-			<p class="text-slate-500 text-[15px] mb-8 leading-relaxed">{i18n.t('order.successDescription')}</p>
-			<a href="/" class="block w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl transition-all shadow-md">
-				{i18n.t('order.backToCatalog')}
-			</a>
-		</div>
-	</div>
-{/if}

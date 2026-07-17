@@ -5,11 +5,11 @@
 	import { goto } from '$app/navigation';
 	import { enhance } from '$app/forms';
 	import { getI18n } from '$lib/i18n.svelte.js';
+	import Loading from '$lib/components/Loading.svelte';
 	
 	let { form } = $props();
 	const i18n = getI18n();
 	let mounted = $state(false);
-	let showSuccessModal = $state(false);
 	let selectedDeliveryOption = $state('');
 	
 	onMount(() => {
@@ -119,12 +119,22 @@
 							</button>
 						</div>
 					{:else}
+					<div class="relative">
+					{#if loading}
+						<Loading
+							variant="overlay"
+							label={i18n.t('checkout.sendOrder')}
+							description="Mohon tunggu, pesanan sedang diproses."
+							class="rounded-2xl"
+						/>
+					{/if}
 					<form method="POST" action="?/checkout" use:enhance={() => {
 						return async ({ result, update }) => {
 							loading = false;
 							if (result.type === 'success' && result.data?.success) {
 								cart.clear();
-								showSuccessModal = true;
+								await goto(`/order/receipt/${result.data.orderId}`);
+								return;
 							} else if (result.type === 'success' && result.data?.error) {
 								errorMsg = result.data.error;
 							} else if (result.type === 'error' || result.type === 'failure') {
@@ -192,12 +202,13 @@
 						<div class="pt-6">
 							<button type="submit" disabled={loading || cart.items.length === 0} class="w-full py-4 bg-primary hover:bg-[#724828] active:scale-[0.99] text-white font-bold text-[16px] tracking-wide rounded-xl transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed">
 								{#if loading}
-									<span class="animate-spin inline-block w-5 h-5 border-2 border-white/30 border-t-white rounded-full"></span>
+									<Loading label="" size="sm" class="text-white" />
 								{/if}
 								{i18n.t('checkout.sendOrder')}
 							</button>
 						</div>
 					</form>
+					</div>
 					{/if}
 				</div>
 			</div>
@@ -248,20 +259,3 @@
 		</div>
 	</div>
 </div>
-
-{#if showSuccessModal}
-	<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-		<div class="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-8 text-center animate-in fade-in zoom-in duration-200">
-			<div class="w-20 h-20 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto mb-5 border-[6px] border-green-50/50">
-				<svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
-				</svg>
-			</div>
-			<h3 class="text-2xl font-bold text-slate-800 mb-2">{i18n.t('checkout.successTitle')}</h3>
-			<p class="text-slate-500 text-[15px] mb-8 leading-relaxed">{i18n.t('checkout.successDescription')}</p>
-			<a href="/" class="block w-full py-4 bg-primary hover:bg-[#724828] text-white font-semibold rounded-xl transition-all shadow-md">
-				{i18n.t('checkout.backHome')}
-			</a>
-		</div>
-	</div>
-{/if}

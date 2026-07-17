@@ -1,8 +1,54 @@
-import { supabase } from '$lib/supabase';
 import { normalizeLocale, translate } from '$lib/i18n.svelte.js';
+import { normalizeSiteInfo } from '$lib/site-info.js';
+import { sendOrderConfirmationEmail } from '$lib/server/order-confirmation-email.js';
+
+const ORDER_CONFIRMATION_SELECT = `
+	*,
+	products (
+		name
+	),
+	order_items (
+		*,
+		products (
+			name
+		)
+	)
+`;
+
+const OPTIONAL_ORDER_COLUMNS = [
+	'product_variant_id',
+	'estimated_subtotal',
+	'size_price',
+	'dark_color_surcharge',
+	'cake_topper_fee',
+	'estimated_unit_price',
+	'has_cake_topper',
+	'customized_options'
+];
+
+const OPTIONAL_ORDER_ITEM_COLUMNS = [
+	'product_variant_id',
+	'size_price',
+	'dark_color_surcharge',
+	'cake_topper_fee',
+	'estimated_unit_price',
+	'estimated_subtotal',
+	'has_cake_topper',
+	'customized_options'
+];
+
+function isSchemaCacheColumnError(error) {
+	return error?.code === 'PGRST204' || String(error?.message || '').includes('schema cache');
+}
+
+function withoutColumns(payload, columns) {
+	const copy = { ...payload };
+	for (const column of columns) delete copy[column];
+	return copy;
+}
 
 export const actions = {
-	checkout: async ({ request }) => {
+	checkout: async ({ request, locals: { supabase } }) => {
 		const formData = await request.formData();
 		const locale = normalizeLocale(formData.get('locale'));
 		
@@ -51,40 +97,51 @@ export const actions = {
 		const firstItem = cartItems[0];
 		const estimatedSubtotal = parseFloat(total_price) || 0;
 
+		const orderPayload = {
+			customer_name,
+			email,
+			phone_number,
+			delivery_option,
+			address,
+			delivery_date,
+			delivery_time,
+			status: 'Pending',
+			// Legacy fields to bypass RLS:
+			product_id: cartItems[0].product_id,
+			product_variant_id: firstItem.product_variant_id || null,
+			quantity: 1,
+			cake_size: cartItems[0].cake_size || 'Custom',
+			cake_flavor: cartItems[0].cake_flavor || '-',
+			cake_color: cartItems[0].cake_color || null,
+			crown_option: cartItems[0].crown_option || null,
+			add_edible_glitter: cartItems[0].add_edible_glitter || null,
+			cake_text: cartItems[0].cake_text || null,
+			gift_card_text: cartItems[0].gift_card_text || null,
+			reference_image_url: cartItems[0].reference_image_url || null,
+			amount: estimatedSubtotal,
+			estimated_subtotal: estimatedSubtotal,
+			size_price: firstItem.size_price || firstItem.price_at_order || 0,
+			dark_color_surcharge: firstItem.dark_color_surcharge || 0,
+			cake_topper_fee: firstItem.cake_topper_fee || 0,
+			estimated_unit_price: firstItem.estimated_unit_price || firstItem.price_at_order || 0,
+			has_cake_topper: Boolean(firstItem.has_cake_topper),
+			customized_options: firstItem.customized_options || null
+		};
+
 		// 1. Insert Order
-		const { data: orderData, error: orderError } = await supabase
+		let { data: orderData, error: orderError } = await supabase
 			.from('orders')
-			.insert({
-				customer_name,
-				email,
-				phone_number,
-				delivery_option,
-				address,
-				delivery_date,
-				delivery_time,
-				status: 'Pending',
-				// Legacy fields to bypass RLS:
-				product_id: cartItems[0].product_id,
-				quantity: 1,
-				cake_size: cartItems[0].cake_size || 'Custom',
-				cake_flavor: cartItems[0].cake_flavor || '-',
-				cake_color: cartItems[0].cake_color || null,
-				crown_option: cartItems[0].crown_option || null,
-				add_edible_glitter: cartItems[0].add_edible_glitter || null,
-				cake_text: cartItems[0].cake_text || null,
-				gift_card_text: cartItems[0].gift_card_text || null,
-				reference_image_url: cartItems[0].reference_image_url || null,
-				amount: estimatedSubtotal,
-				estimated_subtotal: estimatedSubtotal,
-				size_price: firstItem.size_price || firstItem.price_at_order || 0,
-				dark_color_surcharge: firstItem.dark_color_surcharge || 0,
-				cake_topper_fee: firstItem.cake_topper_fee || 0,
-				estimated_unit_price: firstItem.estimated_unit_price || firstItem.price_at_order || 0,
-				has_cake_topper: Boolean(firstItem.has_cake_topper),
-				customized_options: firstItem.customized_options || null
-			})
+			.insert(orderPayload)
 			.select('id')
 			.single();
+
+		if (isSchemaCacheColumnError(orderError)) {
+			({ data: orderData, error: orderError } = await supabase
+				.from('orders')
+				.insert(withoutColumns(orderPayload, OPTIONAL_ORDER_COLUMNS))
+				.select('id')
+				.single());
+		}
 
 		if (orderError) {
 			console.error('Order Error:', orderError);
@@ -97,6 +154,7 @@ export const actions = {
 		const itemsToInsert = cartItems.map(item => ({
 			order_id: orderId,
 			product_id: item.product_id,
+			product_variant_id: item.product_variant_id || null,
 			quantity: item.quantity,
 			cake_size: item.cake_size,
 			cake_flavor: item.cake_flavor,
@@ -116,13 +174,35 @@ export const actions = {
 			customized_options: item.customized_options || null
 		}));
 
-		const { error: itemsError } = await supabase
+		let { error: itemsError } = await supabase
 			.from('order_items')
 			.insert(itemsToInsert);
+
+		if (isSchemaCacheColumnError(itemsError)) {
+			({ error: itemsError } = await supabase
+				.from('order_items')
+				.insert(itemsToInsert.map((item) => withoutColumns(item, OPTIONAL_ORDER_ITEM_COLUMNS))));
+		}
 
 		if (itemsError) {
 			console.error('Items Error:', itemsError);
 			return { success: false, error: itemsError.message };
+		}
+
+		try {
+			const [{ data: order }, { data: siteInfo }] = await Promise.all([
+				supabase.from('orders').select(ORDER_CONFIRMATION_SELECT).eq('id', orderId).single(),
+				supabase.from('site_contact_info').select('*').eq('id', 'main').maybeSingle()
+			]);
+
+			if (order) {
+				const emailResult = await sendOrderConfirmationEmail(order, normalizeSiteInfo(siteInfo));
+				if (!emailResult.success && !emailResult.skipped) {
+					console.error('Order confirmation email failed:', emailResult.message);
+				}
+			}
+		} catch (emailError) {
+			console.error('Order confirmation email error:', emailError);
 		}
 
 		return { success: true, orderId };

@@ -5,7 +5,16 @@ export const load = async ({ params, locals: { supabase } }) => {
 
 	const { data: product, error: dbError } = await supabase
 		.from('products')
-		.select('*')
+		.select(`
+			*,
+			product_variants (
+				id,
+				name,
+				price,
+				is_active,
+				display_order
+			)
+		`)
 		.eq('id', id)
 		.eq('is_active', true)
 		.single();

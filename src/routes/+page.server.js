@@ -105,12 +105,14 @@ const PRODUCT_SELECT = `
   id, name, description, base_price, is_active, is_available, created_at,
   category:categories ( name, slug ),
   product_images ( image_url, is_primary ),
+  product_variants ( id, name, price, is_active, display_order ),
   product_addons ( addon_id, is_active )
 `;
 
 const TOP_PICKS_SELECT = `
   *,
   product_images(image_url, is_primary),
+  product_variants ( id, name, price, is_active, display_order ),
   product_addons (
     addon_id,
     is_active,

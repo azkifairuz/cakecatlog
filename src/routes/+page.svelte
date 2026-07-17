@@ -4,10 +4,11 @@
 	import TopPicksSkeleton from '$lib/components/TopPicksSkeleton.svelte';
 	import CatalogSkeleton from '$lib/components/CatalogSkeleton.svelte';
 	import QuickAddModal from '$lib/components/QuickAddModal.svelte';
+	import aboutImage from '$lib/assets/about.jpeg';
 	import { getImageUrl } from '$lib/image-url.js';
 	import { getStartFromPrice } from '$lib/pricing.js';
 	import { getI18n } from '$lib/i18n.svelte.js';
-
+	
 	let { data } = $props();
 	const i18n = getI18n();
 
@@ -47,7 +48,7 @@
 <section id="about" class="py-24 bg-white relative overflow-hidden">
 	<div class="container mx-auto px-6 lg:px-12 flex flex-col md:flex-row items-center gap-16">
 		<div class="md:w-1/2 relative">
-			<img src={getImageUrl('https://images.unsplash.com/photo-1621303837174-89787a7d4729?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', { width: 800, quality: 80 })} alt={i18n.t('home.aboutImageAlt')} class="rounded-[2rem] w-full max-w-md mx-auto shadow-2xl relative z-10" loading="lazy" decoding="async" />
+			<img src={aboutImage} alt={i18n.t('home.aboutImageAlt')} class="rounded-[2rem] w-full max-w-md mx-auto shadow-2xl relative z-10" loading="lazy" decoding="async" />
 			<div class="absolute -bottom-8 -left-8 w-64 h-64 bg-[#FFFBF7] rounded-full -z-10"></div>
 		</div>
 		<div class="md:w-1/2">
@@ -175,7 +176,7 @@
 									<span class="font-bold text-[#4A3B32] text-[13px] sm:text-lg leading-none">{formatCurrency(getStartFromPrice(product))}</span>
 								</div>
 								<div class="flex gap-2 items-center relative z-20">
-									<button onclick={() => openQuickAdd(product)} class="p-2 sm:p-2.5 rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors" title={i18n.t('home.addToCartTitle')}>
+									<button onclick={() => openQuickAdd(product)} class="p-2 sm:p-2.5 rounded-full bg-primary/10 text-primary shadow-sm shadow-primary/5 hover:bg-primary hover:text-white hover:shadow-primary/20 active:scale-[0.92] transition-[background-color,color,transform,box-shadow] duration-150 ease-out" title={i18n.t('home.addToCartTitle')}>
 										<svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
 									</button>
 								</div>

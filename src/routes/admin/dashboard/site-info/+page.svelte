@@ -4,6 +4,7 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import { Textarea } from '$lib/components/ui/textarea';
+	import Loading from '$lib/components/Loading.svelte';
 	import { Clock, MapPin, MessageCircle, Save } from 'lucide-svelte';
 
 	let { data, form } = $props();
@@ -51,19 +52,30 @@
 			saved = false;
 
 			return async ({ update, result }) => {
-				await update();
-				saving = false;
+				try {
+					await update();
 
-				if (result.type === 'success') {
-					saved = true;
-					setTimeout(() => {
-						saved = false;
-					}, 3000);
+					if (result.type === 'success') {
+						saved = true;
+						setTimeout(() => {
+							saved = false;
+						}, 3000);
+					}
+				} finally {
+					saving = false;
 				}
 			};
 		}}
-		class="grid gap-6 lg:grid-cols-3"
+		class="relative grid gap-6 lg:grid-cols-3"
 	>
+		{#if saving}
+			<Loading
+				variant="overlay"
+				label="Menyimpan info toko"
+				description="Mohon tunggu, informasi footer sedang diperbarui."
+				class="rounded-xl"
+			/>
+		{/if}
 		<div class="space-y-4 rounded-xl border border-primary/10 bg-white p-5 shadow-sm">
 			<div class="flex items-center gap-3">
 				<div class="flex h-10 w-10 items-center justify-center rounded-full bg-[#FFFBF7] text-primary shadow-sm">
@@ -129,8 +141,12 @@
 
 		<div class="flex justify-end lg:col-span-3">
 			<Button type="submit" disabled={saving} class="h-12 rounded-xl bg-primary px-6 font-bold text-white hover:bg-[#724828]">
-				<Save class="h-4 w-4" />
-				{saving ? 'Menyimpan...' : 'Simpan Info Toko'}
+				{#if saving}
+					<Loading label="Menyimpan..." size="sm" class="text-white" />
+				{:else}
+					<Save class="h-4 w-4" />
+					Simpan Info Toko
+				{/if}
 			</Button>
 		</div>
 	</form>

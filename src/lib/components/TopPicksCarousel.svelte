@@ -117,7 +117,7 @@
 										</div>
 										<div class="flex gap-2 items-center relative z-20">
 											{#if onQuickAdd}
-												<button onclick={() => onQuickAdd(product)} class="p-2 sm:p-2.5 rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors" title={i18n.t('home.addToCartTitle')}>
+												<button onclick={() => onQuickAdd(product)} class="p-2 sm:p-2.5 rounded-full bg-primary/10 text-primary shadow-sm shadow-primary/5 hover:bg-primary hover:text-white hover:shadow-primary/20 active:scale-[0.92] transition-[background-color,color,transform,box-shadow] duration-150 ease-out" title={i18n.t('home.addToCartTitle')}>
 													<svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
 												</button>
 											{/if}
