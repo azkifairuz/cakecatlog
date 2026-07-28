@@ -215,11 +215,16 @@
 
 					<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 						{#each addonGroups as group (group.key)}
+							{@const selectedAddon = group.addons.find((addon) => addon.id === selectedAddonIds[group.key])}
 							<div>
 								<label for={`quick-addon-${group.key}`} class="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-[#4A3B32]">{group.label}</label>
 								<Select.Root type="single" name={`addon_${group.key}`} bind:value={selectedAddonIds[group.key]} allowDeselect>
 									<Select.Trigger id={`quick-addon-${group.key}`} class="h-10 w-full rounded-xl border-primary/20 bg-slate-50 px-3 text-sm text-[#4A3B32] hover:bg-white focus-visible:ring-primary/15">
-										<SelectValue placeholder={i18n.t('form.choose')} />
+										{#if selectedAddon}
+											<SelectValue>{selectedAddon.name}</SelectValue>
+										{:else}
+											<SelectValue placeholder={i18n.t('form.choose')} />
+										{/if}
 									</Select.Trigger>
 									<Select.Content class="rounded-xl border-primary/10 bg-white text-[#4A3B32] shadow-xl shadow-primary/10">
 										<Select.Group>
