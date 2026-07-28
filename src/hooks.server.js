@@ -74,7 +74,7 @@ export const handle = async ({ event, resolve }) => {
 		},
 	});
 
-	if (event.request.method === 'GET') {
+	if (event.request.method === 'GET' && response.ok) {
 		if (event.url.pathname === '/') {
 			response.headers.set('cache-control', NO_STORE_CACHE_CONTROL);
 		} else if (isCacheablePublicPage(event.url.pathname)) {

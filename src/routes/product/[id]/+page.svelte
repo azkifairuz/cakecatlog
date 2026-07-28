@@ -7,11 +7,11 @@
 	import { supabase } from '$lib/supabase';
 	import { cart } from '$lib/stores/cart.svelte.js';
 	import {
-		getAddonsByCategory,
+		getAddonSelectionPrice,
+		getDynamicAddonGroups,
 		getSizePriceOptions,
 		getSizePrice,
 		getStartFromPrice,
-		parseCommaOptions,
 		parsePrice
 	} from '$lib/pricing.js';
 	import { getI18n } from '$lib/i18n.svelte.js';
@@ -33,37 +33,21 @@
 		return new Intl.NumberFormat(i18n.locale === 'en' ? 'en-US' : 'id-ID', { style: 'currency', currency: 'IDR' }).format(amount);
 	}
 
-	let addonsByCategory = $derived(getAddonsByCategory(product));
 	let sizePriceOptions = $derived(getSizePriceOptions(product));
-	let colors = $derived(addonsByCategory.color?.length ? addonsByCategory.color : parseCommaOptions(product.colors).map((name) => ({ name, price: 0 })));
-	let flavors = $derived(addonsByCategory.flavor?.length ? addonsByCategory.flavor : parseCommaOptions(product.flavors).map((name) => ({ name, price: 0 })));
-	let crowns = $derived(addonsByCategory.crown?.length ? addonsByCategory.crown : parseCommaOptions(product.crown_options).map((name) => ({ name, price: 0 })));
-	let glitters = $derived(addonsByCategory.glitter?.length ? addonsByCategory.glitter : parseCommaOptions(product.edible_glitter).map((name) => ({ name, price: 0 })));
-	let cakeTopperAddon = $derived(addonsByCategory.cake_topper?.[0] ?? null);
+	let addonGroups = $derived(getDynamicAddonGroups(product));
+	let selectedAddonIds = $state({});
+	let selectedAddons = $derived(addonGroups.map((group) => group.addons.find((addon) => addon.id === selectedAddonIds[group.key])).filter(Boolean));
 	let selectedSize = $state(undefined);
-	let selectedColor = $state(undefined);
-	let selectedFlavor = $state(undefined);
-	let selectedCrown = $state(undefined);
-	let selectedGlitter = $state(undefined);
 	let quantity = $state(1);
-	let hasCakeTopper = $state(false);
 	let startFromPrice = $derived(getStartFromPrice(product));
 	let selectedSizeOption = $derived(sizePriceOptions.find((option) => option.label === selectedSize) ?? null);
 	let selectedSizeAddon = $derived(selectedSizeOption?.addon ?? null);
-	let selectedColorAddon = $derived(colors.find((addon) => addon.name === selectedColor) ?? null);
-	let selectedFlavorAddon = $derived(flavors.find((addon) => addon.name === selectedFlavor) ?? null);
-	let selectedCrownAddon = $derived(crowns.find((addon) => addon.name === selectedCrown) ?? null);
-	let selectedGlitterAddon = $derived(glitters.find((addon) => addon.name === selectedGlitter) ?? null);
 	let selectedSizePrice = $derived(selectedSizeOption ? selectedSizeOption.price : selectedSize ? getSizePrice(product, selectedSize) : startFromPrice);
-	let darkColorSurcharge = $derived(selectedColorAddon?.is_dark_color ? parsePrice(selectedColorAddon.dark_color_surcharge) : 0);
-	let cakeTopperFee = $derived(hasCakeTopper && cakeTopperAddon ? parsePrice(cakeTopperAddon.price) : 0);
-	let addonUnitPrice = $derived(
-		parsePrice(selectedFlavorAddon?.price) +
-		parsePrice(selectedColorAddon?.price) +
-		parsePrice(selectedCrownAddon?.price) +
-		parsePrice(selectedGlitterAddon?.price)
-	);
-	let estimatedUnitPrice = $derived(selectedSizePrice + addonUnitPrice + darkColorSurcharge + cakeTopperFee);
+	let darkColorSurcharge = $derived(selectedAddons.reduce((sum, addon) => sum + (addon.is_dark_color ? parsePrice(addon.dark_color_surcharge) : 0), 0));
+	let addonUnitPrice = $derived(selectedAddons.reduce((sum, addon) => sum + getAddonSelectionPrice(addon), 0));
+	let cakeTopperAddon = $derived(selectedAddons.find((addon) => addon.category_key === 'cake_topper') ?? null);
+	let cakeTopperFee = $derived(cakeTopperAddon ? getAddonSelectionPrice(cakeTopperAddon) : 0);
+	let estimatedUnitPrice = $derived(selectedSizePrice + addonUnitPrice);
 	let estimatedSubtotal = $derived(estimatedUnitPrice * Math.max(Number(quantity) || 1, 1));
 
 	let loading = $state(false);
@@ -102,23 +86,26 @@
 			}
 
 			// Construct cart item
+			const addonOptions = selectedAddons.map((addon) => ({
+				addon_id: addon.id,
+				category: addon.category,
+				category_key: addon.category_key,
+				name: addon.name,
+				price: getAddonSelectionPrice(addon)
+			}));
+			const optionFor = (key) => addonOptions.find((option) => option.category_key === key) ?? null;
 			const customizedOptions = {
-				size: selectedSize ? { name: selectedSize, price: selectedSizePrice, variant_id: selectedSizeOption?.id ?? null } : null,
-				flavor: selectedFlavorAddon ? { name: selectedFlavorAddon.name, price: selectedFlavorAddon.price } : null,
-				color: selectedColorAddon ? {
-					name: selectedColorAddon.name,
-					price: selectedColorAddon.price + darkColorSurcharge,
-					is_dark_color: Boolean(selectedColorAddon.is_dark_color)
-				} : null,
-				crown: selectedCrownAddon ? { name: selectedCrownAddon.name, price: selectedCrownAddon.price } : null,
-				glitter: selectedGlitterAddon ? { name: selectedGlitterAddon.name, price: selectedGlitterAddon.price } : null,
-				cake_topper: hasCakeTopper && cakeTopperAddon
-					? { selected: true, name: cakeTopperAddon.name, price: cakeTopperFee, addon_id: cakeTopperAddon.id }
-					: { selected: false, price: 0 }
+				size: selectedSize ? { name: selectedSize, price: selectedSizePrice, variant_id: selectedSizeOption?.variant?.id ?? null, addon_id: selectedSizeAddon?.id ?? null } : null,
+				addons: addonOptions,
+				flavor: optionFor('flavor'),
+				color: optionFor('color'),
+				crown: optionFor('crown'),
+				glitter: optionFor('glitter'),
+				cake_topper: cakeTopperAddon ? { ...optionFor('cake_topper'), selected: true } : { selected: false, price: 0 }
 			};
 			const cartItem = {
 				product_id: product.id,
-				product_variant_id: selectedSizeOption?.id ?? null,
+				product_variant_id: selectedSizeOption?.variant?.id ?? null,
 				product_name: product.name,
 				primary_image: sortedImages[0]?.image_url || null,
 				price_at_order: estimatedUnitPrice,
@@ -128,13 +115,13 @@
 				cake_topper_fee: cakeTopperFee,
 				estimated_unit_price: estimatedUnitPrice,
 				estimated_subtotal: estimatedSubtotal,
-				has_cake_topper: hasCakeTopper && Boolean(cakeTopperAddon),
+				has_cake_topper: Boolean(cakeTopperAddon),
 				cake_size: formData.get('cake_size'),
 				quantity: Math.max(parseInt(formData.get('quantity')) || 1, 1),
-				cake_flavor: formData.get('cake_flavor') || 'Standard',
-				cake_color: formData.get('cake_color') || null,
-				crown_option: formData.get('crown_option') || null,
-				add_edible_glitter: formData.get('add_edible_glitter') || null,
+				cake_flavor: optionFor('flavor')?.name || 'Standard',
+				cake_color: optionFor('color')?.name || null,
+				crown_option: optionFor('crown')?.name || null,
+				add_edible_glitter: optionFor('glitter')?.name || null,
 				customized_options: customizedOptions,
 				cake_text: formData.get('add_on'),
 				gift_card_text: formData.get('gift_card_text'),
@@ -147,12 +134,8 @@
 			form.reset();
 			fileName = '';
 			selectedSize = '';
-			selectedColor = '';
-			selectedFlavor = '';
-			selectedCrown = '';
-			selectedGlitter = '';
+			selectedAddonIds = {};
 			quantity = 1;
-			hasCakeTopper = false;
 
 		} catch (err) {
 			console.error(err);
@@ -268,89 +251,26 @@
 						</div>
 					</div>
 
-					<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-						{#if flavors.length > 0}
+					<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+						{#each addonGroups as group (group.key)}
 							<div>
-								<label for="cake_flavor" class="block text-[13px] font-semibold text-[#4A3B32] mb-1.5 uppercase tracking-wide">{i18n.t('form.flavor')}</label>
-								<Select.Root type="single" name="cake_flavor" bind:value={selectedFlavor} allowDeselect>
-									<Select.Trigger id="cake_flavor" class="h-12 w-full rounded-xl border-primary/20 bg-slate-50 px-4 text-[15px] text-[#4A3B32] hover:bg-white focus-visible:ring-primary/15">
-										<SelectValue placeholder={i18n.t('form.chooseFlavor')} />
+								<label for={`addon-${group.key}`} class="mb-1.5 block text-[13px] font-semibold uppercase tracking-wide text-[#4A3B32]">{group.label}</label>
+								<Select.Root type="single" name={`addon_${group.key}`} bind:value={selectedAddonIds[group.key]} allowDeselect>
+									<Select.Trigger id={`addon-${group.key}`} class="h-12 w-full rounded-xl border-primary/20 bg-slate-50 px-4 text-[15px] text-[#4A3B32] hover:bg-white focus-visible:ring-primary/15">
+										<SelectValue placeholder={i18n.t('form.choose')} />
 									</Select.Trigger>
 									<Select.Content class="rounded-xl border-primary/10 bg-white text-[#4A3B32] shadow-xl shadow-primary/10">
-										{#each flavors as flavor}
-											<Select.Item value={flavor.name} label={flavor.name}>{flavor.name}{flavor.price > 0 ? ` (+${formatCurrency(flavor.price)})` : ''}</Select.Item>
-										{/each}
+										<Select.Group>
+											{#each group.addons as addon (addon.id)}
+												{@const selectionPrice = getAddonSelectionPrice(addon)}
+												<Select.Item value={addon.id} label={addon.name}>{addon.name}{selectionPrice > 0 ? ` (+${formatCurrency(selectionPrice)})` : ''}</Select.Item>
+											{/each}
+										</Select.Group>
 									</Select.Content>
 								</Select.Root>
 							</div>
-						{/if}
-
-						{#if colors.length > 0}
-							<div>
-								<label for="cake_color" class="block text-[13px] font-semibold text-[#4A3B32] mb-1.5 uppercase tracking-wide">{i18n.t('form.color')}</label>
-								<Select.Root type="single" name="cake_color" bind:value={selectedColor} allowDeselect>
-									<Select.Trigger id="cake_color" class="h-12 w-full rounded-xl border-primary/20 bg-slate-50 px-4 text-[15px] text-[#4A3B32] hover:bg-white focus-visible:ring-primary/15">
-										<SelectValue placeholder={i18n.t('form.chooseColor')} />
-									</Select.Trigger>
-									<Select.Content class="rounded-xl border-primary/10 bg-white text-[#4A3B32] shadow-xl shadow-primary/10">
-										{#each colors as color}
-											{@const colorPrice = color.price + (color.is_dark_color ? parsePrice(color.dark_color_surcharge) : 0)}
-											<Select.Item value={color.name} label={color.name}>{color.name}{colorPrice > 0 ? ` (+${formatCurrency(colorPrice)})` : ''}</Select.Item>
-										{/each}
-									</Select.Content>
-								</Select.Root>
-							</div>
-						{/if}
-
-						{#if crowns.length > 0}
-							<div>
-								<label for="crown_option" class="block text-[13px] font-semibold text-[#4A3B32] mb-1.5 uppercase tracking-wide">{i18n.t('form.crown')}</label>
-								<Select.Root type="single" name="crown_option" bind:value={selectedCrown} allowDeselect>
-									<Select.Trigger id="crown_option" class="h-12 w-full rounded-xl border-primary/20 bg-slate-50 px-4 text-[15px] text-[#4A3B32] hover:bg-white focus-visible:ring-primary/15">
-										<SelectValue placeholder={i18n.t('form.chooseCrown')} />
-									</Select.Trigger>
-									<Select.Content class="rounded-xl border-primary/10 bg-white text-[#4A3B32] shadow-xl shadow-primary/10">
-										{#each crowns as crown}
-											<Select.Item value={crown.name} label={crown.name}>{crown.name}{crown.price > 0 ? ` (+${formatCurrency(crown.price)})` : ''}</Select.Item>
-										{/each}
-									</Select.Content>
-								</Select.Root>
-							</div>
-						{/if}
-
-						{#if glitters.length > 0}
-							<div>
-								<label for="add_edible_glitter" class="block text-[13px] font-semibold text-[#4A3B32] mb-1.5 uppercase tracking-wide">{i18n.t('form.glitter')}</label>
-								<Select.Root type="single" name="add_edible_glitter" bind:value={selectedGlitter} allowDeselect>
-									<Select.Trigger id="add_edible_glitter" class="h-12 w-full rounded-xl border-primary/20 bg-slate-50 px-4 text-[15px] text-[#4A3B32] hover:bg-white focus-visible:ring-primary/15">
-										<SelectValue placeholder={i18n.t('form.chooseGlitter')} />
-									</Select.Trigger>
-									<Select.Content class="rounded-xl border-primary/10 bg-white text-[#4A3B32] shadow-xl shadow-primary/10">
-										{#each glitters as glitter}
-											<Select.Item value={glitter.name} label={glitter.name}>{glitter.name}{glitter.price > 0 ? ` (+${formatCurrency(glitter.price)})` : ''}</Select.Item>
-										{/each}
-									</Select.Content>
-								</Select.Root>
-							</div>
-						{:else}
-							<div>
-								<label for="add_edible_glitter" class="block text-[13px] font-semibold text-[#4A3B32] mb-1.5 uppercase tracking-wide">{i18n.t('form.extraGlitter')}</label>
-								<input type="text" id="add_edible_glitter" name="add_edible_glitter" placeholder={i18n.t('form.extraGlitterPlaceholder')} class="w-full px-4 py-3 bg-slate-50 border border-primary/20 focus:bg-white rounded-xl text-[15px] placeholder-slate-400 focus:outline-none focus:border-primary transition-all text-[#4A3B32]" />
-							</div>
-						{/if}
+						{/each}
 					</div>
-
-					{#if cakeTopperAddon}
-						<div>
-							<label class="flex items-start gap-3 rounded-xl border border-primary/15 bg-[#FFFBF7] p-4">
-								<input type="checkbox" name="has_cake_topper" bind:checked={hasCakeTopper} class="mt-1 h-4 w-4 rounded border-primary/30 text-primary" />
-								<span>
-									<span class="block text-[12px] font-bold uppercase tracking-wide text-[#4A3B32]">{cakeTopperAddon.name}</span>
-									<span class="mt-0.5 block text-sm text-[#4A3B32]/65">{i18n.t('form.cakeTopperFee', { price: formatCurrency(cakeTopperAddon.price) })}</span>
-								</span>
-							</label>
-						</div>
-					{/if}
 
 					<div>
 						<label for="gift_card_text" class="block text-[13px] font-semibold text-[#4A3B32] mb-1.5 uppercase tracking-wide">{i18n.t('form.giftCard')}</label>

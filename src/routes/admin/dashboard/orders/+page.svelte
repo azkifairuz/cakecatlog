@@ -157,6 +157,7 @@
 			'Rasa': order.cake_flavor ?? '-',
 			'Mahkota': order.crown_option ?? '-',
 			'Glitter': order.add_edible_glitter ?? '-',
+			'Addons': (order.customized_options?.addons ?? []).map((addon) => `${addon.category}: ${addon.name}`).join(', ') || '-',
 			'Qty': order.quantity,
 			'Tanggal Kirim': order.delivery_date ?? '-',
 			'Waktu Kirim': order.delivery_time ?? '-',
@@ -396,11 +397,9 @@
 									<div class="grid grid-cols-2 gap-y-1 gap-x-2 text-xs text-slate-600">
 										<p><span class="text-slate-400">Qty:</span> {item.quantity}</p>
 										<p><span class="text-slate-400">Size:</span> {getItemOption(item, 'size', item.cake_size)}</p>
-										{#if getItemOption(item, 'flavor', item.cake_flavor) !== '-'}<p><span class="text-slate-400">Rasa:</span> {getItemOption(item, 'flavor', item.cake_flavor)}</p>{/if}
-										{#if getItemOption(item, 'color', item.cake_color) !== '-'}<p><span class="text-slate-400">Warna:</span> {getItemOption(item, 'color', item.cake_color)}</p>{/if}
-										{#if getItemOption(item, 'crown', item.crown_option) !== '-'}<p><span class="text-slate-400">Crown:</span> {getItemOption(item, 'crown', item.crown_option)}</p>{/if}
-										{#if getItemOption(item, 'glitter', item.add_edible_glitter) !== '-'}<p><span class="text-slate-400">Glitter:</span> {getItemOption(item, 'glitter', item.add_edible_glitter)}</p>{/if}
-										{#if hasItemTopper(item)}<p><span class="text-slate-400">Cake topper:</span> Ya</p>{/if}
+										{#each item.customized_options?.addons ?? [] as addon (addon.addon_id)}
+											<p><span class="text-slate-400">{addon.category}:</span> {addon.name}</p>
+										{/each}
 										{#if item.cake_text}<p class="col-span-2"><span class="text-slate-400">Tulisan Kue:</span> {item.cake_text}</p>{/if}
 										{#if item.gift_card_text}<p class="col-span-2"><span class="text-slate-400">Kartu Ucapan:</span> {item.gift_card_text}</p>{/if}
 									</div>

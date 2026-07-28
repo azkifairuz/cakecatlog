@@ -237,11 +237,11 @@
 									<div class="flex-1 min-w-0">
 										<h4 class="font-bold text-sm text-[#4A3B32] truncate">{item.product_name}</h4>
 										<p class="text-xs text-[#4A3B32]/70 mt-0.5">{item.quantity}x @ {formatCurrency(item.estimated_unit_price || item.price_at_order)}</p>
-										{#if item.cake_color || item.has_cake_topper}
-											<p class="mt-0.5 text-[11px] text-[#4A3B32]/50">
-												{#if item.cake_color}{i18n.t('checkout.color')}: {item.cake_color}{/if}{item.cake_color && item.has_cake_topper ? ' • ' : ''}{#if item.has_cake_topper}{i18n.t('checkout.cakeTopper')}{/if}
-											</p>
-										{/if}
+									{#if item.customized_options?.addons?.length}
+										<p class="mt-0.5 text-[11px] text-[#4A3B32]/50">
+											{item.customized_options.addons.map((addon) => `${addon.category}: ${addon.name}`).join(' • ')}
+										</p>
+									{/if}
 										<div class="text-xs font-semibold text-primary mt-1">{formatCurrency((item.estimated_unit_price || item.price_at_order) * item.quantity)}</div>
 									</div>
 								</div>

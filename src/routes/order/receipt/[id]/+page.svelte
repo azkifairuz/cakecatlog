@@ -15,6 +15,7 @@
 				quantity: item.quantity || 1,
 				size: item.customized_options?.size?.name || item.cake_size || '-',
 				flavor: item.customized_options?.flavor?.name || item.cake_flavor || '-',
+				addons: Array.isArray(item.customized_options?.addons) ? item.customized_options.addons : [],
 				subtotal: item.estimated_subtotal || (item.estimated_unit_price || item.price_at_order || 0) * (item.quantity || 1)
 			}));
 		}
@@ -25,6 +26,7 @@
 				quantity: currentOrder.quantity || 1,
 				size: currentOrder.customized_options?.size?.name || currentOrder.cake_size || '-',
 				flavor: currentOrder.customized_options?.flavor?.name || currentOrder.cake_flavor || '-',
+				addons: Array.isArray(currentOrder.customized_options?.addons) ? currentOrder.customized_options.addons : [],
 				subtotal: currentOrder.estimated_subtotal || currentOrder.amount || 0
 			}
 		];
@@ -95,7 +97,8 @@
 							<div class="flex items-start justify-between gap-4 px-4 py-4">
 								<div>
 									<p class="font-bold">{item.name}</p>
-									<p class="mt-1 text-sm text-[#4A3B32]/60">{item.quantity}x · Ukuran {item.size} · Rasa {item.flavor}</p>
+									<p class="mt-1 text-sm text-[#4A3B32]/60">{item.quantity}x · Ukuran {item.size}</p>
+									{#if item.addons.length}<p class="mt-1 text-xs text-[#4A3B32]/55">{item.addons.map((addon) => `${addon.category}: ${addon.name}`).join(' · ')}</p>{/if}
 								</div>
 								<p class="shrink-0 text-sm font-bold text-primary">{formatCurrency(item.subtotal)}</p>
 							</div>

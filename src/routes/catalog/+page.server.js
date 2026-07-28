@@ -60,7 +60,6 @@ export const load = async ({ locals: { supabase }, url }) => {
 		supabase
 			.from('global_addons')
 			.select('*')
-			.eq('is_active', true)
 			.order('category')
 			.order('name')
 	]);
@@ -73,7 +72,7 @@ export const load = async ({ locals: { supabase }, url }) => {
 
 	const productsWithAddons = (products ?? []).map((product) => ({
 		...product,
-		global_addons: product.product_addons?.length ? [] : (globalAddons ?? [])
+		global_addons: globalAddons ?? []
 	}));
 
 	return {

@@ -99,6 +99,7 @@ export function normalizeAddon(addon = {}) {
 	return {
 		id: addon.id,
 		category: String(addon.category ?? '').trim(),
+		category_key: normalizeCategoryKey(addon.category),
 		name: String(addon.name ?? addon.label ?? '').trim(),
 		price,
 		additional_price: price,
@@ -109,26 +110,48 @@ export function normalizeAddon(addon = {}) {
 	};
 }
 
-export function getProductAddons(product = {}) {
-	const linkedAddons = Array.isArray(product?.product_addons)
-		? product.product_addons
-			.map((item) => {
-				const addon = item.global_addons ?? item;
-				return addon ? { ...addon, product_addon_is_active: item.is_active !== false } : null;
-			})
-			.filter(Boolean)
-		: [];
-	const globalAddons = Array.isArray(product?.global_addons) ? product.global_addons : [];
-	const source = linkedAddons.length > 0 ? linkedAddons : globalAddons;
-
-	return source
-		.map(normalizeAddon)
-		.filter((addon) => addon.category && addon.name && addon.is_active && addon.product_addon_is_active);
+export function normalizeCategoryKey(category = '') {
+	return String(category)
+		.trim()
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, '_')
+		.replace(/^_+|_+$/g, '');
 }
 
-export function getAddonsByCategory(product = {}) {
-	return getProductAddons(product).reduce((groups, addon) => {
-		groups[addon.category] = [...(groups[addon.category] ?? []), addon];
+export function getProductAddons(product = {}, suppliedGlobalAddons) {
+	const globalAddons = Array.isArray(suppliedGlobalAddons)
+		? suppliedGlobalAddons
+		: Array.isArray(product?.global_addons)
+			? product.global_addons
+			: [];
+	const overrides = new Map(
+		(Array.isArray(product?.product_addons) ? product.product_addons : [])
+			.filter((item) => item?.addon_id || item?.global_addons?.id || item?.id)
+			.map((item) => [item.addon_id ?? item.global_addons?.id ?? item.id, item])
+	);
+	const addonsById = new Map(globalAddons.filter((addon) => addon?.id).map((addon) => [addon.id, addon]));
+
+	for (const item of overrides.values()) {
+		const addon = item.global_addons ?? (item.category ? item : null);
+		if (addon?.id && !addonsById.has(addon.id)) addonsById.set(addon.id, addon);
+	}
+
+	return [...addonsById.values()]
+		.map((addon) => {
+			const override = overrides.get(addon.id);
+			return {
+				...addon,
+				product_addon_is_active: override ? override.is_active !== false : true,
+				is_active: override ? override.is_active !== false : addon.is_active !== false
+			};
+		})
+		.map(normalizeAddon)
+		.filter((addon) => addon.category_key && addon.name && addon.is_active && addon.product_addon_is_active);
+}
+
+export function getAddonsByCategory(product = {}, suppliedGlobalAddons) {
+	return getProductAddons(product, suppliedGlobalAddons).reduce((groups, addon) => {
+		groups[addon.category_key] = [...(groups[addon.category_key] ?? []), addon];
 		return groups;
 	}, {});
 }
@@ -137,6 +160,17 @@ export function getAddonPrice(product = {}, category = '', name = '') {
 	const addon = getAddonsByCategory(product)[category]?.find((item) => item.name === name);
 	if (!addon) return 0;
 	return addon.price + (addon.is_dark_color ? addon.dark_color_surcharge : 0);
+}
+
+export function getAddonSelectionPrice(addon = {}) {
+	const normalized = normalizeAddon(addon);
+	return normalized.price + (normalized.is_dark_color ? normalized.dark_color_surcharge : 0);
+}
+
+export function getDynamicAddonGroups(product = {}, suppliedGlobalAddons) {
+	return Object.entries(getAddonsByCategory(product, suppliedGlobalAddons))
+		.filter(([categoryKey, addons]) => categoryKey !== 'size' && addons.length > 0)
+		.map(([key, addons]) => ({ key, label: addons[0].category, addons }));
 }
 
 export function isDarkColor(color = '') {

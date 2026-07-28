@@ -17,6 +17,7 @@ function getOrderItems(order) {
 			name: item.products?.name || 'Produk',
 			quantity: item.quantity || 1,
 			size: item.customized_options?.size?.name || item.cake_size || '-',
+			addons: Array.isArray(item.customized_options?.addons) ? item.customized_options.addons : [],
 			subtotal: item.estimated_subtotal || (item.estimated_unit_price || item.price_at_order || 0) * (item.quantity || 1)
 		}));
 	}
@@ -26,6 +27,7 @@ function getOrderItems(order) {
 			name: order.products?.name || order.product_name || 'Produk',
 			quantity: order.quantity || 1,
 			size: order.customized_options?.size?.name || order.cake_size || '-',
+			addons: Array.isArray(order.customized_options?.addons) ? order.customized_options.addons : [],
 			subtotal: order.estimated_subtotal || order.amount || 0
 		}
 	];
@@ -36,7 +38,10 @@ export function generateOrderConfirmationEmail(order, siteInfo) {
 	const whatsappHref = getWhatsAppHref(info.whatsapp_number);
 	const orderNumber = order.order_number ? `#${order.order_number}` : `#${String(order.id).slice(0, 8)}`;
 	const items = getOrderItems(order);
-	const itemsText = items.map((item) => `- ${item.name} (${item.quantity}x), ukuran ${item.size}`).join('\n');
+	const itemsText = items.map((item) => {
+		const addons = item.addons.length ? `, ${item.addons.map((addon) => `${addon.category}: ${addon.name}`).join(', ')}` : '';
+		return `- ${item.name} (${item.quantity}x), ukuran ${item.size}${addons}`;
+	}).join('\n');
 	const itemsHtml = items
 		.map(
 			(item) => `
@@ -44,6 +49,7 @@ export function generateOrderConfirmationEmail(order, siteInfo) {
 					<td style="padding:12px;border-bottom:1px solid #f1e7dc;">
 						<strong>${escapeHtml(item.name)}</strong><br />
 						<span style="color:#7a6a5f;font-size:13px;">Ukuran: ${escapeHtml(item.size)} · Qty: ${item.quantity}x</span>
+						${item.addons.length ? `<br /><span style="color:#7a6a5f;font-size:13px;">${item.addons.map((addon) => `${escapeHtml(addon.category)}: ${escapeHtml(addon.name)}`).join(' · ')}</span>` : ''}
 					</td>
 					<td style="padding:12px;border-bottom:1px solid #f1e7dc;text-align:right;white-space:nowrap;">${formatCurrency(item.subtotal)}</td>
 				</tr>

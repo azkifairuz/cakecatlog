@@ -1,6 +1,7 @@
 import { normalizeLocale, translate } from '$lib/i18n.svelte.js';
 import { normalizeSiteInfo } from '$lib/site-info.js';
 import { sendOrderConfirmationEmail } from '$lib/server/order-confirmation-email.js';
+import { getAddonSelectionPrice, getProductAddons, parsePrice } from '$lib/pricing.js';
 
 const ORDER_CONFIRMATION_SELECT = `
 	*,
@@ -45,6 +46,121 @@ function withoutColumns(payload, columns) {
 	const copy = { ...payload };
 	for (const column of columns) delete copy[column];
 	return copy;
+}
+
+async function repriceCartItems(supabase, submittedItems) {
+	const productIds = [...new Set(submittedItems.map((item) => String(item?.product_id || '')).filter(Boolean))];
+	if (productIds.length === 0) throw new Error('Produk dalam cart tidak valid.');
+
+	const [productsResult, addonsResult] = await Promise.all([
+		supabase
+			.from('products')
+			.select(`
+				id, name, base_price, is_active, is_available,
+				product_variants ( id, name, price, is_active ),
+				product_addons ( addon_id, is_active )
+			`)
+			.in('id', productIds),
+		supabase.from('global_addons').select('*')
+	]);
+
+	if (productsResult.error || addonsResult.error) throw new Error('Harga produk tidak dapat diperiksa. Coba lagi.');
+	const productMap = new Map((productsResult.data ?? []).map((product) => [product.id, product]));
+	const globalAddons = addonsResult.data ?? [];
+	const canonicalItems = [];
+
+	for (const submitted of submittedItems) {
+		const product = productMap.get(submitted.product_id);
+		if (!product || product.is_active === false || product.is_available === false) {
+			throw new Error('Salah satu produk sudah tidak tersedia. Perbarui cart sebelum checkout.');
+		}
+
+		const quantity = Number.parseInt(submitted.quantity, 10);
+		if (!Number.isInteger(quantity) || quantity < 1) throw new Error(`Jumlah ${product.name} tidak valid.`);
+
+		const effectiveAddons = getProductAddons(product, globalAddons);
+		const addonMap = new Map(effectiveAddons.map((addon) => [addon.id, addon]));
+		const variantId = submitted.product_variant_id || submitted.customized_options?.size?.variant_id || null;
+		const sizeAddonId = submitted.customized_options?.size?.addon_id || null;
+		let sizePrice = parsePrice(product.base_price);
+		let canonicalSize = null;
+
+		if (variantId) {
+			const variant = (product.product_variants ?? []).find((item) => item.id === variantId && item.is_active !== false);
+			if (!variant) throw new Error(`Pilihan ukuran ${product.name} sudah tidak tersedia.`);
+			sizePrice = parsePrice(variant.price);
+			canonicalSize = { name: variant.name, price: sizePrice, variant_id: variant.id, addon_id: null };
+		} else if (sizeAddonId) {
+			const sizeAddon = addonMap.get(sizeAddonId);
+			if (!sizeAddon || sizeAddon.category_key !== 'size') throw new Error(`Pilihan ukuran ${product.name} sudah tidak tersedia.`);
+			sizePrice += getAddonSelectionPrice(sizeAddon);
+			canonicalSize = { name: sizeAddon.name, price: sizePrice, variant_id: null, addon_id: sizeAddon.id };
+		} else {
+			canonicalSize = { name: submitted.customized_options?.size?.name || submitted.cake_size || 'Custom', price: sizePrice, variant_id: null, addon_id: null };
+		}
+
+		const requestedAddons = Array.isArray(submitted.customized_options?.addons)
+			? submitted.customized_options.addons
+			: ['flavor', 'color', 'crown', 'glitter', 'cake_topper']
+				.map((key) => {
+					const legacy = submitted.customized_options?.[key];
+					if (!legacy?.name || legacy.selected === false) return null;
+					const match = effectiveAddons.find((addon) => addon.category_key === key && addon.name === legacy.name);
+					return match ? { addon_id: match.id } : null;
+				})
+				.filter(Boolean);
+		const seenCategories = new Set();
+		const canonicalAddons = [];
+		let addonPrice = 0;
+		let darkColorSurcharge = 0;
+
+		for (const requested of requestedAddons) {
+			const addon = addonMap.get(requested?.addon_id);
+			if (!addon || addon.category_key === 'size') throw new Error(`Pilihan addon ${product.name} sudah tidak tersedia.`);
+			if (seenCategories.has(addon.category_key)) throw new Error(`Hanya satu pilihan diperbolehkan untuk kategori ${addon.category}.`);
+			seenCategories.add(addon.category_key);
+			const price = getAddonSelectionPrice(addon);
+			addonPrice += price;
+			if (addon.is_dark_color) darkColorSurcharge += parsePrice(addon.dark_color_surcharge);
+			canonicalAddons.push({ addon_id: addon.id, category: addon.category, category_key: addon.category_key, name: addon.name, price });
+		}
+
+		const optionFor = (key) => canonicalAddons.find((addon) => addon.category_key === key) ?? null;
+		const cakeTopper = optionFor('cake_topper');
+		const estimatedUnitPrice = sizePrice + addonPrice;
+		const customizedOptions = {
+			size: canonicalSize,
+			addons: canonicalAddons,
+			flavor: optionFor('flavor'), color: optionFor('color'), crown: optionFor('crown'), glitter: optionFor('glitter'),
+			cake_topper: cakeTopper ? { ...cakeTopper, selected: true } : { selected: false, price: 0 }
+		};
+
+		canonicalItems.push({
+			...submitted,
+			product_name: product.name,
+			product_variant_id: canonicalSize.variant_id,
+			quantity,
+			cake_size: canonicalSize.name,
+			cake_flavor: optionFor('flavor')?.name || 'Standard',
+			cake_color: optionFor('color')?.name || null,
+			crown_option: optionFor('crown')?.name || null,
+			add_edible_glitter: optionFor('glitter')?.name || null,
+			price_at_order: estimatedUnitPrice,
+			base_price_at_order: parsePrice(product.base_price),
+			size_price: sizePrice,
+			dark_color_surcharge: darkColorSurcharge,
+			cake_topper_fee: cakeTopper?.price || 0,
+			estimated_unit_price: estimatedUnitPrice,
+			estimated_subtotal: estimatedUnitPrice * quantity,
+			has_cake_topper: Boolean(cakeTopper),
+			customized_options: customizedOptions
+		});
+	}
+
+	return {
+		items: canonicalItems,
+		total: canonicalItems.reduce((sum, item) => sum + item.estimated_subtotal, 0)
+	};
 }
 
 export const actions = {
@@ -94,8 +210,18 @@ export const actions = {
 			return { success: false, error: translate(locale, 'server.emptyCart') };
 		}
 
+		try {
+			const repriced = await repriceCartItems(supabase, cartItems);
+			cartItems = repriced.items;
+			if (Math.abs((parseFloat(total_price) || 0) - repriced.total) > 0.01) {
+				return { success: false, error: 'Harga cart telah berubah. Kembali ke cart untuk melihat harga terbaru.' };
+			}
+		} catch (pricingError) {
+			return { success: false, error: pricingError.message || 'Pilihan produk tidak valid.' };
+		}
+
 		const firstItem = cartItems[0];
-		const estimatedSubtotal = parseFloat(total_price) || 0;
+		const estimatedSubtotal = cartItems.reduce((sum, item) => sum + item.estimated_subtotal, 0);
 
 		const orderPayload = {
 			customer_name,

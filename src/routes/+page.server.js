@@ -134,12 +134,12 @@ export const load = async ({ locals: { supabase } }) => {
     supabase.from('categories').select('id, name, slug').order('name'),
     supabase.from('global_addons')
       .select('id, category, name, additional_price, is_dark_color, dark_color_surcharge, is_active')
-      .eq('is_active', true).order('category').order('name')
+      .order('category').order('name')
   ]);
 
   const globalAddons = globalAddonsResult.data ?? [];
   const withAddons = (list) =>
-    list.map((p) => ({ ...p, global_addons: p.product_addons?.length ? [] : globalAddons }));
+    list.map((p) => ({ ...p, global_addons: globalAddons }));
 
   // Non-critical: stream ini, jangan di-await
   const bannersPromise = supabase

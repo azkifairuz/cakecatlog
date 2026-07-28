@@ -43,17 +43,20 @@ export const load = async ({ params, locals: { supabase } }) => {
 		throw error(404, 'Product not found');
 	}
 
-	const hasProductAddons = (product.product_addons ?? []).length > 0;
-	if (!hasProductAddons) {
-		const { data: globalAddons } = await supabase
-			.from('global_addons')
-			.select('*')
-			.eq('is_active', true)
-			.order('category')
-			.order('name');
+	const { data: globalAddons, error: addonsError } = await supabase
+		.from('global_addons')
+		.select('*')
+		.order('category')
+		.order('name');
 
-		product.global_addons = globalAddons ?? [];
+	if (addonsError) {
+		console.error('Unable to load global addons for product detail:', addonsError);
 	}
+
+	// Global addons are an enhancement, not a reason to take the whole product
+	// page down. Linked product addons from the main query remain usable when
+	// this secondary query is temporarily unavailable.
+	product.global_addons = globalAddons ?? [];
 
 	return {
 		product,

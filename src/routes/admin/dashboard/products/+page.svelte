@@ -947,13 +947,13 @@
 				<div>
 					<h4 class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-4">Opsi Kustomisasi</h4>
 					<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-						{#each Object.entries(groupAddons(getProductAddons(selectedProductDetail))) as [category, addons]}
+						{#each Object.entries(groupAddons(getProductAddons(selectedProductDetail, data.globalAddons))) as [category, addons]}
 							<div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
 								<span class="block text-xs font-semibold text-slate-500 mb-1 capitalize">{category}</span>
 								<p class="text-sm font-medium text-slate-800">{addons.map((addon) => addon.name).join(', ')}</p>
 							</div>
 						{/each}
-						{#if getProductAddons(selectedProductDetail).length === 0}
+						{#if getProductAddons(selectedProductDetail, data.globalAddons).length === 0}
 							<div class="bg-slate-50 p-3 rounded-xl border border-slate-100 sm:col-span-2">
 								<p class="text-sm font-medium text-slate-600">Menggunakan global addons default.</p>
 							</div>

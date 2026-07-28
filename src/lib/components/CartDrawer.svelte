@@ -90,9 +90,9 @@
 							</p>
 							
 							<div class="text-xs text-primary mt-1 space-y-0.5">
-								{#if item.cake_flavor}<div>{i18n.t('cart.flavor')}: {item.cake_flavor}</div>{/if}
-								{#if item.cake_color}<div>{i18n.t('cart.color')}: {item.cake_color}</div>{/if}
-								{#if item.has_cake_topper}<div>{i18n.t('cart.cakeTopper')}: {i18n.t('cart.yes')}</div>{/if}
+								{#each item.customized_options?.addons ?? [] as addon (addon.addon_id)}
+									<div><span class="capitalize">{addon.category}:</span> {addon.name}</div>
+								{/each}
 								{#if item.cake_text}<div>{i18n.t('cart.text')}: {item.cake_text}</div>{/if}
 							</div>
 							

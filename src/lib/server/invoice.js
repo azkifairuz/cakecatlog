@@ -52,6 +52,7 @@ function getInvoiceItems(order) {
 			crown: item.customized_options?.crown?.name || item.crown_option || '-',
 			glitter: item.customized_options?.glitter?.name || item.add_edible_glitter || '-',
 			hasCakeTopper: Boolean(item.customized_options?.cake_topper?.selected ?? item.has_cake_topper),
+			addons: Array.isArray(item.customized_options?.addons) ? item.customized_options.addons : [],
 			text: item.cake_text || '-',
 			subtotal: item.estimated_subtotal || (item.estimated_unit_price || item.price_at_order || 0) * (item.quantity || 1)
 		}));
@@ -68,6 +69,7 @@ function getInvoiceItems(order) {
 			crown: order.customized_options?.crown?.name || order.crown_option || '-',
 			glitter: order.customized_options?.glitter?.name || order.add_edible_glitter || '-',
 			hasCakeTopper: Boolean(order.customized_options?.cake_topper?.selected ?? order.has_cake_topper),
+			addons: Array.isArray(order.customized_options?.addons) ? order.customized_options.addons : [],
 			text: order.cake_text || '-',
 			subtotal: order.estimated_subtotal || order.amount || 0
 		}
@@ -83,13 +85,11 @@ export function generateInvoiceText(order) {
 
 	const itemsText = getInvoiceItems(order)
 		.map((item) => {
+			const addonsText = item.addons.length
+				? `\n${item.addons.map((addon) => `   ${addon.category}: ${addon.name}`).join('\n')}`
+				: `\n   Rasa: ${item.flavor}\n   Warna: ${item.color}\n   Crown: ${item.crown}\n   Glitter: ${item.glitter}\n   Cake Topper: ${item.hasCakeTopper ? 'Ya' : 'Tidak'}`;
 			return `${item.number}. *${item.name}* (${item.quantity}x)
-   Ukuran: ${item.size}
-   Rasa: ${item.flavor}
-   Warna: ${item.color}
-   Crown: ${item.crown}
-   Glitter: ${item.glitter}
-   Cake Topper: ${item.hasCakeTopper ? 'Ya' : 'Tidak'}
+   Ukuran: ${item.size}${addonsText}
    Tulisan: ${item.text}`;
 		})
 		.join('\n\n');
@@ -157,17 +157,22 @@ export function generateInvoiceEmail(order) {
 
 	const itemsHtml = items
 		.map(
-			(item) => `
+			(item) => {
+				const addonsHtml = item.addons.length
+					? item.addons.map((addon) => `${escapeHtml(addon.category)}: ${escapeHtml(addon.name)}`).join(' · ')
+					: `Crown: ${escapeHtml(item.crown)} · Glitter: ${escapeHtml(item.glitter)} · Topper: ${item.hasCakeTopper ? 'Ya' : 'Tidak'}`;
+				return `
 				<tr>
 					<td style="padding:12px;border-bottom:1px solid #f1e7dc;">
 						<strong>${item.number}. ${escapeHtml(item.name)}</strong><br />
 						<span style="color:#7a6a5f;font-size:13px;">Ukuran: ${escapeHtml(item.size)} · Rasa: ${escapeHtml(item.flavor)} · Warna: ${escapeHtml(item.color)} · Qty: ${item.quantity}x</span>
-						<br /><span style="color:#7a6a5f;font-size:13px;">Crown: ${escapeHtml(item.crown)} · Glitter: ${escapeHtml(item.glitter)} · Topper: ${item.hasCakeTopper ? 'Ya' : 'Tidak'}</span>
+						<br /><span style="color:#7a6a5f;font-size:13px;">${addonsHtml}</span>
 						${item.text && item.text !== '-' ? `<br /><span style="color:#7a6a5f;font-size:13px;">Tulisan: ${escapeHtml(item.text)}</span>` : ''}
 					</td>
 					<td style="padding:12px;border-bottom:1px solid #f1e7dc;text-align:right;white-space:nowrap;">${formatCurrency(item.subtotal)}</td>
 				</tr>
-			`
+			`;
+			}
 		)
 		.join('');
 
