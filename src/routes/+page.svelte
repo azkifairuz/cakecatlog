@@ -21,6 +21,37 @@
 	}
 
 	let selectedCategory = $state('All');
+	let categoryProducts = $state({});
+	let loadingCategory = $state(null);
+	let categoryError = $state('');
+	let categoryRequestId = 0;
+
+	function getVisibleProducts(products) {
+		return selectedCategory === 'All' ? products : (categoryProducts[selectedCategory] ?? []);
+	}
+
+	async function selectCategory(category) {
+		const requestId = ++categoryRequestId;
+		selectedCategory = category;
+		categoryError = '';
+		if (category === 'All' || categoryProducts[category]) {
+			loadingCategory = null;
+			return;
+		}
+
+		loadingCategory = category;
+
+		try {
+			const response = await fetch(`/api/home-products?category=${encodeURIComponent(category)}`);
+			if (!response.ok) throw new Error('Unable to load category');
+			const result = await response.json();
+			categoryProducts = { ...categoryProducts, [category]: result.products ?? [] };
+		} catch (error) {
+			if (requestId === categoryRequestId) categoryError = error.message;
+		} finally {
+			if (requestId === categoryRequestId) loadingCategory = null;
+		}
+	}
 
 	function formatCurrency(amount) {
 		return new Intl.NumberFormat(i18n.locale === 'en' ? 'en-US' : 'id-ID', { style: 'currency', currency: 'IDR' }).format(amount);
@@ -128,14 +159,14 @@
 			<div class="flex overflow-x-auto gap-3 pb-2 px-6 sm:px-0 sm:flex-wrap sm:justify-center [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] snap-x">
 			<button 
 				class="shrink-0 snap-start sm:snap-align-none whitespace-nowrap px-6 py-2 rounded-full border text-[13px] font-semibold tracking-wide transition-all {selectedCategory === 'All' ? 'border-primary bg-primary text-white' : 'border-slate-200 text-[#4A3B32] hover:border-primary'}"
-				onclick={() => selectedCategory = 'All'}
+				onclick={() => selectCategory('All')}
 			>
 				{i18n.t('home.allCategory')}
 			</button>
 			{#each data.categories as category}
 				<button 
 					class="shrink-0 snap-start sm:snap-align-none whitespace-nowrap px-6 py-2 rounded-full border text-[13px] font-semibold tracking-wide transition-all {selectedCategory === category.slug ? 'border-primary bg-primary text-white' : 'border-slate-200 text-[#4A3B32] hover:border-primary'}"
-					onclick={() => selectedCategory = category.slug}
+					onclick={() => selectCategory(category.slug)}
 				>
 					{category.name}
 				</button>
@@ -146,8 +177,13 @@
 
 
 	<div class="container mx-auto px-4 sm:px-6 max-w-7xl">
+		{#if loadingCategory === selectedCategory}
+			<div class="py-16 text-center text-sm text-[#4A3B32]/50">Loading products...</div>
+		{:else if categoryError}
+			<div class="py-16 text-center text-sm text-red-500">Unable to load products. Please choose the category again.</div>
+		{:else}
 		<div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-6 sm:gap-x-6 sm:gap-y-12">
-			{#each selectedCategory === 'All' ? products : products.filter((p) => p.category?.slug === selectedCategory) as product}
+			{#each getVisibleProducts(products) as product}
 				{@const primaryImg = product.product_images?.find(img => img.is_primary) || product.product_images?.[0]}
 				<div class="bg-white rounded-3xl p-3 sm:p-4 border border-slate-100 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_30px_-10px_rgba(140,90,53,0.15)] hover:-translate-y-1 transition-all duration-300 group flex flex-col h-full relative">
 					<!-- Card Link Cover (Makes the whole top part clickable) -->
@@ -193,9 +229,10 @@
 				</div>
 			{/each}
 		</div>
+		{/if}
 		{#if products.length > 0}
 			<div class="mt-12 flex justify-center">
-				<a href="/catalog" class="inline-flex items-center justify-center rounded-full bg-primary px-8 py-3 text-sm font-bold tracking-wide text-white shadow-lg shadow-primary/15 transition-all hover:bg-[#724828] hover:shadow-xl">
+				<a href={selectedCategory === 'All' ? '/catalog' : `/catalog?category=${encodeURIComponent(selectedCategory)}`} class="inline-flex items-center justify-center rounded-full bg-primary px-8 py-3 text-sm font-bold tracking-wide text-white shadow-lg shadow-primary/15 transition-all hover:bg-[#724828] hover:shadow-xl">
 					{i18n.t('home.loadMore')}
 				</a>
 			</div>
