@@ -29,6 +29,12 @@ npm run dev
 npm run dev -- --open
 ```
 
+Salin `.env.example` menjadi `.env` dan isi konfigurasi yang diperlukan. Integrasi WhatsApp
+memakai `WA_GATEWAY_URL` dan `WA_GATEWAY_API_KEY` yang hanya boleh tersedia di server.
+Generate API key gateway dengan `bun run key:generate` di project `wagateway`; jangan memakai
+prefix `PUBLIC_` atau menyimpan key di kode frontend. Rotasi key mengikuti urutan primary/previous
+key yang didokumentasikan oleh gateway.
+
 ## Building
 
 To create a production version of your app:

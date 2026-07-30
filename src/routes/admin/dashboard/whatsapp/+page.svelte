@@ -1,132 +1,190 @@
 <script>
+	import { enhance } from '$app/forms';
+	import { invalidateAll } from '$app/navigation';
+	import { onMount } from 'svelte';
+	import CheckCircle2Icon from '@lucide/svelte/icons/check-circle-2';
+	import MessageCircleIcon from '@lucide/svelte/icons/message-circle';
+	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
 	import { Button } from '$lib/components/ui/button';
-	import { PUBLIC_WA_GATEWAY_URL } from '$env/static/public';
-	import { onMount, onDestroy } from 'svelte';
+	import { Spinner } from '$lib/components/ui/spinner';
 	import * as Card from '$lib/components/ui/card';
 	import * as Alert from '$lib/components/ui/alert';
 	import { AdminPage, AdminPageHeader, AdminStatusBadge } from '$lib/components/admin';
 
-	let waStatus = $state('Memuat...');
-	let qrImage = $state(null);
-	let isConnected = $state(false);
-	let polling = $state(null);
+	let { data, form } = $props();
+	let currentState = $state({ status: 'idle', qr: null, message: 'Memuat status WhatsApp.' });
+	let pollingTimer = null;
 	let disconnecting = $state(false);
+	let refreshing = $state(false);
 
-	async function checkStatus() {
-		try {
-			const res = await fetch(`${PUBLIC_WA_GATEWAY_URL}/api/status`);
-			const data = await res.json();
+	const statusLabels = {
+		idle: 'Belum diinisialisasi',
+		connecting: 'Sedang menghubungkan',
+		qr: 'Menunggu QR dipindai',
+		connected: 'Terhubung',
+		logged_out: 'Sesi telah keluar',
+		error: 'Terjadi gangguan'
+	};
 
-			if (data.success) {
-				waStatus = data.status;
-				qrImage = data.qr;
-				isConnected = data.status === 'Terhubung';
-			}
-		} catch (err) {
-			waStatus = 'Tidak dapat terhubung ke server gateway';
-			qrImage = null;
-			isConnected = false;
-		}
+	let statusCode = $derived(currentState?.status ?? 'error');
+	let statusLabel = $derived(statusLabels[statusCode] ?? currentState?.message ?? 'Status tidak diketahui');
+	let qrImage = $derived(currentState?.qr?.dataUrl ?? null);
+	let isConnected = $derived(statusCode === 'connected');
+
+	$effect(() => {
+		currentState = data.whatsapp;
+	});
+
+	function scheduleStatusCheck(delay = 8_000) {
+		if (pollingTimer) clearTimeout(pollingTimer);
+		if (document.hidden) return;
+		pollingTimer = setTimeout(checkStatus, delay);
 	}
 
-	async function disconnectWA() {
-		disconnecting = true;
+	async function checkStatus() {
+		if (document.hidden) return;
+
 		try {
-			await fetch(`${PUBLIC_WA_GATEWAY_URL}/api/disconnect`, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json', 'x-api-key': 'temp' }
+			const response = await fetch('/admin/dashboard/whatsapp/status', {
+				headers: { Accept: 'application/json' }
 			});
-		} catch (err) {
-			console.error('Disconnect error:', err);
+			const result = await response.json();
+			currentState = result;
+
+			if (response.status === 429) {
+				const retryAfter = Number.parseInt(response.headers.get('Retry-After') ?? '', 10);
+				scheduleStatusCheck(Number.isFinite(retryAfter) ? retryAfter * 1_000 : 60_000);
+				return;
+			}
+		} catch {
+			currentState = {
+				status: 'error',
+				qr: null,
+				message: 'Tidak dapat menghubungi server aplikasi.'
+			};
 		}
-		disconnecting = false;
-		// Will auto-update via polling
+
+		scheduleStatusCheck();
+	}
+
+	async function refreshPairing() {
+		refreshing = true;
+		await invalidateAll();
+		refreshing = false;
+		scheduleStatusCheck();
 	}
 
 	onMount(() => {
-		checkStatus();
-		polling = setInterval(checkStatus, 5000);
-	});
+		const handleVisibilityChange = () => {
+			if (!document.hidden) checkStatus();
+			else if (pollingTimer) clearTimeout(pollingTimer);
+		};
 
-	onDestroy(() => {
-		if (polling) clearInterval(polling);
+		document.addEventListener('visibilitychange', handleVisibilityChange);
+		scheduleStatusCheck();
+
+		return () => {
+			document.removeEventListener('visibilitychange', handleVisibilityChange);
+			if (pollingTimer) clearTimeout(pollingTimer);
+		};
 	});
 </script>
 
 <AdminPage class="max-w-2xl">
-	<!-- Header -->
 	<AdminPageHeader eyebrow="Integrasi" title="WhatsApp Gateway" description="Hubungkan WhatsApp untuk mengirim invoice dan notifikasi pesanan kepada pelanggan." />
 
-	<!-- Status Card -->
 	<Card.Root class="overflow-hidden">
-		<!-- Status Bar -->
-		<div class="flex items-center justify-between p-6 border-b border-primary/10">
-			<div class="flex items-center gap-3">
-				<div class="w-3 h-3 rounded-full {isConnected ? 'bg-green-500 animate-pulse' : 'bg-amber-400 animate-pulse'}"></div>
-				<div>
-					<p class="font-bold text-[#4A3B32] text-[15px]">Status Koneksi</p>
-					<p class="text-sm text-[#4A3B32]/70">{waStatus}</p>
+		<Card.Header class="border-b">
+			<div class="flex flex-wrap items-center justify-between gap-3">
+				<div class="flex items-center gap-3">
+					<MessageCircleIcon class="text-primary" />
+					<div class="flex flex-col gap-1">
+						<Card.Title>Status Koneksi</Card.Title>
+						<Card.Description>{statusLabel} · {currentState?.message}</Card.Description>
+					</div>
+				</div>
+				<div class="flex items-center gap-2">
+					<AdminStatusBadge status={isConnected ? 'active' : 'pending'} label={statusLabel} />
+					{#if isConnected}
+						<form
+							method="POST"
+							action="?/logout"
+							use:enhance={() => {
+								disconnecting = true;
+								return async ({ update }) => {
+									await update({ reset: false, invalidateAll: true });
+									disconnecting = false;
+									scheduleStatusCheck();
+								};
+							}}
+						>
+							<Button type="submit" variant="destructive" disabled={disconnecting}>
+								{#if disconnecting}<Spinner data-icon="inline-start" />{/if}
+								{disconnecting ? 'Memutus...' : 'Logout'}
+							</Button>
+						</form>
+					{/if}
 				</div>
 			</div>
-			{#if isConnected}
-				<AdminStatusBadge status="active" label="Terhubung" />
-				<Button 
-					variant="destructive"
-					onclick={disconnectWA}
-					disabled={disconnecting}
-				>
-					{disconnecting ? 'Memutus...' : 'Disconnect'}
-				</Button>
-			{/if}
-		</div>
+		</Card.Header>
 
-		<!-- QR Code Area -->
-		<div class="p-8 flex flex-col items-center">
+		<Card.Content class="flex min-h-96 flex-col items-center justify-center pt-6 text-center">
 			{#if isConnected}
-				<!-- Connected State -->
-				<div class="text-center py-8">
-					<div class="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-5">
-						<svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+				<div class="flex max-w-sm flex-col items-center gap-4 py-8">
+					<div class="flex size-20 items-center justify-center rounded-full bg-primary/10">
+						<CheckCircle2Icon class="size-10 text-primary" />
 					</div>
-					<h3 class="text-xl font-bold text-[#4A3B32] mb-2">WhatsApp Terhubung!</h3>
-					<p class="text-sm text-[#4A3B32]/70 max-w-sm">Anda dapat mengirim invoice ke pelanggan melalui halaman <a href="/admin/dashboard/orders" class="underline text-primary font-semibold">Daftar Pesanan</a>.</p>
+					<div class="flex flex-col gap-2">
+						<h3 class="text-xl font-bold">WhatsApp Terhubung</h3>
+						<p class="text-sm text-muted-foreground">Invoice dapat dikirim melalui halaman <a href="/admin/dashboard/orders" class="font-semibold text-primary underline">Daftar Pesanan</a>.</p>
+					</div>
 				</div>
 			{:else if qrImage}
-				<!-- QR Code State -->
-				<div class="text-center">
-					<div class="bg-white p-4 rounded-2xl border-2 border-primary/20 inline-block mb-6 shadow-sm">
-						<img src={qrImage} alt="WhatsApp QR Code" class="w-64 h-64" />
+				<div class="flex max-w-sm flex-col items-center gap-5">
+					<div class="rounded-2xl border bg-background p-4 shadow-sm">
+						<img src={qrImage} alt="WhatsApp QR Code" class="size-64" />
 					</div>
-					<h3 class="text-lg font-bold text-[#4A3B32] mb-3">Scan QR Code Ini</h3>
-					<div class="text-sm text-[#4A3B32]/70 space-y-1 max-w-sm">
-						<p>1. Buka <strong>WhatsApp</strong> di HP Anda</p>
-						<p>2. Ketuk <strong>Menu (⋮)</strong> atau <strong>Settings</strong></p>
-						<p>3. Pilih <strong>Linked Devices</strong></p>
-						<p>4. Ketuk <strong>"Link a Device"</strong></p>
-						<p>5. Arahkan kamera ke QR code di atas</p>
+					<div class="flex flex-col gap-2">
+						<h3 class="text-lg font-bold">Scan QR Code Ini</h3>
+						<p class="text-sm text-muted-foreground">Buka WhatsApp, pilih <strong>Linked devices</strong>, lalu pilih <strong>Link a device</strong> dan arahkan kamera ke QR code.</p>
 					</div>
 				</div>
 			{:else}
-				<!-- Loading / Waiting State -->
-				<div class="text-center py-8">
-					<div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-5 animate-pulse">
-						<svg class="w-8 h-8 text-[#4A3B32]/40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+				<div class="flex max-w-sm flex-col items-center gap-4 py-8">
+					{#if statusCode === 'connecting' || statusCode === 'idle'}
+						<Spinner class="size-8 text-primary" />
+					{:else}
+						<MessageCircleIcon class="size-10 text-muted-foreground" />
+					{/if}
+					<div class="flex flex-col gap-2">
+						<p class="font-medium">{currentState?.message ?? statusLabel}</p>
+						<p class="text-sm text-muted-foreground">QR akan tampil setelah gateway siap menerima koneksi.</p>
 					</div>
-					<p class="text-sm text-[#4A3B32]/70 font-medium">{waStatus}</p>
-					<p class="text-xs text-[#4A3B32]/50 mt-2">Menunggu koneksi ke server gateway...</p>
+					{#if statusCode === 'error' || statusCode === 'logged_out' || statusCode === 'idle'}
+						<Button type="button" variant="outline" disabled={refreshing} onclick={refreshPairing}>
+							{#if refreshing}<Spinner data-icon="inline-start" />{:else}<RefreshCwIcon data-icon="inline-start" />{/if}
+							Coba lagi
+						</Button>
+					{/if}
 				</div>
 			{/if}
-		</div>
+		</Card.Content>
 	</Card.Root>
 
-	<!-- Info -->
+	{#if form?.message}
+		<Alert.Root variant="destructive">
+			<Alert.Title>Logout gagal</Alert.Title>
+			<Alert.Description>{form.message}</Alert.Description>
+		</Alert.Root>
+	{/if}
+
 	<Alert.Root>
 		<Alert.Title>Penting</Alert.Title>
 		<Alert.Description>
-		<ul class="flex list-disc flex-col gap-1 pl-5">
-			<li>Hanya 1 perangkat yang bisa terhubung ke WhatsApp Web pada saat bersamaan.</li>
-			<li>Jika koneksi terputus, halaman ini akan otomatis menampilkan QR baru.</li>
-		</ul>
+			<ul class="flex list-disc flex-col gap-1 pl-5">
+				<li>Hanya satu akun WhatsApp yang dikelola gateway ini.</li>
+				<li>Logout menghapus credential gateway dan memerlukan scan QR baru.</li>
+			</ul>
 		</Alert.Description>
 	</Alert.Root>
 </AdminPage>
