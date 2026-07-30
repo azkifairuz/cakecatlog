@@ -4,6 +4,8 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
+	import * as Field from '$lib/components/ui/field';
+	import * as Select from '$lib/components/ui/select';
 	import Loading from '$lib/components/Loading.svelte';
 	import PriceInput from '$lib/components/PriceInput.svelte';
 	import { Label } from '$lib/components/ui/label';
@@ -13,6 +15,9 @@
 	import { getImageUrl } from '$lib/image-url.js';
 	import { fly, fade } from 'svelte/transition';
 	import { getProductAddons, getStartFromPrice } from '$lib/pricing.js';
+	import { toast } from 'svelte-sonner';
+	import SearchIcon from '@lucide/svelte/icons/search';
+	import RotateCcwIcon from '@lucide/svelte/icons/rotate-ccw';
 
 	let { data, form } = $props();
 	let isFormOpen = $state(false);
@@ -27,9 +32,12 @@
 	let isCreatingCategory = $state(false);
 	let categoryCreateError = $state('');
 	let categoryCreateSuccess = $state('');
+	let productFieldErrors = $state({});
+	let productCategoryFilter = $state('all');
 
 	$effect(() => {
 		categories = data.categories ?? [];
+		productCategoryFilter = data.filters?.category || 'all';
 	});
 
 	let newImages = $state([]);
@@ -39,6 +47,10 @@
 	let productVariants = $state([]);
 	let productAddonStates = $state({});
 	let newAddonRows = $state([]);
+	let addonCategories = $derived(
+		[...new Set((data.globalAddons ?? []).map((addon) => addon.category?.trim()).filter(Boolean))]
+			.sort((a, b) => a.localeCompare(b, 'id'))
+	);
 
 	// Detail drawer
 	let selectedProductDetail = $state(null);
@@ -46,7 +58,64 @@
 
 	let customizeAddons = $state(false);
 
+	function resetProductErrors() {
+		productFieldErrors = {};
+	}
+
+	function clearProductFieldError(fieldName) {
+		if (!productFieldErrors[fieldName]) return;
+		const { [fieldName]: _removed, ...remainingErrors } = productFieldErrors;
+		productFieldErrors = remainingErrors;
+	}
+
+	function clearVariantFieldError(index, fieldName) {
+		const currentRowErrors = productFieldErrors.variants?.[index];
+		if (!currentRowErrors?.[fieldName]) return;
+
+		const { [fieldName]: _removed, ...remainingRowErrors } = currentRowErrors;
+		const remainingVariantErrors = { ...(productFieldErrors.variants ?? {}) };
+		if (Object.keys(remainingRowErrors).length > 0) {
+			remainingVariantErrors[index] = remainingRowErrors;
+		} else {
+			delete remainingVariantErrors[index];
+		}
+
+		const { variants: _variants, ...remainingErrors } = productFieldErrors;
+		productFieldErrors = Object.keys(remainingVariantErrors).length > 0
+			? { ...remainingErrors, variants: remainingVariantErrors }
+			: remainingErrors;
+	}
+
+	function focusFirstProductError(fieldErrors) {
+		let firstInvalidField = ['name', 'base_price'].find((fieldName) => fieldErrors[fieldName]);
+		if (!firstInvalidField && fieldErrors.variants) {
+			const firstVariantIndex = Object.keys(fieldErrors.variants)
+				.map(Number)
+				.sort((a, b) => a - b)[0];
+			const firstVariantField = ['name', 'price'].find(
+				(fieldName) => fieldErrors.variants[firstVariantIndex]?.[fieldName]
+			);
+			if (firstVariantField) {
+				firstInvalidField = `variant-${firstVariantField}-${firstVariantIndex}`;
+			}
+		}
+		if (!firstInvalidField) return;
+
+		requestAnimationFrame(() => {
+			const field = document.getElementById(firstInvalidField);
+			if (!field) return;
+
+			const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+			field.focus({ preventScroll: true });
+			field.scrollIntoView({
+				behavior: reduceMotion ? 'auto' : 'smooth',
+				block: 'center'
+			});
+		});
+	}
+
 	function openCreateForm() {
+		resetProductErrors();
 		editingProduct = null;
 		newImages = [];
 		existingImages = [];
@@ -67,6 +136,7 @@
 	}
 
 	function openEditForm(product) {
+		resetProductErrors();
 		editingProduct = product;
 		newImages = [];
 		existingImages = product.product_images ? [...product.product_images] : [];
@@ -86,7 +156,7 @@
 					is_active: variant.is_active !== false,
 					display_order: variant.display_order ?? index
 				}))
-			: [{ id: '', name: '', price: product.base_price ?? '', is_active: true, display_order: 0 }];
+			: [{ id: '', name: '', price: '', is_active: true, display_order: 0 }];
 		productAddonStates = Object.fromEntries(
 			(product.product_addons ?? []).map((item) => [
 				item.addon_id,
@@ -177,18 +247,18 @@
 
 	function removeProductVariant(index) {
 		productVariants = productVariants.filter((_, i) => i !== index);
+		const { variants: _variants, ...remainingErrors } = productFieldErrors;
+		productFieldErrors = remainingErrors;
 	}
 
 	function serializeProductVariants() {
-		return productVariants
-			.map((variant, index) => ({
+		return productVariants.map((variant, index) => ({
 				id: variant.id || null,
 				name: variant.name?.trim() ?? '',
 				price: variant.price,
 				is_active: variant.is_active !== false,
 				display_order: Number(variant.display_order ?? index)
-			}))
-			.filter((variant) => variant.name && variant.price !== '' && variant.price !== null);
+			}));
 	}
 
 	function openDetail(product) {
@@ -286,7 +356,9 @@
 		newAddonRows = [
 			...newAddonRows,
 			{
-				category: 'size',
+				category: '',
+				categoryQuery: '',
+				isCategoryDropdownOpen: false,
 				name: '',
 				additional_price: '',
 				is_dark_color: false,
@@ -298,6 +370,23 @@
 
 	function removeNewAddonRow(index) {
 		newAddonRows = newAddonRows.filter((_, i) => i !== index);
+	}
+
+	function getFilteredAddonCategories(query) {
+		const normalizedQuery = query.trim().toLowerCase();
+		if (!normalizedQuery) return addonCategories;
+		return addonCategories.filter((category) => category.toLowerCase().includes(normalizedQuery));
+	}
+
+	function selectNewAddonCategory(row, category) {
+		row.category = category;
+		row.categoryQuery = category;
+		row.isCategoryDropdownOpen = false;
+	}
+
+	function canUseNewAddonCategory(row) {
+		const query = row.categoryQuery.trim();
+		return query && !addonCategories.some((category) => category.toLowerCase() === query.toLowerCase());
 	}
 
 	function serializeNewAddons() {
@@ -329,27 +418,37 @@
 	let pagination = $derived(data.pagination);
 	let canGoPrev = $derived(pagination.page > 1);
 	let canGoNext = $derived(pagination.page < pagination.totalPages);
+	let hasActiveProductFilters = $derived(Boolean(data.filters?.search || data.filters?.category));
+	let selectedFilterCategoryName = $derived(
+		productCategoryFilter === 'all'
+			? 'Semua kategori'
+			: categories.find((category) => category.id === productCategoryFilter)?.name ?? 'Semua kategori'
+	);
 
 	function getPageHref(page) {
-		return `?page=${page}`;
+		const params = new URLSearchParams();
+		if (data.filters?.search) params.set('q', data.filters.search);
+		if (data.filters?.category) params.set('category', data.filters.category);
+		params.set('page', String(page));
+		return `?${params.toString()}`;
 	}
 </script>
 
-<div class="flex items-center justify-between mb-4">
+<div class="flex items-center justify-between mb-2">
 	<h1 class="text-lg font-semibold md:text-2xl">Products</h1>
 	<Button onclick={() => isFormOpen ? (isFormOpen = false) : openCreateForm()} class="cursor-pointer active:scale-95 transition-transform">
 		{isFormOpen ? 'Cancel' : 'Add New Product'}
 	</Button>
 </div>
 
-{#if form?.error}
+{#if form?.error && !isFormOpen}
 	<div class="p-4 bg-destructive/15 text-destructive font-medium text-sm mb-4 rounded-md">
 		Error: {form.error}
 	</div>
 {/if}
 
 {#if isFormOpen}
-	<Card.Root class="mb-8 border-slate-200 shadow-sm animate-in fade-in slide-in-from-top-4">
+	<Card.Root class="mb-2 border-slate-200 shadow-sm animate-in fade-in slide-in-from-top-4">
 		<Card.Header class="bg-slate-50/50 border-b border-slate-100 pb-4">
 			<Card.Title class="text-xl text-slate-800">{editingProduct ? 'Edit Product' : 'Add New Product'}</Card.Title>
 			<Card.Description>Fill in the details for this cake in your catalog.</Card.Description>
@@ -387,6 +486,7 @@
 					try {
 						await update();
 						if (result.type === 'success' && result.data?.success) {
+							resetProductErrors();
 							isFormOpen = false;
 							editingProduct = null;
 							newImages = [];
@@ -396,6 +496,16 @@
 							productVariants = [];
 							selectedCategoryId = '';
 							categoryQuery = '';
+						} else if (result.type === 'failure') {
+							const fieldErrors = result.data?.fieldErrors ?? {};
+							productFieldErrors = fieldErrors;
+
+							if (Object.keys(fieldErrors).length > 0) {
+								toast.error('Periksa kembali field yang ditandai.');
+								focusFirstProductError(fieldErrors);
+							} else {
+								toast.error(result.data?.error ?? 'Produk gagal disimpan. Silakan coba lagi.');
+							}
 						}
 					} finally {
 						isSubmitting = false;
@@ -403,10 +513,22 @@
 				};
 			}} class="grid gap-5 md:grid-cols-2">
 				
-				<div class="grid gap-2">
-					<Label for="name">Product Name *</Label>
-					<Input id="name" name="name" required value={editingProduct?.name ?? ''} class="bg-slate-50 focus:bg-white" />
-				</div>
+				<Field.Field data-invalid={productFieldErrors.name ? true : undefined} class="gap-2">
+					<Field.Label for="name">Product Name *</Field.Label>
+					<Input
+						id="name"
+						name="name"
+						required
+						value={editingProduct?.name ?? ''}
+						aria-invalid={productFieldErrors.name ? true : undefined}
+						aria-describedby={productFieldErrors.name ? 'name-error' : undefined}
+						oninput={() => clearProductFieldError('name')}
+						class="bg-slate-50 focus:bg-white"
+					/>
+					{#if productFieldErrors.name}
+						<Field.Error id="name-error">{productFieldErrors.name}</Field.Error>
+					{/if}
+				</Field.Field>
 				
 				<div class="grid gap-2 md:col-span-2">
 					<Label for="category_search">Category</Label>
@@ -464,16 +586,28 @@
 					{/if}
 				</div>
 				
-				<div class="space-y-2 relative">
-					<Label for="base_price">Harga Dasar (Rp) <span class="text-red-500">*</span></Label>
-					<PriceInput id="base_price" name="base_price" required={true} value={editingProduct?.base_price ?? ''} class="bg-slate-50 focus:bg-white" />
-				</div>
+				<Field.Field data-invalid={productFieldErrors.base_price ? true : undefined} class="relative gap-2">
+					<Field.Label for="base_price">Harga Dasar (Rp) <span class="text-destructive">*</span></Field.Label>
+					<PriceInput
+						id="base_price"
+						name="base_price"
+						required={true}
+						value={editingProduct?.base_price ?? ''}
+						aria-invalid={productFieldErrors.base_price ? true : undefined}
+						aria-describedby={productFieldErrors.base_price ? 'base-price-error' : undefined}
+						oninput={() => clearProductFieldError('base_price')}
+						class="bg-slate-50 focus:bg-white"
+					/>
+					{#if productFieldErrors.base_price}
+						<Field.Error id="base-price-error">{productFieldErrors.base_price}</Field.Error>
+					{/if}
+				</Field.Field>
 
 				<div class="grid gap-3 md:col-span-2 rounded-xl border border-primary/10 bg-white p-4">
 					<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 						<div>
 							<h3 class="text-sm font-semibold text-slate-800">Ukuran & Harga</h3>
-							<p class="text-xs text-muted-foreground">Harga size disimpan per produk. Harga terendah dipakai sebagai start from di katalog.</p>
+							<p class="text-xs text-muted-foreground">Opsional. Jika mulai menambahkan size, nama dan harga size harus diisi lengkap.</p>
 						</div>
 						<Button type="button" variant="outline" size="sm" onclick={addProductVariant}>+ Size</Button>
 					</div>
@@ -483,14 +617,36 @@
 							<div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
 								<input type="hidden" value={variant.id} />
 								<div class="grid gap-2 md:grid-cols-[1fr_1fr_96px_auto] md:items-end">
-									<div class="grid gap-1.5">
-										<Label>Nama size</Label>
-										<Input bind:value={variant.name} placeholder="Contoh: 10cm" class="bg-white" />
-									</div>
-									<div class="grid gap-1.5">
-										<Label>Harga size</Label>
-										<PriceInput bind:value={variant.price} placeholder="Harga" class="bg-white" />
-									</div>
+									<Field.Field data-invalid={productFieldErrors.variants?.[index]?.name ? true : undefined} class="gap-1.5">
+										<Field.Label for={`variant-name-${index}`}>Nama size</Field.Label>
+										<Input
+											id={`variant-name-${index}`}
+											bind:value={variant.name}
+											placeholder="Contoh: 10cm"
+											aria-invalid={productFieldErrors.variants?.[index]?.name ? true : undefined}
+											aria-describedby={productFieldErrors.variants?.[index]?.name ? `variant-name-error-${index}` : undefined}
+											oninput={() => clearVariantFieldError(index, 'name')}
+											class="bg-white"
+										/>
+										{#if productFieldErrors.variants?.[index]?.name}
+											<Field.Error id={`variant-name-error-${index}`}>{productFieldErrors.variants[index].name}</Field.Error>
+										{/if}
+									</Field.Field>
+									<Field.Field data-invalid={productFieldErrors.variants?.[index]?.price ? true : undefined} class="gap-1.5">
+										<Field.Label for={`variant-price-${index}`}>Harga size</Field.Label>
+										<PriceInput
+											id={`variant-price-${index}`}
+											bind:value={variant.price}
+											placeholder="Harga"
+											aria-invalid={productFieldErrors.variants?.[index]?.price ? true : undefined}
+											aria-describedby={productFieldErrors.variants?.[index]?.price ? `variant-price-error-${index}` : undefined}
+											oninput={() => clearVariantFieldError(index, 'price')}
+											class="bg-white"
+										/>
+										{#if productFieldErrors.variants?.[index]?.price}
+											<Field.Error id={`variant-price-error-${index}`}>{productFieldErrors.variants[index].price}</Field.Error>
+										{/if}
+									</Field.Field>
 									<div class="grid gap-1.5">
 										<Label>Urutan</Label>
 										<Input type="number" bind:value={variant.display_order} min="0" class="bg-white" />
@@ -509,7 +665,7 @@
 						{/each}
 						{#if productVariants.length === 0}
 							<div class="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-center text-sm text-slate-500">
-								Belum ada size. Tambahkan minimal satu size agar user bisa memilih ukuran.
+								Belum ada size. Produk tetap dapat disimpan menggunakan harga dasar.
 							</div>
 						{/if}
 					</div>
@@ -549,15 +705,48 @@
 									<div class="mt-3 space-y-3">
 										{#each newAddonRows as row, index}
 											<div class="rounded-xl border border-slate-200 bg-white p-3">
-												<div class="grid gap-2 md:grid-cols-4">
-													<select bind:value={row.category} class="h-10 rounded-md border border-input bg-slate-50 px-3 py-2 text-sm">
-														<option value="size">size</option>
-														<option value="color">color</option>
-														<option value="flavor">flavor</option>
-														<option value="crown">crown</option>
-														<option value="glitter">glitter</option>
-														<option value="cake_topper">cake_topper</option>
-													</select>
+											<div class="grid gap-2 md:grid-cols-4">
+												<div class="relative">
+													<Input
+														id={`addon-category-${index}`}
+														bind:value={row.categoryQuery}
+														placeholder="Cari category"
+														autocomplete="off"
+														class="bg-slate-50 pr-9"
+														onfocus={() => (row.isCategoryDropdownOpen = true)}
+														oninput={() => {
+															row.category = '';
+															row.isCategoryDropdownOpen = true;
+														}}
+													/>
+													<button
+														type="button"
+														class="absolute inset-y-0 right-1 flex items-center px-2 text-muted-foreground"
+														onclick={() => (row.isCategoryDropdownOpen = !row.isCategoryDropdownOpen)}
+														aria-label="Buka pilihan category addon"
+													>
+														<svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+													</button>
+
+													{#if row.isCategoryDropdownOpen}
+														<div class="absolute z-30 mt-2 max-h-56 w-full overflow-y-auto rounded-xl border border-border bg-popover p-1 text-popover-foreground shadow-xl">
+															{#each getFilteredAddonCategories(row.categoryQuery) as category}
+																<button type="button" class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm hover:bg-accent" onclick={() => selectNewAddonCategory(row, category)}>
+																	<span class="truncate">{category}</span>
+																	{#if row.category === category}<span class="text-xs font-semibold text-primary">Dipilih</span>{/if}
+																</button>
+															{/each}
+															{#if canUseNewAddonCategory(row)}
+																<button type="button" class="mt-1 flex w-full items-center gap-2 rounded-lg border border-dashed border-primary/30 bg-primary/5 px-3 py-2 text-left text-sm font-semibold text-primary hover:bg-primary/10" onclick={() => selectNewAddonCategory(row, row.categoryQuery.trim())}>
+																	+ Gunakan “{row.categoryQuery.trim()}”
+																</button>
+															{/if}
+															{#if getFilteredAddonCategories(row.categoryQuery).length === 0 && !canUseNewAddonCategory(row)}
+																<p class="px-3 py-2 text-sm text-muted-foreground">Belum ada category addon.</p>
+															{/if}
+														</div>
+													{/if}
+												</div>
 													<Input bind:value={row.name} placeholder="Nama addon" class="bg-slate-50 md:col-span-2" />
 													<PriceInput bind:value={row.additional_price} placeholder="Harga" class="bg-slate-50" />
 												</div>
@@ -713,7 +902,10 @@
 				</div>
 				
 				<div class="md:col-span-2 mt-4 flex gap-3">
-					<Button type="button" variant="outline" class="flex-1 md:flex-none cursor-pointer active:scale-95 transition-transform" onclick={() => isFormOpen = false} disabled={isSubmitting}>Cancel</Button>
+					<Button type="button" variant="outline" class="flex-1 md:flex-none cursor-pointer active:scale-95 transition-transform" onclick={() => {
+						resetProductErrors();
+						isFormOpen = false;
+					}} disabled={isSubmitting}>Cancel</Button>
 					<Button type="submit" class="flex-1 md:flex-none bg-slate-800 hover:bg-slate-900 hover:shadow-md cursor-pointer active:scale-95 transition-all" disabled={isSubmitting}>
 						{#if isSubmitting}
 							<Loading label="Menyimpan..." size="sm" class="text-white" />
@@ -777,6 +969,52 @@
 		</div>
 	</div>
 {/if}
+
+<form method="GET" class="mb-4 rounded-xl border border-border bg-card p-4 shadow-sm">
+	<Field.Group class="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(220px,0.45fr)_auto] md:items-end">
+		<Field.Field class="gap-1.5">
+			<Field.Label for="product-search">Cari produk</Field.Label>
+			<Input
+				id="product-search"
+				name="q"
+				type="search"
+				placeholder="Cari berdasarkan nama produk..."
+				value={data.filters?.search ?? ''}
+			/>
+		</Field.Field>
+
+		<Field.Field class="gap-1.5">
+			<Field.Label for="product-category-filter">Kategori</Field.Label>
+			<Select.Root type="single" name="category" bind:value={productCategoryFilter}>
+				<Select.Trigger id="product-category-filter" class="w-full">
+					{selectedFilterCategoryName}
+				</Select.Trigger>
+				<Select.Content>
+					<Select.Group>
+						<Select.Label>Filter kategori</Select.Label>
+						<Select.Item value="all" label="Semua kategori">Semua kategori</Select.Item>
+						{#each categories as category (category.id)}
+							<Select.Item value={category.id} label={category.name}>{category.name}</Select.Item>
+						{/each}
+					</Select.Group>
+				</Select.Content>
+			</Select.Root>
+		</Field.Field>
+
+		<Field.Field orientation="horizontal" class="gap-2">
+			<Button type="submit">
+				<SearchIcon data-icon="inline-start" />
+				Cari
+			</Button>
+			{#if hasActiveProductFilters}
+				<Button href="/admin/dashboard/products" variant="outline">
+					<RotateCcwIcon data-icon="inline-start" />
+					Reset
+				</Button>
+			{/if}
+		</Field.Field>
+	</Field.Group>
+</form>
 
 <div class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden mb-8">
 	<div class="overflow-x-auto">
@@ -845,8 +1083,14 @@
 					<Table.Cell colspan="5" class="text-center py-12">
 						<div class="flex flex-col items-center justify-center text-slate-400">
 							<svg class="w-10 h-10 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
-							<p class="font-medium text-sm">Belum ada produk yang ditambahkan.</p>
-							<Button variant="outline" size="sm" class="mt-4" onclick={openCreateForm}>Tambah Produk Pertama</Button>
+							<p class="font-medium text-sm">
+								{hasActiveProductFilters ? 'Tidak ada produk yang cocok dengan pencarian atau filter.' : 'Belum ada produk yang ditambahkan.'}
+							</p>
+							{#if hasActiveProductFilters}
+								<Button href="/admin/dashboard/products" variant="outline" size="sm" class="mt-4">Reset filter</Button>
+							{:else}
+								<Button variant="outline" size="sm" class="mt-4" onclick={openCreateForm}>Tambah Produk Pertama</Button>
+							{/if}
 						</div>
 					</Table.Cell>
 				</Table.Row>

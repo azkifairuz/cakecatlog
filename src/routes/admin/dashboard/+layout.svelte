@@ -1,6 +1,7 @@
 <script>
 	import { page } from '$app/stores';
 	import { Button } from '$lib/components/ui/button';
+	import { Toaster } from '$lib/components/ui/sonner';
 	import { ChartBar, Info, ListPlus, LogOut, MessageCircle, Package, ShoppingCart, Tags, Image } from 'lucide-svelte';
 
 	let { children } = $props();
@@ -148,3 +149,5 @@
 		</a>
 	</div>
 </div>
+
+<Toaster position="top-right" richColors />

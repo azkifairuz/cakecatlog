@@ -9,6 +9,9 @@ create table if not exists public.product_variants (
 	updated_at timestamptz not null default now()
 );
 
+alter table public.product_variants
+	alter column id set default gen_random_uuid();
+
 create index if not exists product_variants_product_id_idx on public.product_variants(product_id);
 create index if not exists product_variants_active_idx on public.product_variants(is_active);
 create unique index if not exists product_variants_product_name_unique

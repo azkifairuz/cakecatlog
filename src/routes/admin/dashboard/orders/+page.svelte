@@ -3,6 +3,7 @@
 	import * as Card from '$lib/components/ui/card';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
+	import * as Table from '$lib/components/ui/table';
 	import PriceInput from '$lib/components/PriceInput.svelte';
 	import DatePicker from '$lib/components/DatePicker.svelte';
 	import { Label } from '$lib/components/ui/label';
@@ -65,6 +66,7 @@
 	let statusFilter = $state('All');
 	let dateFilter = $state(todayStr);
 	let dateTypeFilter = $state('delivery_date');
+	let viewMode = $state('card');
 
 	let filteredOrders = $derived(data.orders.filter(order => {
 		const matchesSearch = !searchQuery || 
@@ -183,15 +185,43 @@
 	}
 </script>
 
-<div class="flex items-center justify-between mb-6 gap-4 flex-wrap">
+<div class="flex items-center justify-between mb-2 gap-4 flex-wrap">
 	<h1 class="text-2xl font-bold text-slate-800">Daftar Pesanan</h1>
-	<Button onclick={exportToExcel} variant="outline" class="rounded-full px-5 py-2.5 text-sm font-semibold border-primary/30 text-primary hover:bg-primary/10 gap-2 shrink-0">
-		<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-		Export Excel
-	</Button>
+	<div class="flex items-center gap-3">
+		<div class="flex items-center gap-1 rounded-xl border border-border bg-muted p-1 shadow-inner" aria-label="Pilihan tampilan pesanan">
+			<Button
+				type="button"
+				variant={viewMode === 'card' ? 'default' : 'ghost'}
+				size="sm"
+				class="min-w-20 rounded-lg"
+				onclick={() => (viewMode = 'card')}
+				aria-label="Tampilan card"
+				aria-pressed={viewMode === 'card'}
+			>
+				<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+				Card
+			</Button>
+			<Button
+				type="button"
+				variant={viewMode === 'list' ? 'default' : 'ghost'}
+				size="sm"
+				class="min-w-20 rounded-lg"
+				onclick={() => (viewMode = 'list')}
+				aria-label="Tampilan list"
+				aria-pressed={viewMode === 'list'}
+			>
+				<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+				List
+			</Button>
+		</div>
+		<Button onclick={exportToExcel} variant="outline" class="rounded-full px-5 py-2.5 text-sm font-semibold border-primary/30 text-primary hover:bg-primary/10 gap-2 shrink-0">
+			<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 011.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+			Export Excel
+		</Button>
+	</div>
 </div>
 
-<div class="flex flex-col lg:flex-row items-center gap-3 mb-6 bg-white p-3 sm:p-4 rounded-2xl shadow-sm border border-slate-100">
+<div class="flex flex-col lg:flex-row items-center gap-3 mb-2 bg-white p-3 sm:p-4 rounded-2xl shadow-sm border border-slate-100">
 	<!-- Search -->
 	<div class="relative w-full lg:flex-1">
 		<svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
@@ -243,6 +273,7 @@
 	</div>
 {/if}
 
+{#if viewMode === 'card'}
 <div class="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-5 pb-4">
 	{#each filteredOrders as order (order.id)}
 		<Card.Root class="shadow-sm border-slate-200 hover:shadow-md transition-shadow overflow-visible">
@@ -336,6 +367,76 @@
 		</div>
 	{/each}
 </div>
+{:else}
+	<div class="mb-4 overflow-hidden rounded-xl border border-border bg-background shadow-sm">
+		<div class="overflow-x-auto">
+			<Table.Root class="min-w-[980px]">
+				<Table.Header>
+					<Table.Row>
+						<Table.Head>Order</Table.Head>
+						<Table.Head>Pelanggan</Table.Head>
+						<Table.Head>Produk</Table.Head>
+						<Table.Head>Pengiriman</Table.Head>
+						<Table.Head>Total</Table.Head>
+						<Table.Head>Status</Table.Head>
+						<Table.Head class="text-right">Aksi</Table.Head>
+					</Table.Row>
+				</Table.Header>
+				<Table.Body>
+					{#each filteredOrders as order (order.id)}
+						<Table.Row>
+							<Table.Cell class="font-semibold">#{order.order_number}</Table.Cell>
+							<Table.Cell>
+								<div class="flex max-w-56 flex-col gap-0.5">
+									<span class="truncate font-semibold">{order.customer_name}</span>
+									<span class="truncate text-xs text-muted-foreground">{order.phone_number || '-'}</span>
+									<span class="truncate text-xs text-muted-foreground">{order.email || 'Email belum diisi'}</span>
+								</div>
+							</Table.Cell>
+							<Table.Cell>
+								{#if order.order_items?.length > 0}
+									<div class="flex max-w-56 flex-col gap-0.5">
+										<span class="truncate font-medium">{order.order_items[0].products?.name ?? 'Unknown'}</span>
+										<span class="text-xs text-muted-foreground">{order.order_items.length} item</span>
+									</div>
+								{:else}
+									<span class="text-sm text-muted-foreground">Pesanan lama</span>
+								{/if}
+							</Table.Cell>
+							<Table.Cell>
+								<div class="flex flex-col gap-0.5">
+									<span class="font-medium">{getDeliveryOptionLabel(order)}</span>
+									<span class="text-xs text-muted-foreground">{formatDate(order.delivery_date)}{order.delivery_time ? ` • ${order.delivery_time}` : ''}</span>
+								</div>
+							</Table.Cell>
+							<Table.Cell class="whitespace-nowrap font-semibold">{formatCurrency(order.amount)}</Table.Cell>
+							<Table.Cell>
+								<form method="POST" action="?/updateStatus" use:enhance>
+									<input type="hidden" name="id" value={order.id} />
+									<select name="status" class="h-9 rounded-md border border-input bg-background px-3 text-sm font-medium" onchange={(event) => event.currentTarget.form.requestSubmit()}>
+										<option value="Pending" selected={order.status === 'Pending'}>Pending</option>
+										<option value="Diproses" selected={order.status === 'Diproses'}>Diproses</option>
+										<option value="Selesai" selected={order.status === 'Selesai'}>Selesai</option>
+										<option value="Batal/Refund" selected={order.status === 'Batal/Refund'}>Batal / Refund</option>
+									</select>
+								</form>
+							</Table.Cell>
+							<Table.Cell class="text-right">
+								<Button variant="outline" size="sm" onclick={() => openDrawer(order)}>Kelola</Button>
+							</Table.Cell>
+						</Table.Row>
+					{:else}
+						<Table.Row>
+							<Table.Cell colspan={7} class="h-32 text-center text-muted-foreground">
+								{data.orders.length === 0 ? 'Belum ada pesanan masuk.' : 'Tidak ada pesanan yang sesuai dengan filter.'}
+							</Table.Cell>
+						</Table.Row>
+					{/each}
+				</Table.Body>
+			</Table.Root>
+		</div>
+	</div>
+{/if}
 
 <!-- BOTTOM SHEET DRAWER -->
 {#if isDrawerOpen && selectedOrder}

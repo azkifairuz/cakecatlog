@@ -1,52 +1,72 @@
 import { parsePrice } from '$lib/pricing.js';
+import { buildProductVariantRows } from '$lib/product-variants.js';
+import {
+	getProductFieldErrors,
+	getProductPersistenceErrorMessage
+} from '$lib/product-validation.js';
 import { fail } from '@sveltejs/kit';
+import { randomUUID } from 'node:crypto';
 
 const PRODUCTS_PER_PAGE = 10;
 
 export const load = async ({ locals: { supabase }, url }) => {
 	const pageParam = Number(url.searchParams.get('page') ?? '1');
 	const page = Number.isInteger(pageParam) && pageParam > 0 ? pageParam : 1;
+	const search = String(url.searchParams.get('q') ?? '').trim().slice(0, 100);
+	const categoryParam = String(url.searchParams.get('category') ?? '').trim();
+	const category = categoryParam === 'all' ? '' : categoryParam;
 	const from = (page - 1) * PRODUCTS_PER_PAGE;
 	const to = from + PRODUCTS_PER_PAGE - 1;
+	let productsQuery = supabase
+		.from('products')
+		.select(`
+			*,
+			category:categories (
+				name,
+				slug
+			),
+			product_images (
+				id,
+				image_url,
+				is_primary
+			),
+			product_variants (
+				id,
+				name,
+				price,
+				is_active,
+				display_order
+			),
+			product_addons (
+				addon_id,
+				is_active,
+				global_addons (
+					id,
+					category,
+					name,
+					additional_price,
+					is_dark_color,
+					dark_color_surcharge,
+					is_active
+				)
+			)
+		`, { count: 'exact' })
+		.eq('is_active', true);
+
+	if (search) {
+		productsQuery = productsQuery.ilike('name', `%${search}%`);
+	}
+
+	if (category) {
+		productsQuery = productsQuery.eq('category_id', category);
+	}
+
+	productsQuery = productsQuery
+		.order('created_at', { ascending: false })
+		.range(from, to);
 
 	const [productsResult, categoriesResult, globalAddonsResult] = await Promise.all([
-		supabase
-			.from('products')
-			.select(`
-				*,
-				category:categories (
-					name,
-					slug
-				),
-				product_images (
-					id,
-					image_url,
-					is_primary
-				),
-				product_variants (
-					id,
-					name,
-					price,
-					is_active,
-					display_order
-				),
-				product_addons (
-					addon_id,
-					is_active,
-					global_addons (
-						id,
-						category,
-						name,
-						additional_price,
-						is_dark_color,
-						dark_color_surcharge,
-						is_active
-					)
-				)
-			`, { count: 'exact' })
-			.eq('is_active', true)
-			.order('created_at', { ascending: false })
-			.range(from, to),
+		productsQuery,
 		supabase.from('categories').select('*').order('name'),
 		supabase.from('global_addons').select('*').order('category').order('name')
 	]);
@@ -66,6 +86,10 @@ export const load = async ({ locals: { supabase }, url }) => {
 			totalPages,
 			from: totalProducts === 0 ? 0 : from + 1,
 			to: Math.min(to + 1, totalProducts)
+		},
+		filters: {
+			search,
+			category
 		},
 		categories: categories ?? [],
 		globalAddons: globalAddons ?? []
@@ -130,14 +154,22 @@ function parseProductVariants(value) {
 			.map((item, index) => ({
 				id: item?.id ? String(item.id) : null,
 				name: String(item?.name || '').trim(),
-				price: parsePrice(item?.price),
+				price: item?.price ?? '',
 				is_active: item?.is_active !== false,
 				display_order: Number.isFinite(Number(item?.display_order)) ? Number(item.display_order) : index
-			}))
-			.filter((item) => item.name && item.price > 0);
+			}));
 	} catch {
 		return [];
 	}
+}
+
+function getPersistableProductVariants(variants) {
+	return variants
+		.filter((variant) => variant.name && parsePrice(variant.price) > 0)
+		.map((variant) => ({
+			...variant,
+			price: parsePrice(variant.price)
+		}));
 }
 
 async function syncProductVariants(supabase, productId, variants) {
@@ -165,19 +197,50 @@ async function syncProductVariants(supabase, productId, variants) {
 
 	if (variants.length === 0) return null;
 
-	const rows = variants.map((variant) => ({
-		...(variant.id ? { id: variant.id } : {}),
-		product_id: productId,
-		name: variant.name,
-		price: variant.price,
-		is_active: variant.is_active,
-		display_order: variant.display_order
-	}));
+	const { existingVariantRows, newVariantRows } = buildProductVariantRows(
+		productId,
+		variants,
+		randomUUID
+	);
 
-	const { error } = await supabase.from('product_variants').upsert(rows, {
-		onConflict: 'id'
+	if (existingVariantRows.length > 0) {
+		const { error } = await supabase.from('product_variants').upsert(existingVariantRows, {
+			onConflict: 'id'
+		});
+		if (error) return error;
+	}
+
+	if (newVariantRows.length > 0) {
+		const { error } = await supabase.from('product_variants').insert(newVariantRows);
+		if (error) return error;
+	}
+
+	return null;
+}
+
+function productFailure(stage, error) {
+	console.error(`Product ${stage} error:`, {
+		code: error?.code,
+		message: error?.message,
+		details: error?.details,
+		hint: error?.hint
 	});
-	return error;
+
+	return fail(500, {
+		success: false,
+		error: getProductPersistenceErrorMessage(error, stage)
+	});
+}
+
+async function cleanupFailedProduct(supabase, productId) {
+	const { error } = await supabase.from('products').delete().eq('id', productId);
+	if (error) {
+		console.error('Failed to clean up product after create error:', {
+			productId,
+			code: error.code,
+			message: error.message
+		});
+	}
 }
 
 async function createNewGlobalAddons(supabase, productId, newAddons) {
@@ -312,26 +375,43 @@ async function uploadProductImages(supabase, productId, images, primaryImageKey)
 		const filePath = `product/${fileName}`;
 
 		const { error: uploadError } = await supabase.storage.from('products').upload(filePath, file);
-		if (uploadError) return null;
+		if (uploadError) return { filePath, error: uploadError, row: null };
 
 		const { data: publicUrlData } = supabase.storage.from('products').getPublicUrl(filePath);
 		return {
-			product_id: productId,
-			image_url: publicUrlData.publicUrl,
-			is_primary: selectedPrimary?.type === 'new'
-				? Number(selectedPrimary.value) === i
-				: i === 0 && !selectedPrimary
+			filePath,
+			error: null,
+			row: {
+				product_id: productId,
+				image_url: publicUrlData.publicUrl,
+				is_primary: selectedPrimary?.type === 'new'
+					? Number(selectedPrimary.value) === i
+					: i === 0 && !selectedPrimary
+			}
 		};
 	});
 
 	const results = await Promise.all(uploadPromises);
-	const imageInserts = results.filter(Boolean);
+	const uploadedPaths = results.filter((result) => result.row).map((result) => result.filePath);
+	const uploadError = results.find((result) => result.error)?.error;
+	if (uploadError) {
+		if (uploadedPaths.length > 0) {
+			await supabase.storage.from('products').remove(uploadedPaths);
+		}
+		return { error: uploadError };
+	}
+
+	const imageInserts = results.map((result) => result.row).filter(Boolean);
 	if (imageInserts.length === 0) return { error: null };
 
 	const { data: insertedImages, error } = await supabase
 		.from('product_images')
 		.insert(imageInserts)
 		.select('id, is_primary');
+
+	if (error && uploadedPaths.length > 0) {
+		await supabase.storage.from('products').remove(uploadedPaths);
+	}
 
 	return { insertedImages: insertedImages ?? [], error };
 }
@@ -427,14 +507,24 @@ export const actions = {
 		const category_id = formData.get('category_id');
 		const images = formData.getAll('images');
 		const primaryImageKey = formData.get('primary_image_key');
-		const productVariants = parseProductVariants(formData.get('product_variants'));
+		const parsedProductVariants = parseProductVariants(formData.get('product_variants'));
 		const addonStates = parseProductAddonStates(formData.get('product_addons'));
 		const newAddons = parseNewAddons(formData.get('new_addons'));
 		const handling_warning = formData.get('handling_warning');
 
-		if (!name || !base_price) {
-			return fail(400, { success: false, error: 'Name and Base Price are required' });
+		const fieldErrors = getProductFieldErrors({
+			name,
+			basePrice: base_price,
+			variants: parsedProductVariants
+		});
+		if (Object.keys(fieldErrors).length > 0) {
+			return fail(400, {
+				success: false,
+				error: 'Periksa kembali field yang ditandai.',
+				fieldErrors
+			});
 		}
+		const productVariants = getPersistableProductVariants(parsedProductVariants);
 
 		const { data: product, error: productError } = await insertProduct(supabase, {
 			...getProductPayload({
@@ -449,24 +539,26 @@ export const actions = {
 		});
 
 		if (productError) {
-			console.error('Create product error:', productError);
-			return fail(500, { success: false, error: productError.message });
+			return productFailure('product', productError);
 		}
 
 		const variantError = await syncProductVariants(supabase, product.id, productVariants);
-		if (variantError) return fail(500, { success: false, error: variantError.message });
+		if (variantError) {
+			await cleanupFailedProduct(supabase, product.id);
+			return productFailure('variants', variantError);
+		}
 
 		const addonError = await syncProductAddons(supabase, product.id, addonStates);
-		if (addonError) return fail(500, { success: false, error: addonError.message });
+		if (addonError) return productFailure('addons', addonError);
 
 		const newAddonError = await createNewGlobalAddons(supabase, product.id, newAddons);
-		if (newAddonError) return fail(500, { success: false, error: newAddonError.message });
+		if (newAddonError) return productFailure('addons', newAddonError);
 
 		const { error: uploadImagesError } = await uploadProductImages(supabase, product.id, images, primaryImageKey);
-		if (uploadImagesError) return fail(500, { success: false, error: uploadImagesError.message });
+		if (uploadImagesError) return productFailure('images', uploadImagesError);
 
 		const primaryError = await applyPrimaryImage(supabase, product.id, primaryImageKey);
-		if (primaryError) return fail(500, { success: false, error: primaryError.message });
+		if (primaryError) return productFailure('images', primaryError);
 
 		return { success: true };
 	},
@@ -481,14 +573,28 @@ export const actions = {
 		const images = formData.getAll('images');
 		const primaryImageKey = formData.get('primary_image_key');
 		const deletedImageIdsStr = formData.get('deleted_image_ids');
-		const productVariants = parseProductVariants(formData.get('product_variants'));
+		const parsedProductVariants = parseProductVariants(formData.get('product_variants'));
 		const addonStates = parseProductAddonStates(formData.get('product_addons'));
 		const newAddons = parseNewAddons(formData.get('new_addons'));
 		const handling_warning = formData.get('handling_warning');
 
-		if (!id || !name || !base_price) {
-			return fail(400, { success: false, error: 'ID, Name, and Base Price are required' });
+		if (!id) {
+			return fail(400, { success: false, error: 'ID produk tidak ditemukan.' });
 		}
+
+		const fieldErrors = getProductFieldErrors({
+			name,
+			basePrice: base_price,
+			variants: parsedProductVariants
+		});
+		if (Object.keys(fieldErrors).length > 0) {
+			return fail(400, {
+				success: false,
+				error: 'Periksa kembali field yang ditandai.',
+				fieldErrors
+			});
+		}
+		const productVariants = getPersistableProductVariants(parsedProductVariants);
 
 		const productError = await updateProductRow(
 			supabase,
@@ -504,18 +610,17 @@ export const actions = {
 		);
 
 		if (productError) {
-			console.error('Update product error:', productError);
-			return fail(500, { success: false, error: productError.message });
+			return productFailure('product', productError);
 		}
 
 		const variantError = await syncProductVariants(supabase, id, productVariants);
-		if (variantError) return fail(500, { success: false, error: variantError.message });
+		if (variantError) return productFailure('variants', variantError);
 
 		const addonError = await syncProductAddons(supabase, id, addonStates);
-		if (addonError) return fail(500, { success: false, error: addonError.message });
+		if (addonError) return productFailure('addons', addonError);
 
 		const newAddonError = await createNewGlobalAddons(supabase, id, newAddons);
-		if (newAddonError) return fail(500, { success: false, error: newAddonError.message });
+		if (newAddonError) return productFailure('addons', newAddonError);
 
 		// Delete images
 		if (deletedImageIdsStr) {
@@ -545,10 +650,10 @@ export const actions = {
 		}
 
 		const { error: uploadImagesError } = await uploadProductImages(supabase, id, images, primaryImageKey);
-		if (uploadImagesError) return fail(500, { success: false, error: uploadImagesError.message });
+		if (uploadImagesError) return productFailure('images', uploadImagesError);
 
 		const primaryError = await applyPrimaryImage(supabase, id, primaryImageKey);
-		if (primaryError) return fail(500, { success: false, error: primaryError.message });
+		if (primaryError) return productFailure('images', primaryError);
 
 		return { success: true };
 	},
