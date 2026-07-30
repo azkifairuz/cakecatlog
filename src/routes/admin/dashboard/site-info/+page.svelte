@@ -6,6 +6,7 @@
 	import { Textarea } from '$lib/components/ui/textarea';
 	import Loading from '$lib/components/Loading.svelte';
 	import { Clock, MapPin, MessageCircle, Save } from 'lucide-svelte';
+	import { AdminPage, AdminPageHeader } from '$lib/components/admin';
 
 	let { data, form } = $props();
 
@@ -14,16 +15,8 @@
 	let currentInfo = $derived(form?.values ?? data.siteInfo);
 </script>
 
-<div class="mx-auto w-full max-w-5xl space-y-6">
-	<div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-		<div>
-			<div class="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Footer User</div>
-			<h1 class="mt-2 text-2xl font-bold text-[#4A3B32]">Info Toko</h1>
-			<p class="mt-2 max-w-2xl text-sm leading-relaxed text-[#4A3B32]/70">
-				Atur informasi pickup, alamat, dan WhatsApp yang muncul di footer halaman user.
-			</p>
-		</div>
-	</div>
+<AdminPage class="max-w-5xl">
+	<AdminPageHeader eyebrow="Footer User" title="Info Toko" description="Atur informasi pickup, alamat, dan WhatsApp yang muncul di footer halaman user." />
 
 	{#if data.setupError}
 		<div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
@@ -150,4 +143,4 @@
 			</Button>
 		</div>
 	</form>
-</div>
+</AdminPage>

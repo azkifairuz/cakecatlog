@@ -5,6 +5,9 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import Loading from '$lib/components/Loading.svelte';
+	import { AdminPage, AdminPageHeader, AdminEmptyState } from '$lib/components/admin';
+	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
+	import Trash2Icon from '@lucide/svelte/icons/trash-2';
 
 	let { data, form } = $props();
 	
@@ -13,12 +16,10 @@
 	let deletingId = $state(null);
 </script>
 
-<div class="flex items-center justify-between mb-6">
-	<h1 class="text-2xl font-bold text-[#4A3B32]">Kategori Kue</h1>
-	<Button onclick={() => isAdding = !isAdding} class="bg-primary hover:bg-[#724828] rounded-xl px-5">
-		{isAdding ? 'Batal' : '+ Tambah Kategori'}
-	</Button>
-</div>
+<AdminPage>
+<AdminPageHeader title="Kategori Kue" description="Kelompokkan produk agar katalog lebih mudah dicari.">
+	{#snippet actions()}<Button onclick={() => isAdding = !isAdding}>{isAdding ? 'Batal' : 'Tambah Kategori'}</Button>{/snippet}
+</AdminPageHeader>
 
 {#if form?.error}
 	<div class="p-4 bg-red-50 text-red-600 font-medium text-sm rounded-xl mb-6 border border-red-100">
@@ -69,14 +70,20 @@
 
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
 	{#each data.categories as category (category.id)}
-		<Card.Root class="border-primary/20 shadow-sm hover:shadow-md transition-shadow">
+		<Card.Root class="group relative border-primary/20 shadow-sm transition-[border-color,box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md">
 			<Card.Content class="p-5 flex items-center justify-between gap-4">
-				<div class="flex flex-col">
+				<div class="flex min-w-0 flex-col">
 					<h3 class="font-bold text-lg text-[#4A3B32] leading-tight">{category.name}</h3>
 					<span class="text-xs font-medium text-[#4A3B32]/50 bg-slate-50 px-2 py-0.5 rounded-md mt-1.5 w-fit">/{category.slug}</span>
 				</div>
-				
-				<form method="POST" action="?/deleteCategory" use:enhance={() => {
+				<a
+					href={`/admin/dashboard/categories/${encodeURIComponent(category.slug)}`}
+					class="absolute inset-0 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+					aria-label={`Lihat produk kategori ${category.name}`}
+				></a>
+				<div class="pointer-events-none relative z-10 flex items-center gap-1">
+					<ArrowRightIcon class="size-4 text-muted-foreground transition-transform duration-150 group-hover:translate-x-0.5" aria-hidden="true" />
+				<form class="pointer-events-auto" method="POST" action="?/deleteCategory" use:enhance={() => {
 					deletingId = category.id;
 					return async ({ update }) => {
 						await update();
@@ -84,25 +91,21 @@
 					};
 				}}>
 					<input type="hidden" name="id" value={category.id} />
-					<Button type="submit" variant="ghost" size="icon" disabled={deletingId === category.id} class="text-red-400 hover:text-red-600 hover:bg-red-50 rounded-full w-10 h-10 transition-colors" onclick={(e) => {
+					<Button type="submit" variant="ghost" size="icon" disabled={deletingId === category.id} aria-label={`Hapus kategori ${category.name}`} onclick={(e) => {
 						if (!confirm('Hapus kategori ini? Jika dihapus, produk dengan kategori ini tidak akan memiliki kategori (menjadi kosong).')) e.preventDefault();
 					}}>
 						{#if deletingId === category.id}
 							<Loading label="" size="sm" />
 						{:else}
-							<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+						<Trash2Icon />
 						{/if}
 					</Button>
 				</form>
+				</div>
 			</Card.Content>
 		</Card.Root>
 	{:else}
-		<div class="col-span-full py-16 text-center border-2 border-dashed border-primary/20 rounded-2xl bg-white">
-			<div class="w-16 h-16 bg-slate-50 text-slate-300 rounded-full flex items-center justify-center mx-auto mb-4">
-				<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
-			</div>
-			<p class="font-medium text-[#4A3B32]/70 mb-1">Belum ada kategori yang dibuat.</p>
-			<p class="text-sm text-[#4A3B32]/50">Silakan klik tombol "Tambah Kategori" di atas.</p>
-		</div>
+		<div class="col-span-full"><AdminEmptyState title="Belum ada kategori" description="Tambahkan kategori pertama untuk mulai mengelompokkan produk." /></div>
 	{/each}
 </div>
+</AdminPage>

@@ -13,8 +13,10 @@ export const load = async ({ locals: { supabase }, url }) => {
 	const pageParam = Number(url.searchParams.get('page') ?? '1');
 	const page = Number.isInteger(pageParam) && pageParam > 0 ? pageParam : 1;
 	const search = String(url.searchParams.get('q') ?? '').trim().slice(0, 100);
-	const categoryParam = String(url.searchParams.get('category') ?? '').trim();
-	const category = categoryParam === 'all' ? '' : categoryParam;
+	const categoryIds = url.searchParams
+		.getAll('category')
+		.map((value) => String(value).trim())
+		.filter((value) => value && value !== 'all');
 	const from = (page - 1) * PRODUCTS_PER_PAGE;
 	const to = from + PRODUCTS_PER_PAGE - 1;
 	let productsQuery = supabase
@@ -57,8 +59,8 @@ export const load = async ({ locals: { supabase }, url }) => {
 		productsQuery = productsQuery.ilike('name', `%${search}%`);
 	}
 
-	if (category) {
-		productsQuery = productsQuery.eq('category_id', category);
+	if (categoryIds.length > 0) {
+		productsQuery = productsQuery.in('category_id', categoryIds);
 	}
 
 	productsQuery = productsQuery
@@ -89,7 +91,7 @@ export const load = async ({ locals: { supabase }, url }) => {
 		},
 		filters: {
 			search,
-			category
+			categories: categoryIds
 		},
 		categories: categories ?? [],
 		globalAddons: globalAddons ?? []

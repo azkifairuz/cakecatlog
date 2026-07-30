@@ -2,6 +2,9 @@
 	import { Button } from '$lib/components/ui/button';
 	import { PUBLIC_WA_GATEWAY_URL } from '$env/static/public';
 	import { onMount, onDestroy } from 'svelte';
+	import * as Card from '$lib/components/ui/card';
+	import * as Alert from '$lib/components/ui/alert';
+	import { AdminPage, AdminPageHeader, AdminStatusBadge } from '$lib/components/admin';
 
 	let waStatus = $state('Memuat...');
 	let qrImage = $state(null);
@@ -50,16 +53,12 @@
 	});
 </script>
 
-<div class="space-y-8 max-w-2xl mx-auto">
+<AdminPage class="max-w-2xl">
 	<!-- Header -->
-	<div class="space-y-2">
-		<div class="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Integrasi</div>
-		<h1 class="text-3xl font-bold text-[#4A3B32]">WhatsApp Gateway</h1>
-		<p class="text-sm text-[#4A3B32]/70">Hubungkan WhatsApp Anda untuk mengirim invoice dan notifikasi pesanan ke pelanggan secara langsung.</p>
-	</div>
+	<AdminPageHeader eyebrow="Integrasi" title="WhatsApp Gateway" description="Hubungkan WhatsApp untuk mengirim invoice dan notifikasi pesanan kepada pelanggan." />
 
 	<!-- Status Card -->
-	<div class="bg-white rounded-3xl border border-primary/10 shadow-sm overflow-hidden">
+	<Card.Root class="overflow-hidden">
 		<!-- Status Bar -->
 		<div class="flex items-center justify-between p-6 border-b border-primary/10">
 			<div class="flex items-center gap-3">
@@ -70,9 +69,9 @@
 				</div>
 			</div>
 			{#if isConnected}
+				<AdminStatusBadge status="active" label="Terhubung" />
 				<Button 
-					variant="outline" 
-					class="rounded-full border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 text-sm font-semibold px-5"
+					variant="destructive"
 					onclick={disconnectWA}
 					disabled={disconnecting}
 				>
@@ -118,14 +117,16 @@
 				</div>
 			{/if}
 		</div>
-	</div>
+	</Card.Root>
 
 	<!-- Info -->
-	<div class="bg-amber-50 border border-amber-200 rounded-2xl p-5 text-sm text-amber-800">
-		<p class="font-bold mb-1">⚠️ Penting</p>
-		<ul class="list-disc pl-5 space-y-1 text-amber-700">
+	<Alert.Root>
+		<Alert.Title>Penting</Alert.Title>
+		<Alert.Description>
+		<ul class="flex list-disc flex-col gap-1 pl-5">
 			<li>Hanya 1 perangkat yang bisa terhubung ke WhatsApp Web pada saat bersamaan.</li>
 			<li>Jika koneksi terputus, halaman ini akan otomatis menampilkan QR baru.</li>
 		</ul>
-	</div>
-</div>
+		</Alert.Description>
+	</Alert.Root>
+</AdminPage>

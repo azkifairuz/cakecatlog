@@ -5,7 +5,6 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import * as Field from '$lib/components/ui/field';
-	import * as Select from '$lib/components/ui/select';
 	import Loading from '$lib/components/Loading.svelte';
 	import PriceInput from '$lib/components/PriceInput.svelte';
 	import { Label } from '$lib/components/ui/label';
@@ -18,6 +17,7 @@
 	import { toast } from 'svelte-sonner';
 	import SearchIcon from '@lucide/svelte/icons/search';
 	import RotateCcwIcon from '@lucide/svelte/icons/rotate-ccw';
+	import { AdminCategoryMultiSelect, AdminPageHeader, AdminSearchField } from '$lib/components/admin';
 
 	let { data, form } = $props();
 	let isFormOpen = $state(false);
@@ -33,11 +33,11 @@
 	let categoryCreateError = $state('');
 	let categoryCreateSuccess = $state('');
 	let productFieldErrors = $state({});
-	let productCategoryFilter = $state('all');
+	let productCategoryFilter = $state([]);
 
 	$effect(() => {
 		categories = data.categories ?? [];
-		productCategoryFilter = data.filters?.category || 'all';
+		productCategoryFilter = data.filters?.categories ?? [];
 	});
 
 	let newImages = $state([]);
@@ -418,28 +418,25 @@
 	let pagination = $derived(data.pagination);
 	let canGoPrev = $derived(pagination.page > 1);
 	let canGoNext = $derived(pagination.page < pagination.totalPages);
-	let hasActiveProductFilters = $derived(Boolean(data.filters?.search || data.filters?.category));
-	let selectedFilterCategoryName = $derived(
-		productCategoryFilter === 'all'
-			? 'Semua kategori'
-			: categories.find((category) => category.id === productCategoryFilter)?.name ?? 'Semua kategori'
-	);
+	let hasActiveProductFilters = $derived(Boolean(data.filters?.search || data.filters?.categories?.length));
+	let categoryFilterOptions = $derived(categories.map((category) => ({ value: category.id, label: category.name })));
 
 	function getPageHref(page) {
 		const params = new URLSearchParams();
 		if (data.filters?.search) params.set('q', data.filters.search);
-		if (data.filters?.category) params.set('category', data.filters.category);
+		for (const category of data.filters?.categories ?? []) params.append('category', category);
 		params.set('page', String(page));
 		return `?${params.toString()}`;
 	}
 </script>
 
-<div class="flex items-center justify-between mb-2">
-	<h1 class="text-lg font-semibold md:text-2xl">Products</h1>
-	<Button onclick={() => isFormOpen ? (isFormOpen = false) : openCreateForm()} class="cursor-pointer active:scale-95 transition-transform">
-		{isFormOpen ? 'Cancel' : 'Add New Product'}
-	</Button>
-</div>
+<AdminPageHeader title="Products" description="Kelola katalog, harga, gambar, ukuran, dan addon produk.">
+	{#snippet actions()}
+		<Button onclick={() => isFormOpen ? (isFormOpen = false) : openCreateForm()}>
+			{isFormOpen ? 'Batal' : 'Tambah Produk'}
+		</Button>
+	{/snippet}
+</AdminPageHeader>
 
 {#if form?.error && !isFormOpen}
 	<div class="p-4 bg-destructive/15 text-destructive font-medium text-sm mb-4 rounded-md">
@@ -788,9 +785,8 @@
 										<h3 class="text-sm font-semibold text-slate-800">Product Addons</h3>
 										<p class="text-xs text-muted-foreground">Default mengikuti global. Buka category hanya jika perlu override untuk produk ini.</p>
 									</div>
-									<div class="relative w-full sm:max-w-xs">
-										<svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-										<Input bind:value={addonSearchQuery} placeholder="Cari addon atau category..." class="pl-8 bg-slate-50 border-slate-200 h-9 text-xs" />
+									<div class="w-full sm:max-w-xs">
+										<AdminSearchField bind:value={addonSearchQuery} placeholder="Cari addon atau kategori..." label="Cari addon produk" />
 									</div>
 								</div>
 
@@ -974,31 +970,17 @@
 	<Field.Group class="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(220px,0.45fr)_auto] md:items-end">
 		<Field.Field class="gap-1.5">
 			<Field.Label for="product-search">Cari produk</Field.Label>
-			<Input
-				id="product-search"
-				name="q"
-				type="search"
-				placeholder="Cari berdasarkan nama produk..."
-				value={data.filters?.search ?? ''}
-			/>
+			<AdminSearchField id="product-search" name="q" value={data.filters?.search ?? ''} placeholder="Cari berdasarkan nama produk..." label="Cari produk" />
 		</Field.Field>
 
 		<Field.Field class="gap-1.5">
 			<Field.Label for="product-category-filter">Kategori</Field.Label>
-			<Select.Root type="single" name="category" bind:value={productCategoryFilter}>
-				<Select.Trigger id="product-category-filter" class="w-full">
-					{selectedFilterCategoryName}
-				</Select.Trigger>
-				<Select.Content>
-					<Select.Group>
-						<Select.Label>Filter kategori</Select.Label>
-						<Select.Item value="all" label="Semua kategori">Semua kategori</Select.Item>
-						{#each categories as category (category.id)}
-							<Select.Item value={category.id} label={category.name}>{category.name}</Select.Item>
-						{/each}
-					</Select.Group>
-				</Select.Content>
-			</Select.Root>
+			<AdminCategoryMultiSelect
+				id="product-category-filter"
+				name="category"
+				options={categoryFilterOptions}
+				bind:value={productCategoryFilter}
+			/>
 		</Field.Field>
 
 		<Field.Field orientation="horizontal" class="gap-2">

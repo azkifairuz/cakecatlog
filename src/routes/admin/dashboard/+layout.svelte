@@ -1,153 +1,73 @@
 <script>
 	import { page } from '$app/stores';
+	import AdminSidebar from '$lib/components/admin/AdminSidebar.svelte';
 	import { Button } from '$lib/components/ui/button';
+	import * as Sheet from '$lib/components/ui/sheet';
+	import * as Sidebar from '$lib/components/ui/sidebar';
 	import { Toaster } from '$lib/components/ui/sonner';
-	import { ChartBar, Info, ListPlus, LogOut, MessageCircle, Package, ShoppingCart, Tags, Image } from 'lucide-svelte';
+	import { cn } from '$lib/utils';
+	import { ChartBar, Info, ListPlus, LogOut, Menu, MessageCircle, Package, ShoppingCart, Tags, Image } from 'lucide-svelte';
 
 	let { children } = $props();
-	const pageTitles = {
-		'/admin/dashboard': 'Analytics',
-		'/admin/dashboard/orders': 'Orders',
-		'/admin/dashboard/products': 'Products',
-		'/admin/dashboard/addons': 'Addons',
-		'/admin/dashboard/banners': 'Banners',
-		'/admin/dashboard/site-info': 'Info Toko',
-		'/admin/dashboard/categories': 'Categories',
-		'/admin/dashboard/whatsapp': 'WhatsApp'
-	};
+	let sidebarOpen = $state(false);
+	let mobileMoreOpen = $state(false);
+	const navItems = [
+		{ href: '/admin/dashboard', label: 'Analytics', icon: ChartBar },
+		{ href: '/admin/dashboard/orders', label: 'Orders', icon: ShoppingCart },
+		{ href: '/admin/dashboard/products', label: 'Products', icon: Package },
+		{ href: '/admin/dashboard/categories', label: 'Categories', icon: Tags },
+		{ href: '/admin/dashboard/addons', label: 'Addons', icon: ListPlus },
+		{ href: '/admin/dashboard/banners', label: 'Banners', icon: Image },
+		{ href: '/admin/dashboard/site-info', label: 'Info Toko', icon: Info },
+		{ href: '/admin/dashboard/whatsapp', label: 'WhatsApp', icon: MessageCircle }
+	];
+	const primaryMobileNav = navItems.slice(0, 3);
+	const secondaryMobileNav = navItems.slice(3);
+	const pageTitles = Object.fromEntries(navItems.map((item) => [item.href, item.label]));
 	let pageTitle = $derived(pageTitles[$page.url.pathname] ?? 'Dashboard');
+	let isSecondaryMobileActive = $derived(secondaryMobileNav.some((item) => item.href === $page.url.pathname));
+
+	function isActive(href) {
+		return href === '/admin/dashboard' ? $page.url.pathname === href : $page.url.pathname.startsWith(href);
+	}
 </script>
 
-<svelte:head>
-	<title>{pageTitle} | dessertbyfir Admin</title>
-</svelte:head>
+<svelte:head><title>{pageTitle} | dessertbyfir Admin</title></svelte:head>
 
-<div class="flex min-h-screen w-full flex-col bg-slate-50 pb-16 sm:pb-0 font-sans text-[#4A3B32]">
-	<header class="hidden md:flex sticky top-0 z-30 h-16 items-center gap-6 border-b border-primary/10 bg-white px-6 shadow-sm">
-		<div class="flex items-center gap-2 font-bold text-primary font-['Playfair_Display'] text-xl">
-			<ShoppingCart class="h-6 w-6" />
-			<span>dessertbyfir Admin</span>
-		</div>
+<Sidebar.Provider bind:open={sidebarOpen} class="bg-muted/40 text-foreground" style="--sidebar-width: 14rem; --sidebar-width-icon: 4.5rem;">
+	<AdminSidebar {navItems} />
+	<Sidebar.Inset class="min-w-0 bg-muted/40">
+			<header class="sticky top-0 z-30 flex h-14 items-center border-b bg-background/95 px-4 backdrop-blur md:hidden">
+				<span class="font-semibold text-primary">dessertbyfir Admin</span>
+				<span class="ml-auto text-sm text-muted-foreground">{pageTitle}</span>
+			</header>
+			<main class="min-w-0 overflow-x-hidden p-4 pb-24 md:p-5 md:pb-5 lg:p-6">{@render children()}</main>
+	</Sidebar.Inset>
 
-		<nav class="hidden lg:flex items-center gap-2 text-sm font-semibold ml-6">
-			<a href="/admin/dashboard" class="px-4 py-2.5 rounded-full transition-all {$page.url.pathname === '/admin/dashboard' ? 'bg-primary/10 text-primary' : 'text-[#4A3B32]/70 hover:text-primary hover:bg-primary/5'}">Analytics</a>
-			<a href="/admin/dashboard/orders" class="px-4 py-2.5 rounded-full transition-all {$page.url.pathname === '/admin/dashboard/orders' ? 'bg-primary/10 text-primary' : 'text-[#4A3B32]/70 hover:text-primary hover:bg-primary/5'}">Orders</a>
-			<a href="/admin/dashboard/products" class="px-4 py-2.5 rounded-full transition-all {$page.url.pathname === '/admin/dashboard/products' ? 'bg-primary/10 text-primary' : 'text-[#4A3B32]/70 hover:text-primary hover:bg-primary/5'}">Products</a>
-			<a href="/admin/dashboard/addons" class="px-4 py-2.5 rounded-full transition-all {$page.url.pathname === '/admin/dashboard/addons' ? 'bg-primary/10 text-primary' : 'text-[#4A3B32]/70 hover:text-primary hover:bg-primary/5'}">Addons</a>
-			<a href="/admin/dashboard/banners" class="px-4 py-2.5 rounded-full transition-all {$page.url.pathname === '/admin/dashboard/banners' ? 'bg-primary/10 text-primary' : 'text-[#4A3B32]/70 hover:text-primary hover:bg-primary/5'}">Banners</a>
-			<a href="/admin/dashboard/site-info" class="px-4 py-2.5 rounded-full transition-all {$page.url.pathname === '/admin/dashboard/site-info' ? 'bg-primary/10 text-primary' : 'text-[#4A3B32]/70 hover:text-primary hover:bg-primary/5'}">Info Toko</a>
-			<a href="/admin/dashboard/categories" class="px-4 py-2.5 rounded-full transition-all {$page.url.pathname === '/admin/dashboard/categories' ? 'bg-primary/10 text-primary' : 'text-[#4A3B32]/70 hover:text-primary hover:bg-primary/5'}">Categories</a>
-			<a href="/admin/dashboard/whatsapp" class="px-4 py-2.5 rounded-full transition-all {$page.url.pathname === '/admin/dashboard/whatsapp' ? 'bg-primary/10 text-primary' : 'text-[#4A3B32]/70 hover:text-primary hover:bg-primary/5'}">WhatsApp</a>
+	<nav class="fixed inset-x-0 bottom-0 z-40 grid h-[68px] grid-cols-4 border-t bg-background px-2 pb-safe shadow-[0_-8px_24px_rgb(0_0_0/0.05)] md:hidden">
+			{#each primaryMobileNav as item}
+				{@const Icon = item.icon}
+				<a href={item.href} aria-current={isActive(item.href) ? 'page' : undefined} class={cn('my-1 flex flex-col items-center justify-center gap-1 rounded-lg text-[11px] font-medium transition-[background-color,color,transform] duration-150 active:scale-[0.97]', isActive(item.href) ? 'bg-primary/10 text-primary' : 'text-muted-foreground')}>
+					<Icon class="size-5" /><span>{item.label}</span>
+				</a>
+			{/each}
+			<button type="button" onclick={() => (mobileMoreOpen = true)} class={cn('my-1 flex flex-col items-center justify-center gap-1 rounded-lg text-[11px] font-medium transition-[background-color,color,transform] duration-150 active:scale-[0.97]', isSecondaryMobileActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground')}>
+				<Menu class="size-5" /><span>Lainnya</span>
+			</button>
+	</nav>
+</Sidebar.Provider>
+
+<Sheet.Root bind:open={mobileMoreOpen}>
+	<Sheet.Content side="bottom" class="rounded-t-xl p-4 pb-8">
+		<Sheet.Header><Sheet.Title>Menu lainnya</Sheet.Title><Sheet.Description>Akses pengaturan dan fitur admin lainnya.</Sheet.Description></Sheet.Header>
+		<nav class="grid grid-cols-2 gap-2">
+			{#each secondaryMobileNav as item}
+				{@const Icon = item.icon}
+				<a href={item.href} onclick={() => (mobileMoreOpen = false)} class={cn('flex h-12 items-center gap-3 rounded-lg border px-3 text-sm font-medium', isActive(item.href) ? 'border-primary bg-primary/10 text-primary' : 'bg-background text-foreground')}><Icon class="size-4" />{item.label}</a>
+			{/each}
 		</nav>
-
-		<div class="ml-auto hidden lg:block">
-			<form action="/admin/logout" method="POST">
-				<Button type="submit" variant="outline" size="sm" class="rounded-full border-primary/20 text-primary hover:bg-primary/10 hover:text-primary">Logout</Button>
-			</form>
-		</div>
-	</header>
-	<!-- <aside class="fixed inset-y-0 left-0 z-10 hidden w-64 flex-col border-r bg-background xl:flex">
-		<div class="flex h-14 items-center border-b px-4 xl:h-[60px] xl:px-6">
-			<a href="/admin/dashboard" class="flex items-center gap-2 font-semibold">
-				<ShoppingCart class="h-6 w-6" />
-				<span class="">Cake Admin</span>
-			</a>
-		</div>
-		<div class="flex-1 overflow-auto py-6">
-			<nav class="grid items-start gap-2 px-2 text-base font-medium xl:px-4">
-				<a
-					href="/admin/dashboard"
-					class="flex items-center gap-4 rounded-xl px-4 py-4 transition-all hover:text-primary hover:bg-muted/50 { $page.url.pathname === '/admin/dashboard' ? 'bg-muted text-primary shadow-sm' : 'text-muted-foreground' }"
-				>
-					<ChartBar class="h-5 w-5" />
-					Analytics
-				</a>
-				<a
-					href="/admin/dashboard/orders"
-					class="flex items-center gap-4 rounded-xl px-4 py-4 transition-all hover:text-primary hover:bg-muted/50 { $page.url.pathname === '/admin/dashboard/orders' ? 'bg-muted text-primary shadow-sm' : 'text-muted-foreground' }"
-				>
-					<ShoppingCart class="h-5 w-5" />
-					Orders
-				</a>
-				<a
-					href="/admin/dashboard/products"
-					class="flex items-center gap-4 rounded-xl px-4 py-4 transition-all hover:text-primary hover:bg-muted/50 { $page.url.pathname === '/admin/dashboard/products' ? 'bg-muted text-primary shadow-sm' : 'text-muted-foreground' }"
-				>
-					<Package class="h-5 w-5" />
-					Products
-				</a>
-				<a
-					href="/admin/dashboard/categories"
-					class="flex items-center gap-4 rounded-xl px-4 py-4 transition-all hover:text-primary hover:bg-muted/50 { $page.url.pathname === '/admin/dashboard/categories' ? 'bg-muted text-primary shadow-sm' : 'text-muted-foreground' }"
-				>
-					<Tags class="h-5 w-5" />
-					Categories
-				</a>
-			</nav>
-		</div>
-		<div class="mt-auto p-4">
-			<form action="/admin/logout" method="POST">
-				<Button type="submit" variant="outline" class="w-full justify-start gap-3 py-6 rounded-xl text-base font-medium hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20 transition-all">
-					<LogOut class="h-5 w-5" />
-					Logout
-				</Button>
-			</form>
-		</div>
-	</aside> -->
-
-	<div class="flex min-w-0 flex-1 flex-col xl:gap-4 xl:py-4 xl:justify-center ">
-		<header class="sticky top-0 z-30 flex h-14 items-center gap-4 border-b border-primary/10 bg-white px-4 md:hidden shadow-sm">
-			<div class="flex font-bold text-primary font-['Playfair_Display'] text-lg">
-				<span>dessertbyfir Admin</span>
-			</div>
-			<div class="ml-auto">
-				<form action="/admin/logout" method="POST">
-					<Button type="submit" variant="ghost" size="icon" class="text-primary hover:bg-primary/10">
-						<LogOut class="h-5 w-5" />
-					</Button>
-				</form>
-			</div>
-		</header>
-		<main class="grid min-w-0 flex-1 items-start gap-4 overflow-x-hidden p-3 pb-24 sm:p-4 md:gap-8 xl:mb-0 xl:px-6 xl:py-0">
-			{@render children()}
-		</main>
-	</div>
-
-	<!-- Mobile & Tablet Bottom Nav -->
-	<div class="fixed bottom-0 left-0 z-40 flex h-[72px] w-full items-center justify-around overflow-x-auto border-t border-primary/10 bg-white px-1 pb-safe shadow-[0_-4px_20px_rgba(140,90,53,0.05)] [scrollbar-width:none] xl:hidden [&::-webkit-scrollbar]:hidden">
-		<a href="/admin/dashboard" class="flex h-[85%] min-w-[64px] flex-none flex-col items-center justify-center gap-1.5 mx-0.5 rounded-2xl active:scale-95 transition-all { $page.url.pathname === '/admin/dashboard' ? 'text-primary bg-primary/10' : 'text-[#4A3B32]/50 hover:bg-primary/5 hover:text-primary' }">
-			<ChartBar class="h-[22px] w-[22px]" />
-			<span class="text-[11px] font-bold">Analytics</span>
-		</a>
-		<a href="/admin/dashboard/orders" class="flex h-[85%] min-w-[64px] flex-none flex-col items-center justify-center gap-1.5 mx-0.5 rounded-2xl active:scale-95 transition-all { $page.url.pathname === '/admin/dashboard/orders' ? 'text-primary bg-primary/10' : 'text-[#4A3B32]/50 hover:bg-primary/5 hover:text-primary' }">
-			<ShoppingCart class="h-[22px] w-[22px]" />
-			<span class="text-[11px] font-bold">Orders</span>
-		</a>
-		<a href="/admin/dashboard/products" class="flex h-[85%] min-w-[64px] flex-none flex-col items-center justify-center gap-1.5 mx-0.5 rounded-2xl active:scale-95 transition-all { $page.url.pathname === '/admin/dashboard/products' ? 'text-primary bg-primary/10' : 'text-[#4A3B32]/50 hover:bg-primary/5 hover:text-primary' }">
-			<Package class="h-[22px] w-[22px]" />
-			<span class="text-[11px] font-bold">Products</span>
-		</a>
-		<a href="/admin/dashboard/addons" class="flex h-[85%] min-w-[64px] flex-none flex-col items-center justify-center gap-1.5 mx-0.5 rounded-2xl active:scale-95 transition-all { $page.url.pathname === '/admin/dashboard/addons' ? 'text-primary bg-primary/10' : 'text-[#4A3B32]/50 hover:bg-primary/5 hover:text-primary' }">
-			<ListPlus class="h-[22px] w-[22px]" />
-			<span class="text-[11px] font-bold">Addons</span>
-		</a>
-		<a href="/admin/dashboard/categories" class="flex h-[85%] min-w-[64px] flex-none flex-col items-center justify-center gap-1.5 mx-0.5 rounded-2xl active:scale-95 transition-all { $page.url.pathname === '/admin/dashboard/categories' ? 'text-primary bg-primary/10' : 'text-[#4A3B32]/50 hover:bg-primary/5 hover:text-primary' }">
-			<Tags class="h-[22px] w-[22px]" />
-			<span class="text-[11px] font-bold">Categories</span>
-		</a>
-		<a href="/admin/dashboard/banners" class="flex h-[85%] min-w-[64px] flex-none flex-col items-center justify-center gap-1.5 mx-0.5 rounded-2xl active:scale-95 transition-all { $page.url.pathname === '/admin/dashboard/banners' ? 'text-primary bg-primary/10' : 'text-[#4A3B32]/50 hover:bg-primary/5 hover:text-primary' }">
-			<Image class="h-[22px] w-[22px]" />
-			<span class="text-[11px] font-bold">Banners</span>
-		</a>
-		<a href="/admin/dashboard/site-info" class="flex h-[85%] min-w-[64px] flex-none flex-col items-center justify-center gap-1.5 mx-0.5 rounded-2xl active:scale-95 transition-all { $page.url.pathname === '/admin/dashboard/site-info' ? 'text-primary bg-primary/10' : 'text-[#4A3B32]/50 hover:bg-primary/5 hover:text-primary' }">
-			<Info class="h-[22px] w-[22px]" />
-			<span class="text-[11px] font-bold">Info</span>
-		</a>
-		<a href="/admin/dashboard/whatsapp" class="flex h-[85%] min-w-[64px] flex-none flex-col items-center justify-center gap-1.5 mx-0.5 rounded-2xl active:scale-95 transition-all { $page.url.pathname === '/admin/dashboard/whatsapp' ? 'text-primary bg-primary/10' : 'text-[#4A3B32]/50 hover:bg-primary/5 hover:text-primary' }">
-			<MessageCircle class="h-[22px] w-[22px]" />
-			<span class="text-[11px] font-bold">WhatsApp</span>
-		</a>
-	</div>
-</div>
+		<form action="/admin/logout" method="POST"><Button type="submit" variant="outline" class="w-full"><LogOut data-icon="inline-start" />Logout</Button></form>
+	</Sheet.Content>
+</Sheet.Root>
 
 <Toaster position="top-right" richColors />

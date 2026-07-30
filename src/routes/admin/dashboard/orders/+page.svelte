@@ -9,6 +9,7 @@
 	import { Label } from '$lib/components/ui/label';
 	import { fly, fade } from 'svelte/transition';
 	import * as XLSX from 'xlsx';
+	import { AdminPage, AdminPageHeader, AdminSearchField, AdminViewToggle } from '$lib/components/admin';
 	
 	let { data, form } = $props();
 
@@ -185,53 +186,27 @@
 	}
 </script>
 
-<div class="flex items-center justify-between mb-2 gap-4 flex-wrap">
-	<h1 class="text-2xl font-bold text-slate-800">Daftar Pesanan</h1>
-	<div class="flex items-center gap-3">
-		<div class="flex items-center gap-1 rounded-xl border border-border bg-muted p-1 shadow-inner" aria-label="Pilihan tampilan pesanan">
-			<Button
-				type="button"
-				variant={viewMode === 'card' ? 'default' : 'ghost'}
-				size="sm"
-				class="min-w-20 rounded-lg"
-				onclick={() => (viewMode = 'card')}
-				aria-label="Tampilan card"
-				aria-pressed={viewMode === 'card'}
-			>
-				<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
-				Card
-			</Button>
-			<Button
-				type="button"
-				variant={viewMode === 'list' ? 'default' : 'ghost'}
-				size="sm"
-				class="min-w-20 rounded-lg"
-				onclick={() => (viewMode = 'list')}
-				aria-label="Tampilan list"
-				aria-pressed={viewMode === 'list'}
-			>
-				<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
-				List
-			</Button>
-		</div>
-		<Button onclick={exportToExcel} variant="outline" class="rounded-full px-5 py-2.5 text-sm font-semibold border-primary/30 text-primary hover:bg-primary/10 gap-2 shrink-0">
+<AdminPage>
+<AdminPageHeader title="Daftar Pesanan" description="Cari, filter, dan kelola pesanan pelanggan dari satu tempat.">
+	{#snippet actions()}
+		<AdminViewToggle bind:value={viewMode} />
+		<Button onclick={exportToExcel} variant="outline">
 			<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 011.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
 			Export Excel
 		</Button>
-	</div>
-</div>
+	{/snippet}
+</AdminPageHeader>
 
-<div class="flex flex-col lg:flex-row items-center gap-3 mb-2 bg-white p-3 sm:p-4 rounded-2xl shadow-sm border border-slate-100">
+<div class="flex flex-col items-center gap-3 rounded-xl border bg-card p-3 shadow-sm lg:flex-row">
 	<!-- Search -->
-	<div class="relative w-full lg:flex-1">
-		<svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-		<Input type="text" placeholder="Cari nama, email, atau no order..." bind:value={searchQuery} class="pl-9 h-11 w-full rounded-xl bg-slate-50 border-transparent hover:border-slate-200 focus:border-slate-800 focus:bg-white transition-colors" />
+	<div class="w-full lg:flex-1">
+		<AdminSearchField bind:value={searchQuery} placeholder="Cari nama, email, atau nomor order..." label="Cari pesanan" />
 	</div>
 	
 	<div class="grid grid-cols-2 md:flex items-center gap-2 md:gap-3 w-full lg:w-auto">
 		<!-- Date Type Filter -->
 		<div class="col-span-1 md:w-auto">
-			<select bind:value={dateTypeFilter} class="h-11 w-full rounded-xl bg-slate-50 border-transparent hover:border-slate-200 focus:border-slate-800 focus:bg-white px-3 text-sm font-medium text-slate-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-800">
+			<select bind:value={dateTypeFilter} class="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
 				<option value="delivery_date">Tgl Kirim</option>
 				<option value="created_at">Tgl Order</option>
 			</select>
@@ -239,12 +214,12 @@
 
 		<!-- Date Filter -->
 		<div class="col-span-1 md:w-auto">
-			<DatePicker bind:value={dateFilter} class="h-11 w-full md:w-[150px] rounded-xl bg-slate-50 hover:bg-slate-100 border-transparent focus:border-slate-800 text-slate-700 text-sm font-medium" placeholder="Semua Tanggal" />
+			<DatePicker bind:value={dateFilter} class="h-10 w-full rounded-lg md:w-[150px]" placeholder="Semua Tanggal" />
 		</div>
 
 		<!-- Status Filter -->
 		<div class="col-span-2 md:col-span-1 md:w-auto">
-			<select bind:value={statusFilter} class="h-11 w-full md:w-[150px] rounded-xl bg-slate-50 border-transparent hover:border-slate-200 focus:border-slate-800 focus:bg-white px-3 text-sm font-medium text-slate-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-800">
+			<select bind:value={statusFilter} class="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/50 md:w-[150px]">
 				<option value="All">Semua Status</option>
 				<option value="Pending">Pending</option>
 				<option value="Diproses">Diproses</option>
@@ -437,6 +412,7 @@
 		</div>
 	</div>
 {/if}
+</AdminPage>
 
 <!-- BOTTOM SHEET DRAWER -->
 {#if isDrawerOpen && selectedOrder}

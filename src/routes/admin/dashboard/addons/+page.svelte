@@ -9,6 +9,7 @@
 	import { Switch } from '$lib/components/ui/switch';
 	import Loading from '$lib/components/Loading.svelte';
 	import PriceInput from '$lib/components/PriceInput.svelte';
+	import { AdminCategoryMultiSelect, AdminPage, AdminPageHeader, AdminSearchField, AdminViewToggle } from '$lib/components/admin';
 
 	let { data, form } = $props();
 	let editingAddon = $state(null);
@@ -22,11 +23,12 @@
 	let isCategoryDropdownOpen = $state(false);
 
 	let searchQuery = $state('');
-	let selectedCategoryFilter = $state('all');
-	let viewMode = $state('card'); // 'card' or 'table'
+	let selectedCategoryFilter = $state([]);
+	let viewMode = $state('card');
 
 	const defaultCategories = ['size', 'color', 'flavor', 'crown', 'glitter', 'cake_topper'];
 	let allCategories = $derived([...new Set([...defaultCategories, ...data.addons.map(a => a.category)])]);
+	let categoryFilterOptions = $derived(allCategories.map((category) => ({ value: category, label: category })));
 
 	let filteredCategories = $derived(
 		categoryQuery.trim() === ''
@@ -46,7 +48,7 @@
 	let filteredAddons = $derived(
 		data.addons.filter(addon => {
 			const matchesSearch = addon.name.toLowerCase().includes(searchQuery.toLowerCase());
-			const matchesCategory = selectedCategoryFilter === 'all' || addon.category === selectedCategoryFilter;
+			const matchesCategory = selectedCategoryFilter.length === 0 || selectedCategoryFilter.includes(addon.category);
 			return matchesSearch && matchesCategory;
 		})
 	);
@@ -101,13 +103,10 @@
 	}
 </script>
 
-<div class="flex items-center justify-between gap-4 mb-4">
-	<div>
-		<h1 class="text-lg font-semibold md:text-2xl">Global Addons</h1>
-		<p class="text-sm text-slate-500">Kelola addons global yang akan dipakai user saat order.</p>
-	</div>
-	<Button onclick={startCreate}>Tambah Baru</Button>
-</div>
+<AdminPage>
+<AdminPageHeader title="Global Addons" description="Kelola pilihan tambahan yang dapat digunakan pelanggan saat memesan.">
+	{#snippet actions()}<Button onclick={startCreate}>Tambah Addon</Button>{/snippet}
+</AdminPageHeader>
 
 {#if form?.error || data.error}
 	<div class="p-4 bg-destructive/15 text-destructive font-medium text-sm mb-4 rounded-md">
@@ -115,31 +114,17 @@
 	</div>
 {/if}
 
-<div class="mb-6 flex flex-col sm:flex-row justify-between items-center gap-4 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+<div class="flex flex-col items-center justify-between gap-3 rounded-xl border bg-card p-3 shadow-sm sm:flex-row">
 	<div class="flex flex-1 items-center gap-3 w-full">
-		<div class="relative max-w-sm flex-1">
-			<svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-			<Input bind:value={searchQuery} placeholder="Cari addon..." class="pl-9 bg-slate-50 border-slate-200 h-9" />
+		<div class="max-w-sm flex-1">
+			<AdminSearchField bind:value={searchQuery} placeholder="Cari addon atau kategori..." label="Cari addon" />
 		</div>
-		<select bind:value={selectedCategoryFilter} class="h-9 rounded-md border border-slate-200 bg-slate-50 px-3 py-1 text-sm outline-none focus:ring-2 focus:ring-primary max-w-[150px] capitalize">
-			<option value="all">Semua Kategori</option>
-			{#each allCategories as cat}
-				<option value={cat}>{cat}</option>
-			{/each}
-		</select>
-	</div>
-	
-	<div class="flex items-center gap-2 border-l border-slate-200 pl-4">
-		<span class="text-xs font-medium text-slate-500">Tampilan:</span>
-		<div class="flex bg-slate-100 p-1 rounded-lg">
-			<button class="p-1.5 rounded-md transition-colors {viewMode === 'card' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-400 hover:text-slate-600'}" onclick={() => viewMode = 'card'} aria-label="Card View">
-				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
-			</button>
-			<button class="p-1.5 rounded-md transition-colors {viewMode === 'table' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-400 hover:text-slate-600'}" onclick={() => viewMode = 'table'} aria-label="Table View">
-				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
-			</button>
+		<div class="w-full max-w-[220px]">
+			<AdminCategoryMultiSelect options={categoryFilterOptions} bind:value={selectedCategoryFilter} />
 		</div>
 	</div>
+
+	<AdminViewToggle bind:value={viewMode} />
 </div>
 
 {#if viewMode === 'card'}
@@ -248,6 +233,7 @@
 		</div>
 	</div>
 {/if}
+</AdminPage>
 
 <!-- BOTTOM SHEET DRAWER FOR FORM -->
 {#if isDrawerOpen}

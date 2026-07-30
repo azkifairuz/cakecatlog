@@ -1,6 +1,8 @@
 <script>
 	import { enhance } from '$app/forms';
 	import { toast } from 'svelte-sonner';
+	import { AdminPage, AdminPageHeader, AdminStatusBadge } from '$lib/components/admin';
+	import { Switch } from '$lib/components/ui/switch';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
@@ -80,13 +82,8 @@
 	let activeCount = $derived(banners.filter(b => b.is_active).length);
 </script>
 
-<div class="flex flex-col gap-6 w-full max-w-5xl mx-auto">
-	<div class="flex items-center justify-between">
-		<div>
-			<h1 class="text-2xl font-bold tracking-tight text-slate-900">Banners Management</h1>
-			<p class="text-slate-500 mt-1">Unggah dan atur hero banner yang muncul di beranda.</p>
-		</div>
-	</div>
+<AdminPage class="max-w-5xl">
+	<AdminPageHeader title="Banners" description="Unggah dan atur hero banner yang muncul di beranda." />
 
 	<!-- Stats & Validation Card -->
 	<div class="bg-white rounded-2xl border border-slate-200 p-5 flex flex-col md:flex-row gap-4 items-center justify-between shadow-sm">
@@ -106,10 +103,7 @@
 				<span>Minimal 2 dan Maksimal 5 banner aktif!</span>
 			</div>
 		{:else}
-			<div class="flex items-center gap-2 text-green-600 bg-green-50 px-4 py-2 rounded-xl text-sm font-medium border border-green-100">
-				<Check class="h-4 w-4" />
-				<span>Status Valid</span>
-			</div>
+			<AdminStatusBadge status="active" label="Status valid" />
 		{/if}
 	</div>
 
@@ -136,10 +130,7 @@
 							<p class="text-[11px] text-slate-500">Rekomendasi rasio 16:9 atau landscape lebar.</p>
 						</div>
 						
-						<div class="flex items-center gap-2 pt-2">
-							<input type="checkbox" id="is_active" name="is_active" class="rounded border-slate-300 text-primary focus:ring-primary" checked={activeCount < 5} />
-							<Label for="is_active" class="text-sm cursor-pointer">Langsung Aktifkan</Label>
-						</div>
+						<Switch id="is_active" name="is_active" checked={activeCount < 5} label="Langsung aktifkan" description="Banner langsung tampil setelah diunggah" />
 
 						<Button type="submit" disabled={isUploading} class="w-full mt-2 bg-primary hover:bg-[#724828] text-white rounded-xl">
 							{#if isUploading}
@@ -153,8 +144,8 @@
 			</div>
 		</div>
 
-			<!-- Manage Banners -->
-			<div class="lg:col-span-2 space-y-4">
+		<!-- Manage Banners -->
+		<div class="min-w-0 lg:col-span-2">
 				<form id="banners-update-form" method="POST" action="?/update_all" use:enhance={handleUpdateAll} class="hidden">
 					<input type="hidden" name="banners" value={JSON.stringify(banners)} />
 				</form>
@@ -168,9 +159,9 @@
 							class="rounded-2xl"
 						/>
 					{/if}
-					<div class="p-5 border-b border-slate-100 flex items-center justify-between">
+					<div class="flex flex-wrap items-center justify-between gap-3 border-b border-border p-4">
 						<h3 class="font-bold text-slate-800">Daftar Banner</h3>
-						<Button form="banners-update-form" type="submit" size="sm" disabled={isSaving || activeCount < 2 || activeCount > 5} class="bg-slate-900 hover:bg-slate-800 text-white rounded-full px-5">
+						<Button form="banners-update-form" type="submit" size="sm" disabled={isSaving || activeCount < 2 || activeCount > 5}>
 							{#if isSaving}
 								<Loading label="Menyimpan..." size="sm" class="text-white" />
 							{:else}
@@ -187,7 +178,7 @@
 						{:else}
 							<div class="flex flex-col">
 								{#each banners as banner, index (banner.id)}
-									<div class="flex items-center gap-4 p-4 border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors">
+								<div class="flex min-w-0 items-center gap-3 border-b border-border p-3 last:border-0 hover:bg-muted/50">
 										
 										<!-- Order Input -->
 										<div class="flex flex-col items-center gap-1 w-12 shrink-0">
@@ -200,21 +191,13 @@
 										</div>
 
 										<!-- Thumbnail -->
-										<div class="h-20 w-36 shrink-0 rounded-lg overflow-hidden border border-slate-200 bg-slate-100">
+									<div class="h-16 w-24 shrink-0 overflow-hidden rounded-lg border bg-muted xl:h-20 xl:w-36">
 											<img src={getImageUrl(banner.image_url, { width: 360, height: 200, quality: 75, resize: 'cover' })} alt="Banner" class="w-full h-full object-cover" loading="lazy" decoding="async" />
 										</div>
 
 										<!-- Status Toggle -->
-										<div class="flex-1 flex flex-col justify-center">
-											<label class="flex items-center gap-2 cursor-pointer w-fit">
-												<div class="relative inline-flex items-center">
-													<input type="checkbox" bind:checked={banner.is_active} class="sr-only peer" />
-													<div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
-												</div>
-												<span class="text-sm font-semibold {banner.is_active ? 'text-green-600' : 'text-slate-500'}">
-													{banner.is_active ? 'Aktif' : 'Nonaktif'}
-												</span>
-											</label>
+										<div class="flex-1">
+										<Switch bind:checked={banner.is_active} label={banner.is_active ? 'Aktif' : 'Nonaktif'} class="min-w-0 border-0 bg-transparent p-2" />
 										</div>
 
 										<!-- Actions -->
@@ -235,4 +218,4 @@
 				</div>
 			</div>
 		</div>
-	</div>
+</AdminPage>
