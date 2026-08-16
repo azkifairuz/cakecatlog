@@ -330,7 +330,7 @@
 				{/if}
 			</p>
 			{#if searchQuery || statusFilter !== 'All' || dateFilter !== '' || dateTypeFilter !== 'delivery_date'}
-				<Button variant="outline" size="sm" class="mt-4 rounded-full" onclick={() => {
+				<Button size="sm" class="mt-4 rounded-full" onclick={() => {
 					searchQuery = '';
 					statusFilter = 'All';
 					dateFilter = ''; // Show all dates

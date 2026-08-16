@@ -8,7 +8,6 @@
 	import Loading from '$lib/components/Loading.svelte';
 	import PriceInput from '$lib/components/PriceInput.svelte';
 	import { Label } from '$lib/components/ui/label';
-	import { Switch } from '$lib/components/ui/switch';
 	import { Textarea } from '$lib/components/ui/textarea';
 	import * as Card from '$lib/components/ui/card';
 	import { getImageUrl } from '$lib/image-url.js';
@@ -18,6 +17,7 @@
 	import SearchIcon from '@lucide/svelte/icons/search';
 	import RotateCcwIcon from '@lucide/svelte/icons/rotate-ccw';
 	import { AdminCategoryMultiSelect, AdminPageHeader, AdminSearchField } from '$lib/components/admin';
+	import ProductAddonEditor from '$lib/components/admin/ProductAddonEditor.svelte';
 
 	let { data, form } = $props();
 	let isFormOpen = $state(false);
@@ -47,10 +47,6 @@
 	let productVariants = $state([]);
 	let productAddonStates = $state({});
 	let newAddonRows = $state([]);
-	let addonCategories = $derived(
-		[...new Set((data.globalAddons ?? []).map((addon) => addon.category?.trim()).filter(Boolean))]
-			.sort((a, b) => a.localeCompare(b, 'id'))
-	);
 
 	// Detail drawer
 	let selectedProductDetail = $state(null);
@@ -271,33 +267,6 @@
 		selectedProductDetail = null;
 	}
 
-	let addonSearchQuery = $state('');
-
-	let filteredGlobalAddons = $derived(
-		data.globalAddons.filter(addon => 
-			addon.name.toLowerCase().includes(addonSearchQuery.toLowerCase()) || 
-			addon.category.toLowerCase().includes(addonSearchQuery.toLowerCase())
-		)
-	);
-
-	let groupedGlobalAddons = $derived(
-		filteredGlobalAddons.reduce((groups, addon) => {
-			groups[addon.category] = [...(groups[addon.category] ?? []), addon];
-			return groups;
-		}, {})
-	);
-	function getCategoryOverrideCount(addons) {
-		return addons.filter((addon) => productAddonStates[addon.id] !== undefined).length;
-	}
-
-	function getCategoryActiveOverrideCount(addons) {
-		return addons.filter((addon) => productAddonStates[addon.id] === 'active').length;
-	}
-
-	function getCategoryInactiveOverrideCount(addons) {
-		return addons.filter((addon) => productAddonStates[addon.id] === 'inactive').length;
-	}
-
 	let filteredCategories = $derived(
 		categories.filter((category) =>
 			category.name.toLowerCase().includes(categoryQuery.trim().toLowerCase())
@@ -334,59 +303,12 @@
 		categoryCreateError = '';
 	}
 
-	function setProductAddonState(addonId, state) {
-		if (state === 'default') {
-			const { [addonId]: _removed, ...rest } = productAddonStates;
-			productAddonStates = rest;
-			return;
-		}
-
-		productAddonStates = { ...productAddonStates, [addonId]: state };
-	}
-
 	function serializeProductAddonStates() {
 		if (!customizeAddons) return [];
 		return Object.entries(productAddonStates).map(([addon_id, state]) => ({
 			addon_id,
 			is_active: state === 'active'
 		}));
-	}
-
-	function addNewAddonRow() {
-		newAddonRows = [
-			...newAddonRows,
-			{
-				category: '',
-				categoryQuery: '',
-				isCategoryDropdownOpen: false,
-				name: '',
-				additional_price: '',
-				is_dark_color: false,
-				dark_color_surcharge: '',
-				is_active: true
-			}
-		];
-	}
-
-	function removeNewAddonRow(index) {
-		newAddonRows = newAddonRows.filter((_, i) => i !== index);
-	}
-
-	function getFilteredAddonCategories(query) {
-		const normalizedQuery = query.trim().toLowerCase();
-		if (!normalizedQuery) return addonCategories;
-		return addonCategories.filter((category) => category.toLowerCase().includes(normalizedQuery));
-	}
-
-	function selectNewAddonCategory(row, category) {
-		row.category = category;
-		row.categoryQuery = category;
-		row.isCategoryDropdownOpen = false;
-	}
-
-	function canUseNewAddonCategory(row) {
-		const query = row.categoryQuery.trim();
-		return query && !addonCategories.some((category) => category.toLowerCase() === query.toLowerCase());
 	}
 
 	function serializeNewAddons() {
@@ -678,169 +600,12 @@
 					<Textarea id="handling_warning" name="handling_warning" placeholder="Contoh: Harap simpan di dalam kulkas setelah diterima." rows="2" value={editingProduct?.handling_warning ?? ''} class="bg-slate-50 focus:bg-white resize-none border-amber-200 focus-visible:ring-amber-500" />
 				</div>
 
-				<div class="grid gap-2 md:col-span-2 mt-2 pt-4 border-t border-slate-100">
-					<div class="flex items-center justify-between">
-						<div>
-							<h3 class="text-sm font-semibold text-slate-800">Modifikasi Addons</h3>
-							<p class="text-xs text-muted-foreground">Aktifkan untuk mengubah pengaturan addon khusus untuk produk ini.</p>
-						</div>
-						<Switch bind:checked={customizeAddons} label="" description="" />
-					</div>
-					
-					{#if customizeAddons}
-						<div class="grid gap-4 mt-2" transition:fly={{ y: 20, duration: 250, opacity: 0 }}>
-													<div class="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-3">
-								<div class="flex items-center justify-between gap-3">
-									<div>
-										<h4 class="text-sm font-semibold text-slate-800">Tambah Addon Baru</h4>
-										<p class="text-xs text-slate-500">Addon baru akan masuk ke global addons dan otomatis aktif untuk product ini.</p>
-									</div>
-									<Button type="button" variant="outline" size="sm" onclick={addNewAddonRow}>+ Addon</Button>
-								</div>
-
-								{#if newAddonRows.length > 0}
-									<div class="mt-3 space-y-3">
-										{#each newAddonRows as row, index}
-											<div class="rounded-xl border border-slate-200 bg-white p-3">
-											<div class="grid gap-2 md:grid-cols-4">
-												<div class="relative">
-													<Input
-														id={`addon-category-${index}`}
-														bind:value={row.categoryQuery}
-														placeholder="Cari category"
-														autocomplete="off"
-														class="bg-slate-50 pr-9"
-														onfocus={() => (row.isCategoryDropdownOpen = true)}
-														oninput={() => {
-															row.category = '';
-															row.isCategoryDropdownOpen = true;
-														}}
-													/>
-													<button
-														type="button"
-														class="absolute inset-y-0 right-1 flex items-center px-2 text-muted-foreground"
-														onclick={() => (row.isCategoryDropdownOpen = !row.isCategoryDropdownOpen)}
-														aria-label="Buka pilihan category addon"
-													>
-														<svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-													</button>
-
-													{#if row.isCategoryDropdownOpen}
-														<div class="absolute z-30 mt-2 max-h-56 w-full overflow-y-auto rounded-xl border border-border bg-popover p-1 text-popover-foreground shadow-xl">
-															{#each getFilteredAddonCategories(row.categoryQuery) as category}
-																<button type="button" class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm hover:bg-accent" onclick={() => selectNewAddonCategory(row, category)}>
-																	<span class="truncate">{category}</span>
-																	{#if row.category === category}<span class="text-xs font-semibold text-primary">Dipilih</span>{/if}
-																</button>
-															{/each}
-															{#if canUseNewAddonCategory(row)}
-																<button type="button" class="mt-1 flex w-full items-center gap-2 rounded-lg border border-dashed border-primary/30 bg-primary/5 px-3 py-2 text-left text-sm font-semibold text-primary hover:bg-primary/10" onclick={() => selectNewAddonCategory(row, row.categoryQuery.trim())}>
-																	+ Gunakan “{row.categoryQuery.trim()}”
-																</button>
-															{/if}
-															{#if getFilteredAddonCategories(row.categoryQuery).length === 0 && !canUseNewAddonCategory(row)}
-																<p class="px-3 py-2 text-sm text-muted-foreground">Belum ada category addon.</p>
-															{/if}
-														</div>
-													{/if}
-												</div>
-													<Input bind:value={row.name} placeholder="Nama addon" class="bg-slate-50 md:col-span-2" />
-													<PriceInput bind:value={row.additional_price} placeholder="Harga" class="bg-slate-50" />
-												</div>
-
-												<div class="mt-3 grid gap-3 md:grid-cols-2">
-													<Switch
-														bind:checked={row.is_active}
-														label="Aktif"
-														description="Langsung tampilkan addon ini"
-													/>
-													<Switch
-														bind:checked={row.is_dark_color}
-														label="Warna Gelap"
-														description="Aktifkan biaya warna gelap"
-													/>
-												</div>
-
-												<div class="mt-3 flex items-end gap-3">
-													{#if row.is_dark_color}
-														<div class="grid flex-1 gap-1.5">
-															<Label>Dark Color Surcharge</Label>
-															<PriceInput bind:value={row.dark_color_surcharge} placeholder="Biaya gelap" class="bg-slate-50" />
-														</div>
-													{:else}
-														<span class="flex-1 text-xs text-slate-500">Biaya warna gelap akan muncul saat toggle Warna Gelap aktif.</span>
-													{/if}
-													<Button type="button" variant="ghost" size="icon" class="shrink-0 text-red-500 hover:bg-red-50" onclick={() => removeNewAddonRow(index)} aria-label={`Hapus addon baru ${index + 1}`}>
-														<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-													</Button>
-												</div>
-											</div>
-										{/each}
-									</div>
-								{/if}
-							</div>
-							<div>
-								<div class="mb-3 flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
-									<div>
-										<h3 class="text-sm font-semibold text-slate-800">Product Addons</h3>
-										<p class="text-xs text-muted-foreground">Default mengikuti global. Buka category hanya jika perlu override untuk produk ini.</p>
-									</div>
-									<div class="w-full sm:max-w-xs">
-										<AdminSearchField bind:value={addonSearchQuery} placeholder="Cari addon atau kategori..." label="Cari addon produk" />
-									</div>
-								</div>
-
-								<div class="space-y-3">
-									{#each Object.entries(groupedGlobalAddons) as [category, addons]}
-										{@const overrideCount = getCategoryOverrideCount(addons)}
-										<details class="group rounded-xl border border-slate-200 bg-white shadow-sm" open={overrideCount > 0 || addonSearchQuery.trim() !== ''}>
-											<summary class="flex cursor-pointer list-none items-center justify-between gap-3 rounded-xl px-3 py-3 transition-colors hover:bg-slate-50">
-												<div class="min-w-0">
-													<div class="flex flex-wrap items-center gap-2">
-														<span class="font-semibold capitalize text-slate-800">{category}</span>
-														<span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-500">{addons.length} addon</span>
-														{#if overrideCount > 0}
-															<span class="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase text-primary">{overrideCount} override</span>
-														{/if}
-													</div>
-													<p class="mt-1 text-xs text-slate-500">
-														{getCategoryActiveOverrideCount(addons)} dipaksa aktif, {getCategoryInactiveOverrideCount(addons)} disembunyikan, sisanya global default.
-													</p>
-												</div>
-												<svg class="h-4 w-4 shrink-0 text-slate-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-											</summary>
-
-											<div class="space-y-2 border-t border-slate-100 p-3">
-												{#each addons as addon}
-													<div class="rounded-lg border border-slate-100 bg-slate-50 p-2 text-sm">
-														<div class="flex items-start justify-between gap-3">
-															<div class="min-w-0">
-																<span class="block font-semibold text-slate-700">{addon.name}</span>
-																<span class="text-xs text-slate-500">{formatCurrency(addon.additional_price)}{addon.is_active ? '' : ' · global nonaktif'}</span>
-															</div>
-															<span class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase {productAddonStates[addon.id] === 'active' ? 'bg-emerald-50 text-emerald-700' : productAddonStates[addon.id] === 'inactive' ? 'bg-red-50 text-red-700' : 'bg-slate-100 text-slate-500'}">
-																{productAddonStates[addon.id] ?? 'default'}
-															</span>
-														</div>
-														<div class="mt-2 grid grid-cols-3 gap-1 rounded-lg bg-white p-1">
-															<button type="button" class="rounded-md px-2 py-1 text-xs font-semibold {productAddonStates[addon.id] === undefined ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-500 hover:bg-slate-50'}" onclick={() => setProductAddonState(addon.id, 'default')}>Default</button>
-															<button type="button" class="rounded-md px-2 py-1 text-xs font-semibold {productAddonStates[addon.id] === 'active' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-500 hover:bg-emerald-50 hover:text-emerald-700'}" onclick={() => setProductAddonState(addon.id, 'active')}>Aktif</button>
-															<button type="button" class="rounded-md px-2 py-1 text-xs font-semibold {productAddonStates[addon.id] === 'inactive' ? 'bg-red-600 text-white shadow-sm' : 'text-slate-500 hover:bg-red-50 hover:text-red-700'}" onclick={() => setProductAddonState(addon.id, 'inactive')}>Nonaktif</button>
-														</div>
-													</div>
-												{/each}
-											</div>
-										</details>
-									{:else}
-										<div class="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-center text-sm text-slate-500">
-											Tidak ada addon yang cocok dengan pencarian.
-										</div>
-									{/each}
-								</div>
-							</div>
-						</div>
-					{/if}
-				</div>
+				<ProductAddonEditor
+					globalAddons={data.globalAddons ?? []}
+					bind:productAddonStates
+					bind:customizeAddons
+					bind:newAddonRows
+				/>
 				
 				<div class="grid gap-3 md:col-span-2 mt-2 pt-4 border-t border-slate-100">
 					<div class="flex items-center justify-between">
