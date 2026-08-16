@@ -9,7 +9,9 @@
 	import { Spinner } from '$lib/components/ui/spinner';
 	import * as Card from '$lib/components/ui/card';
 	import * as Alert from '$lib/components/ui/alert';
-	import { AdminPage, AdminPageHeader, AdminStatusBadge } from '$lib/components/admin';
+	import AdminPage from '$lib/components/admin/AdminPage.svelte';
+	import AdminPageHeader from '$lib/components/admin/AdminPageHeader.svelte';
+	import AdminStatusBadge from '$lib/components/admin/AdminStatusBadge.svelte';
 
 	let { data, form } = $props();
 	let currentState = $state({ status: 'idle', qr: null, message: 'Memuat status WhatsApp.' });

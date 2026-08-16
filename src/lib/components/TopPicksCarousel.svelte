@@ -1,7 +1,8 @@
 <script>
 	import emblaCarouselSvelte from 'embla-carousel-svelte';
 	import Autoplay from 'embla-carousel-autoplay';
-	import { ChevronLeft, ChevronRight } from 'lucide-svelte';
+	import ChevronLeft from '@lucide/svelte/icons/chevron-left';
+	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import { getImageUrl } from '$lib/image-url.js';
 	import { getStartFromPrice } from '$lib/pricing.js';
 	import { getI18n } from '$lib/i18n.svelte.js';
@@ -60,7 +61,7 @@
 			<div class="flex items-end justify-between mb-10">
 				<div>
 					<p class="text-primary text-xs font-bold uppercase tracking-widest mb-2">{i18n.t('topPicks.eyebrow')}</p>
-					<h2 class="text-3xl md:text-4xl font-bold text-[#4A3B32] font-['Playfair_Display']">{i18n.t('topPicks.title')}</h2>
+					<h2 class="font-serif text-3xl font-bold text-[#4A3B32] md:text-4xl">{i18n.t('topPicks.title')}</h2>
 				</div>
 				
 				<!-- Desktop Navigation Arrows -->

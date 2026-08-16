@@ -41,7 +41,7 @@
 	>
 		<!-- Header -->
 		<div class="px-6 py-5 border-b border-primary/10 flex items-center justify-between bg-[#FFFBF7]">
-			<h2 class="text-xl font-bold text-[#4A3B32] font-['Playfair_Display']">{i18n.t('cart.title')}</h2>
+			<h2 class="font-serif text-xl font-bold text-[#4A3B32]">{i18n.t('cart.title')}</h2>
 			<button 
 				onclick={closeCart}
 				aria-label={i18n.t('cart.close')}

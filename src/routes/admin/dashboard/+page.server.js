@@ -1,19 +1,43 @@
-export const load = async ({ locals: { supabase } }) => {
-	const { data: orders, error } = await supabase
-		.from('orders')
-		.select(`
-			*,
-			order_items (
-				*,
-				products (
-					name
+import { error as httpError } from '@sveltejs/kit';
+import {
+	applyOrderFilters,
+	DASHBOARD_PAGE_SIZE,
+	getOrderPageRange,
+	getPagination,
+	ORDER_LIST_SELECT,
+	parseOrderFilters,
+	summarizeOrders
+} from '$lib/server/admin-orders.js';
+
+export const load = async ({ locals: { supabase }, url }) => {
+	const filters = parseOrderFilters(url, { pageSize: DASHBOARD_PAGE_SIZE });
+	const { from, to } = getOrderPageRange(filters);
+	const summaryQuery = applyOrderFilters(
+		supabase.from('orders').select('status, amount'),
+		filters
+	);
+	const pendingQuery =
+		filters.status === 'All' || filters.status === 'Pending'
+			? applyOrderFilters(
+					supabase.from('orders').select(ORDER_LIST_SELECT, { count: 'exact' }),
+					filters,
+					{ forceStatus: 'Pending' }
 				)
-			)
-		`)
-		.order('created_at', { ascending: false });
+					.order('created_at', { ascending: false })
+					.range(from, to)
+			: Promise.resolve({ data: [], count: 0, error: null });
+
+	const [summaryResult, pendingResult] = await Promise.all([summaryQuery, pendingQuery]);
+	if (summaryResult.error || pendingResult.error) {
+		console.error('Unable to load admin dashboard:', summaryResult.error ?? pendingResult.error);
+		throw httpError(500, 'Ringkasan penjualan belum dapat dimuat.');
+	}
 
 	return {
-		orders: orders ?? [],
+		summary: summarizeOrders(summaryResult.data),
+		orders: pendingResult.data ?? [],
+		filters,
+		pagination: getPagination(pendingResult.count, filters)
 	};
 };
 

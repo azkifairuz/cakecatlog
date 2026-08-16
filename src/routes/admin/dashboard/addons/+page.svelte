@@ -9,7 +9,11 @@
 	import { Switch } from '$lib/components/ui/switch';
 	import Loading from '$lib/components/Loading.svelte';
 	import PriceInput from '$lib/components/PriceInput.svelte';
-	import { AdminCategoryMultiSelect, AdminPage, AdminPageHeader, AdminSearchField, AdminViewToggle } from '$lib/components/admin';
+	import AdminCategoryMultiSelect from '$lib/components/admin/AdminCategoryMultiSelect.svelte';
+	import AdminPage from '$lib/components/admin/AdminPage.svelte';
+	import AdminPageHeader from '$lib/components/admin/AdminPageHeader.svelte';
+	import AdminSearchField from '$lib/components/admin/AdminSearchField.svelte';
+	import AdminViewToggle from '$lib/components/admin/AdminViewToggle.svelte';
 
 	let { data, form } = $props();
 	let editingAddon = $state(null);

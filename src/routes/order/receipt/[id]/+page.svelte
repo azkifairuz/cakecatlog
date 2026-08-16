@@ -66,7 +66,7 @@
 					</svg>
 				</div>
 				<p class="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-primary/80">Pesanan terkirim</p>
-				<h1 class="font-['Playfair_Display'] text-3xl font-bold leading-tight sm:text-4xl">Terima kasih, pesanan kamu sudah kami terima.</h1>
+				<h1 class="font-serif text-3xl font-bold leading-tight sm:text-4xl">Terima kasih, pesanan kamu sudah kami terima.</h1>
 				<p class="mt-4 max-w-2xl text-sm leading-6 text-[#4A3B32]/70 sm:text-base">
 					Status pesanan {orderNumber} saat ini masih <span class="font-bold text-amber-700">Pending</span>. Admin sedang mengecek detail pesanan dan akan memprosesnya segera.
 				</p>

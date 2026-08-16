@@ -68,7 +68,7 @@
 		<p class="mb-3 text-xs font-bold uppercase tracking-[0.24em] text-primary">
 			{i18n.t('catalog.eyebrow')}
 		</p>
-		<h1 class="font-['Playfair_Display'] text-4xl font-bold text-[#4A3B32] sm:text-5xl">
+		<h1 class="font-serif text-4xl font-bold text-[#4A3B32] sm:text-5xl">
 			{i18n.t('catalog.title')}
 		</h1>
 		<p class="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-[#4A3B32]/60 sm:text-base">

@@ -16,7 +16,9 @@
 	import { toast } from 'svelte-sonner';
 	import SearchIcon from '@lucide/svelte/icons/search';
 	import RotateCcwIcon from '@lucide/svelte/icons/rotate-ccw';
-	import { AdminCategoryMultiSelect, AdminPageHeader, AdminSearchField } from '$lib/components/admin';
+	import AdminCategoryMultiSelect from '$lib/components/admin/AdminCategoryMultiSelect.svelte';
+	import AdminPageHeader from '$lib/components/admin/AdminPageHeader.svelte';
+	import AdminSearchField from '$lib/components/admin/AdminSearchField.svelte';
 	import ProductAddonEditor from '$lib/components/admin/ProductAddonEditor.svelte';
 
 	let { data, form } = $props();

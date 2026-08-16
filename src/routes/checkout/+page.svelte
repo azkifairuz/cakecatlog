@@ -72,7 +72,7 @@
 			<!-- Form Info Pemesan -->
 			<div class="w-full lg:w-2/3">
 				<div class="bg-white rounded-3xl p-8 border border-primary/10 shadow-sm">
-					<h2 class="text-2xl font-bold text-[#4A3B32] font-['Playfair_Display'] mb-6">
+					<h2 class="mb-6 font-serif text-2xl font-bold text-[#4A3B32]">
 						{selectedDeliveryOption ? (selectedDeliveryOption === 'delivery' ? i18n.t('checkout.shippingInfo') : i18n.t('checkout.pickupInfo')) : i18n.t('checkout.deliveryOptionTitle')}
 					</h2>
 					

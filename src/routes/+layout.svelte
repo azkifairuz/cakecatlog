@@ -2,8 +2,9 @@
 	import './layout.css';
 	import { page } from '$app/stores';
 	import { onMount, untrack } from 'svelte';
-	import { Clock, MapPin, MessageCircle } from 'lucide-svelte';
-	import CartDrawer from '$lib/components/CartDrawer.svelte';
+	import Clock from '@lucide/svelte/icons/clock';
+	import MapPin from '@lucide/svelte/icons/map-pin';
+	import MessageCircle from '@lucide/svelte/icons/message-circle';
 	import { cart } from '$lib/stores/cart.svelte.js';
 	import { getWhatsAppHref, normalizeSiteInfo } from '$lib/site-info.js';
 	import { createI18n, languageOptions, setI18n } from '$lib/i18n.svelte.js';
@@ -13,11 +14,36 @@
 
 	// Check if we are on an admin route
 	let isAdminRoute = $derived($page.url.pathname.startsWith('/admin'));
-	let siteInfo = $derived(normalizeSiteInfo(data?.siteInfo));
+	let siteInfo = $state(normalizeSiteInfo());
+	let CartDrawerComponent = $state();
+	let cartDrawerPromise;
 	let whatsappHref = $derived(getWhatsAppHref(siteInfo?.whatsapp_number));
+
+	async function loadCartDrawer() {
+		cartDrawerPromise ??= import('$lib/components/CartDrawer.svelte');
+		CartDrawerComponent = (await cartDrawerPromise).default;
+	}
+
+	function openCart() {
+		cart.isOpen = true;
+		void loadCartDrawer();
+	}
+
+	$effect(() => {
+		const value = data?.siteInfo;
+		if (value && typeof value.then === 'function') {
+			value.then((result) => (siteInfo = normalizeSiteInfo(result)));
+		} else {
+			siteInfo = normalizeSiteInfo(value);
+		}
+	});
 
 	onMount(() => {
 		i18n.init(data?.locale);
+	});
+
+	$effect(() => {
+		if (cart.isOpen && !CartDrawerComponent) void loadCartDrawer();
 	});
 </script>
 
@@ -30,7 +56,7 @@
 </svelte:head>
 
 {#if !isAdminRoute}
-	<div class="min-h-screen flex flex-col font-['Plus_Jakarta_Sans'] bg-white">
+	<div class="min-h-screen flex flex-col font-sans bg-white">
 		<header class="w-full bg-white relative z-50">
 			<div class="container mx-auto flex h-20 items-center justify-between px-6 lg:px-12">
 				<a href="/" class="font-pinyon text-3xl tracking-wider text-[#95724E]">dessertbyfir</a>
@@ -56,7 +82,7 @@
 						{/each}
 					</div>
 
-					<button onclick={() => cart.isOpen = true} class="relative p-2 text-[#4A3B32] hover:text-primary transition-colors" aria-label={i18n.t('nav.openCart')}>
+					<button onclick={openCart} class="relative p-2 text-[#4A3B32] hover:text-primary transition-colors" aria-label={i18n.t('nav.openCart')}>
 						<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
 						{#if cart.totalItems > 0}
 							<span class="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/4 -translate-y-1/4 bg-red-600 rounded-full">{cart.totalItems}</span>
@@ -121,7 +147,9 @@
 		</footer>
 
 		<!-- Global Cart Drawer -->
-		<CartDrawer />
+		{#if CartDrawerComponent}
+			<CartDrawerComponent />
+		{/if}
 	</div>
 {:else}
 	{@render children()}

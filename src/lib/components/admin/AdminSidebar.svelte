@@ -1,13 +1,13 @@
 <script>
-	import { page } from '$app/stores';
 	import * as Sidebar from '$lib/components/ui/sidebar';
-	import { LogOut, ShoppingCart } from 'lucide-svelte';
+	import LogOut from '@lucide/svelte/icons/log-out';
+	import ShoppingCart from '@lucide/svelte/icons/shopping-cart';
 
-	let { navItems } = $props();
+	let { navItems, activePath = '/admin/dashboard' } = $props();
 	const sidebar = Sidebar.useSidebar();
 
 	function isActive(href) {
-		return href === '/admin/dashboard' ? $page.url.pathname === href : $page.url.pathname.startsWith(href);
+		return href === '/admin/dashboard' ? activePath === href : activePath.startsWith(href);
 	}
 </script>
 
@@ -25,7 +25,7 @@
 		</div>
 	</Sidebar.Header>
 
-	<Sidebar.Content class="p-2">
+	<Sidebar.Content class="p-2" data-sveltekit-preload-code="eager">
 		<Sidebar.Menu>
 			{#each navItems as item}
 				{@const Icon = item.icon}

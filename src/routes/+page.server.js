@@ -129,17 +129,23 @@ const TOP_PICKS_SELECT = `
 `;
 
 export const load = async ({ locals: { supabase } }) => {
-  // Critical: categories & banners → kecil, fetch blocking
-  const [categoriesResult, globalAddonsResult] = await Promise.all([
-    supabase.from('categories').select('id, name, slug').order('name'),
-    supabase.from('global_addons')
+  const categoriesPromise = supabase
+    .from('categories')
+    .select('id, name, slug')
+    .order('name')
+    .then((result) => {
+      if (result.error) console.error('Failed to load home categories', result.error);
+      return result.data ?? [];
+    });
+
+  const globalAddonsPromise = supabase
+    .from('global_addons')
       .select('id, category, name, additional_price, is_dark_color, dark_color_surcharge, is_active')
       .order('category').order('name')
-  ]);
-
-  const globalAddons = globalAddonsResult.data ?? [];
-  const withAddons = (list) =>
-    list.map((p) => ({ ...p, global_addons: globalAddons }));
+    .then((result) => {
+      if (result.error) console.error('Failed to load global addons', result.error);
+      return result.data ?? [];
+    });
 
   // Non-critical: stream ini, jangan di-await
   const bannersPromise = supabase
@@ -156,7 +162,7 @@ export const load = async ({ locals: { supabase } }) => {
       return r.data ?? [];
     });
 
-  const productsPromise = supabase
+  const productRowsPromise = supabase
     .from('products')
     .select(PRODUCT_SELECT)
     .eq('is_active', true).eq('is_available', true)
@@ -164,7 +170,16 @@ export const load = async ({ locals: { supabase } }) => {
     .order('is_primary', { foreignTable: 'product_images', ascending: false })
     .limit(1, { foreignTable: 'product_images' })
     .limit(HOME_CATALOG_LIMIT)
-    .then(r => withAddons(r.data ?? []));
+    .then((result) => {
+      if (result.error) console.error('Failed to load home products', result.error);
+      return result.data ?? [];
+    });
+
+  const catalogPromise = Promise.all([categoriesPromise, productRowsPromise, globalAddonsPromise])
+    .then(([categories, products, globalAddons]) => ({
+      categories,
+      products: products.map((product) => ({ ...product, global_addons: globalAddons }))
+    }));
 
   const topPicksPromise = supabase
     .from('top_selling_products')
@@ -175,20 +190,19 @@ export const load = async ({ locals: { supabase } }) => {
     .order('is_primary', { foreignTable: 'product_images', ascending: false })
     .limit(1, { foreignTable: 'product_images' })
     .limit(HOME_TOP_PICKS_LIMIT)
-    .then((r) => {
-      if (r.error) {
-        console.error('Failed to load top picks', r.error);
+    .then(async (result) => {
+      if (result.error) {
+        console.error('Failed to load top picks', result.error);
         return [];
       }
 
-      return withAddons(r.data ?? []);
+      const globalAddons = await globalAddonsPromise;
+      return (result.data ?? []).map((product) => ({ ...product, global_addons: globalAddons }));
     });
 
   return {
-    categories: categoriesResult.data ?? [],
-    // Ini di-stream, SvelteKit kirim HTML duluan
     banners: bannersPromise,
-    products: productsPromise,
+    catalog: catalogPromise,
     topPicks: topPicksPromise
   };
 };

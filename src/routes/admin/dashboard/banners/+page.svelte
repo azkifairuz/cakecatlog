@@ -1,14 +1,22 @@
 <script>
 	import { enhance } from '$app/forms';
 	import { toast } from 'svelte-sonner';
-	import { AdminPage, AdminPageHeader, AdminStatusBadge } from '$lib/components/admin';
+	import AdminPage from '$lib/components/admin/AdminPage.svelte';
+	import AdminPageHeader from '$lib/components/admin/AdminPageHeader.svelte';
+	import AdminStatusBadge from '$lib/components/admin/AdminStatusBadge.svelte';
 	import { Switch } from '$lib/components/ui/switch';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import Loading from '$lib/components/Loading.svelte';
 	import { getImageUrl } from '$lib/image-url.js';
-	import { Plus, Trash2, GripVertical, Check, X, AlertCircle, Image } from 'lucide-svelte';
+	import AlertCircle from '@lucide/svelte/icons/circle-alert';
+	import Check from '@lucide/svelte/icons/check';
+	import GripVertical from '@lucide/svelte/icons/grip-vertical';
+	import Image from '@lucide/svelte/icons/image';
+	import Plus from '@lucide/svelte/icons/plus';
+	import Trash2 from '@lucide/svelte/icons/trash-2';
+	import X from '@lucide/svelte/icons/x';
 	
 	let { data } = $props();
 	

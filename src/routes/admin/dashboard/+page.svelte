@@ -1,13 +1,18 @@
 <script>
 	import { enhance } from '$app/forms';
+	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import PriceInput from '$lib/components/PriceInput.svelte';
 	import DatePicker from '$lib/components/DatePicker.svelte';
 	import { Label } from '$lib/components/ui/label';
 	import { fly, fade } from 'svelte/transition';
-	import * as XLSX from 'xlsx';
-	import { AdminPage, AdminPageHeader, AdminSearchField } from '$lib/components/admin';
+	import AdminPage from '$lib/components/admin/AdminPage.svelte';
+	import AdminPageHeader from '$lib/components/admin/AdminPageHeader.svelte';
+	import AdminSearchField from '$lib/components/admin/AdminSearchField.svelte';
+	import { getDashboardDateRange } from '$lib/admin-order-dates.js';
+	import { onDestroy, untrack } from 'svelte';
 
 	let { data, form } = $props();
 
@@ -28,66 +33,104 @@
 		}).format(Number(amount) || 0);
 	}
 
-	const todayStr = new Date().toISOString().split('T')[0];
-
 	let selectedOrder = $state(null);
 	let isDrawerOpen = $state(false);
 	let uploadingReceipt = $state(false);
 
-	let searchQuery = $state('');
-	let statusFilter = $state('All');
+	let searchQuery = $state(untrack(() => data.filters.q));
+	let statusFilter = $state(untrack(() => data.filters.status));
 	let dateMode = $state('daily');
-	let customStart = $state(todayStr);
-	let customEnd = $state(todayStr);
-	let startDate = $state(todayStr);
-	let endDate = $state(todayStr);
-	let dateTypeFilter = $state('delivery_date');
+	let customStart = $state(untrack(() => data.filters.start));
+	let customEnd = $state(untrack(() => data.filters.end));
+	let startDate = $state(untrack(() => data.filters.start));
+	let endDate = $state(untrack(() => data.filters.end));
+	let dateTypeFilter = $state(untrack(() => data.filters.dateType));
+	let searchTimer;
+
+	let pendingOrders = $derived(data.orders);
+	let pagination = $derived(data.pagination);
+	let totalRevenue = $derived(data.summary.totalRevenue);
+	let totalSales = $derived(data.summary.totalSales);
+	let exportHref = $derived(`/admin/dashboard/orders/export?scope=dashboard&${page.url.searchParams.toString()}`);
+
+	function inferDateMode(start, end, today) {
+		if (start === today && end === today) return 'daily';
+		const weekly = getDashboardDateRange('weekly', today);
+		const monthly = getDashboardDateRange('monthly', today);
+		if (start === weekly.start && end === weekly.end) return 'weekly';
+		if (start === monthly.start && end === monthly.end) return 'monthly';
+		return 'range';
+	}
 
 	$effect(() => {
-		const today = new Date();
-		if (dateMode === 'weekly') {
-			const weekAgo = new Date(today);
-			weekAgo.setDate(today.getDate() - 6);
-			startDate = weekAgo.toISOString().split('T')[0];
-			endDate = todayStr;
-		} else if (dateMode === 'monthly') {
-			const monthAgo = new Date(today);
-			monthAgo.setDate(today.getDate() - 29);
-			startDate = monthAgo.toISOString().split('T')[0];
-			endDate = todayStr;
-		} else if (dateMode === 'range') {
-			startDate = customStart;
-			endDate = customEnd;
-		} else {
-			startDate = todayStr;
-			endDate = todayStr;
-		}
+		searchQuery = data.filters.q;
+		statusFilter = data.filters.status;
+		customStart = data.filters.start;
+		customEnd = data.filters.end;
+		startDate = data.filters.start;
+		endDate = data.filters.end;
+		dateTypeFilter = data.filters.dateType;
+		dateMode = inferDateMode(data.filters.start, data.filters.end, data.filters.today);
 	});
 
-	let filteredOrders = $derived(data.orders.filter(order => {
-		const matchesSearch = !searchQuery ||
-			order.customer_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-			order.order_number?.toString().includes(searchQuery);
+	function getFilterHref(overrides = {}) {
+		const values = {
+			q: searchQuery,
+			status: statusFilter,
+			date_type: dateTypeFilter,
+			start: startDate,
+			end: endDate,
+			page: 1,
+			...overrides
+		};
+		const params = new URLSearchParams();
+		if (values.q) params.set('q', values.q);
+		if (values.status !== 'All') params.set('status', values.status);
+		if (values.date_type !== 'delivery_date') params.set('date_type', values.date_type);
+		if (values.start !== data.filters.today) params.set('start', values.start);
+		if (values.end !== data.filters.today) params.set('end', values.end);
+		if (Number(values.page) > 1) params.set('page', String(values.page));
+		const query = params.toString();
+		return `${page.url.pathname}${query ? `?${query}` : ''}`;
+	}
 
-		const matchesStatus = statusFilter === 'All' || order.status === statusFilter;
-		
-		let targetDate = '';
-		if (dateTypeFilter === 'created_at') {
-			targetDate = order.created_at ? order.created_at.split('T')[0] : '';
-		} else {
-			targetDate = order.delivery_date || '';
-		}
-		
-		const inRange = targetDate >= startDate && targetDate <= endDate;
+	function navigateFilters(overrides = {}) {
+		return goto(getFilterHref(overrides), { replaceState: true, keepFocus: true, noScroll: true });
+	}
 
-		return matchesSearch && matchesStatus && inRange;
-	}));
+	function queueSearch(value) {
+		searchQuery = value;
+		clearTimeout(searchTimer);
+		searchTimer = setTimeout(() => navigateFilters({ q: value }), 300);
+	}
 
-	let pendingOrders = $derived(filteredOrders.filter(order => order.status === 'Pending'));
-	let processingOrders = $derived(filteredOrders.filter(order => order.status === 'Diproses'));
-	let completedOrders = $derived(filteredOrders.filter(order => order.status === 'Selesai'));
-	let totalRevenue = $derived(completedOrders.reduce((acc, order) => acc + Number(order.amount || 0), 0));
-	let totalSales = $derived(filteredOrders.length);
+	function changeDateMode(mode) {
+		const range = getDashboardDateRange(mode, data.filters.today, customStart, customEnd);
+		dateMode = mode;
+		startDate = range.start;
+		endDate = range.end;
+		navigateFilters(range);
+	}
+
+	function changeCustomRange(start, end) {
+		startDate = start;
+		endDate = end;
+		navigateFilters({ start, end });
+	}
+
+	function resetFilters() {
+		searchQuery = '';
+		statusFilter = 'All';
+		dateMode = 'daily';
+		customStart = data.filters.today;
+		customEnd = data.filters.today;
+		startDate = data.filters.today;
+		endDate = data.filters.today;
+		dateTypeFilter = 'delivery_date';
+		navigateFilters({ q: '', status: 'All', start: data.filters.today, end: data.filters.today, date_type: 'delivery_date' });
+	}
+
+	onDestroy(() => clearTimeout(searchTimer));
 
 	function openDrawer(order) {
 		selectedOrder = order;
@@ -100,41 +143,12 @@
 		uploadingReceipt = false;
 	}
 
-	function exportToExcel() {
-		const rows = filteredOrders.map((order, i) => ({
-			'No': i + 1,
-			'No Order': order.order_number,
-			'Nama Pelanggan': order.customer_name,
-			'No HP': order.phone_number,
-			'Produk': order.products?.name ?? '-',
-			'Ukuran': order.cake_size ?? '-',
-			'Qty': order.quantity,
-			'Tanggal Kirim': order.delivery_date ?? '-',
-			'Waktu Kirim': order.delivery_time ?? '-',
-			'Status': order.status,
-			'Total Harga': order.amount ?? 0,
-			'Catatan': order.notes ?? '-'
-		}));
-
-		const ws = XLSX.utils.json_to_sheet(rows);
-		// Set column widths
-		ws['!cols'] = [
-			{ wch: 4 }, { wch: 10 }, { wch: 22 }, { wch: 16 },
-			{ wch: 20 }, { wch: 10 }, { wch: 5 }, { wch: 14 },
-			{ wch: 12 }, { wch: 12 }, { wch: 16 }, { wch: 28 }
-		];
-		const wb = XLSX.utils.book_new();
-		XLSX.utils.book_append_sheet(wb, ws, 'Laporan Transaksi');
-
-		const label = dateMode === 'range' ? `${startDate}_${endDate}` : dateMode;
-		XLSX.writeFile(wb, `Laporan_Transaksi_${label}.xlsx`);
-	}
 </script>
 
 <AdminPage>
 	<AdminPageHeader eyebrow="Dashboard Admin" title="Ringkasan Penjualan" description="Pantau omzet, penjualan, dan pesanan yang perlu segera diproses.">
 		{#snippet actions()}
-		<Button onclick={exportToExcel} variant="outline">
+		<Button href={exportHref} variant="outline">
 			<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
 			Export Excel
 		</Button>
@@ -152,24 +166,24 @@
 			<div class="grid gap-3 lg:grid-cols-[minmax(220px,1fr)_auto] lg:items-start">
 			<!-- Search -->
 			<div class="w-full">
-				<AdminSearchField bind:value={searchQuery} placeholder="Cari pesanan..." label="Cari pesanan" />
+				<AdminSearchField bind:value={searchQuery} onValueChange={queueSearch} placeholder="Cari pesanan..." label="Cari pesanan" />
 			</div>
 
 			<!-- Filters -->
 			<div class="grid w-full grid-cols-2 gap-2 sm:grid-cols-4 lg:w-auto lg:grid-cols-[120px_120px_160px_auto]">
-				<select bind:value={dateTypeFilter} class="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/50 md:w-auto">
+				<select bind:value={dateTypeFilter} onchange={(event) => navigateFilters({ date_type: event.currentTarget.value })} class="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/50 md:w-auto">
 					<option value="delivery_date">Tgl Kirim</option>
 					<option value="created_at">Tgl Order</option>
 				</select>
 				
-				<select bind:value={dateMode} class="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/50 md:w-auto">
+				<select bind:value={dateMode} onchange={(event) => changeDateMode(event.currentTarget.value)} class="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/50 md:w-auto">
 					<option value="daily">Harian</option>
 					<option value="weekly">Mingguan</option>
 					<option value="monthly">Bulanan</option>
 					<option value="range">Range</option>
 				</select>
 				
-				<select bind:value={statusFilter} class="col-span-2 h-10 w-full rounded-lg border border-input bg-background px-3 text-sm font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/50 sm:col-span-1">
+				<select bind:value={statusFilter} onchange={(event) => navigateFilters({ status: event.currentTarget.value })} class="col-span-2 h-10 w-full rounded-lg border border-input bg-background px-3 text-sm font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/50 sm:col-span-1">
 					<option value="All">Semua Status</option>
 					<option value="Pending">Pending</option>
 					<option value="Diproses">Diproses</option>
@@ -179,20 +193,13 @@
 				
 				{#if dateMode === 'range'}
 					<div class="col-span-2 grid gap-2 sm:col-span-4 sm:grid-cols-2 lg:col-span-4">
-					<DatePicker bind:value={customStart} class="h-10 min-w-0 rounded-lg" placeholder="Awal" />
-					<DatePicker bind:value={customEnd} class="h-10 min-w-0 rounded-lg" placeholder="Akhir" />
+					<DatePicker bind:value={customStart} onValueChange={(value) => changeCustomRange(value, customEnd)} class="h-10 min-w-0 rounded-lg" placeholder="Awal" />
+					<DatePicker bind:value={customEnd} onValueChange={(value) => changeCustomRange(customStart, value)} class="h-10 min-w-0 rounded-lg" placeholder="Akhir" />
 					</div>
 				{/if}
 
 			{#if searchQuery || statusFilter !== 'All' || dateMode !== 'daily' || dateTypeFilter !== 'delivery_date'}
-				<Button variant="outline" class="col-span-2 h-10 w-full sm:col-span-4 lg:col-span-4" onclick={() => {
-					searchQuery = '';
-					statusFilter = 'All';
-					dateMode = 'daily';
-					customStart = todayStr;
-					customEnd = todayStr;
-					dateTypeFilter = 'delivery_date';
-				}}>
+				<Button variant="outline" class="col-span-2 h-10 w-full sm:col-span-4 lg:col-span-4" onclick={resetFilters}>
 					Reset
 				</Button>
 			{/if}
@@ -217,19 +224,19 @@
 			<div class="grid gap-3 sm:grid-cols-3 sm:gap-4">
 				<div class="rounded-2xl border border-primary/15 bg-white p-4 shadow-sm">
 					<p class="text-sm font-semibold text-[#4A3B32]/70">Pending</p>
-					<p class="mt-2 text-2xl font-bold text-[#4A3B32] sm:text-3xl">{pendingOrders.length}</p>
+					<p class="mt-2 text-2xl font-bold text-[#4A3B32] sm:text-3xl">{data.summary.pending}</p>
 					<p class="mt-2 text-sm text-[#4A3B32]/70">Pesanan belum diproses.</p>
 				</div>
 
 				<div class="rounded-2xl border border-primary/15 bg-white p-4 shadow-sm">
 					<p class="text-sm font-semibold text-[#4A3B32]/70">Diproses</p>
-					<p class="mt-2 text-2xl font-bold text-[#4A3B32] sm:text-3xl">{processingOrders.length}</p>
+					<p class="mt-2 text-2xl font-bold text-[#4A3B32] sm:text-3xl">{data.summary.processing}</p>
 					<p class="mt-2 text-sm text-[#4A3B32]/70">Pesanan sedang dibuat.</p>
 				</div>
 
 				<div class="rounded-2xl border border-primary/15 bg-white p-4 shadow-sm">
 					<p class="text-sm font-semibold text-[#4A3B32]/70">Selesai</p>
-					<p class="mt-2 text-2xl font-bold text-[#4A3B32] sm:text-3xl">{completedOrders.length}</p>
+					<p class="mt-2 text-2xl font-bold text-[#4A3B32] sm:text-3xl">{data.summary.completed}</p>
 					<p class="mt-2 text-sm text-[#4A3B32]/70">Pesanan sudah dikirim.</p>
 				</div>
 			</div>
@@ -241,7 +248,7 @@
 			<div class="min-w-0">
 				<p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#4A3B32]/70 sm:text-sm sm:tracking-widest">Pesanan Belum Diproses</p>
 				<h2 class="mt-1 text-xl font-bold leading-tight text-[#4A3B32] sm:mt-2 sm:text-2xl">Daftar Order Pending</h2>
-				<p class="mt-1 text-sm leading-relaxed text-[#4A3B32]/70">Menampilkan {pendingOrders.length} pesanan pada rentang tanggal {startDate} sampai {endDate}.</p>
+				<p class="mt-1 text-sm leading-relaxed text-[#4A3B32]/70">Menampilkan {pagination.from}-{pagination.to} dari {pagination.totalItems} pesanan pending pada rentang {startDate} sampai {endDate}.</p>
 			</div>
 			<div class="w-fit rounded-full bg-slate-50 px-3 py-2 text-xs font-semibold text-[#4A3B32]/80 sm:px-4 sm:py-3 sm:text-sm">Mode: {dateMode === 'range' ? 'Custom Range' : dateMode}</div>
 		</div>
@@ -341,6 +348,15 @@
 				</tbody>
 			</table>
 		</div>
+		{#if pagination.totalItems > 0}
+			<div class="flex flex-col gap-3 border-t px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+				<p class="text-muted-foreground">Page {pagination.page} dari {pagination.totalPages}</p>
+				<div class="flex items-center gap-2">
+					<Button href={getFilterHref({ page: pagination.page - 1 })} variant="outline" size="sm" disabled={pagination.page <= 1}>Sebelumnya</Button>
+					<Button href={getFilterHref({ page: pagination.page + 1 })} variant="outline" size="sm" disabled={pagination.page >= pagination.totalPages}>Berikutnya</Button>
+				</div>
+			</div>
+		{/if}
 	</div>
 </AdminPage>
 

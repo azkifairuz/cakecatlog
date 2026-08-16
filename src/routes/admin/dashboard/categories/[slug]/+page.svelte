@@ -2,7 +2,9 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
 	import * as Card from '$lib/components/ui/card';
-	import { AdminEmptyState, AdminPage, AdminPageHeader } from '$lib/components/admin';
+	import AdminEmptyState from '$lib/components/admin/AdminEmptyState.svelte';
+	import AdminPage from '$lib/components/admin/AdminPage.svelte';
+	import AdminPageHeader from '$lib/components/admin/AdminPageHeader.svelte';
 	import { getImageUrl } from '$lib/image-url.js';
 	import { getStartFromPrice } from '$lib/pricing.js';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';

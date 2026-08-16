@@ -5,7 +5,9 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import Loading from '$lib/components/Loading.svelte';
-	import { AdminPage, AdminPageHeader, AdminEmptyState } from '$lib/components/admin';
+	import AdminEmptyState from '$lib/components/admin/AdminEmptyState.svelte';
+	import AdminPage from '$lib/components/admin/AdminPage.svelte';
+	import AdminPageHeader from '$lib/components/admin/AdminPageHeader.svelte';
 	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
 	import Trash2Icon from '@lucide/svelte/icons/trash-2';
 

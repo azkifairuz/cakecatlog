@@ -11,14 +11,18 @@ export const load = async ({ locals: { supabase }, request, url }) => {
 		};
 	}
 
-	const { data: siteInfo } = await supabase
+	const siteInfo = supabase
 		.from('site_contact_info')
 		.select('*')
 		.eq('id', 'main')
-		.maybeSingle();
+		.maybeSingle()
+		.then(({ data, error }) => {
+			if (error) console.error('Unable to load public site info:', error);
+			return normalizeSiteInfo(data);
+		});
 
 	return {
 		locale,
-		siteInfo: normalizeSiteInfo(siteInfo)
+		siteInfo
 	};
 };

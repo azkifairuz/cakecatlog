@@ -1,19 +1,32 @@
-export const load = async ({ locals: { supabase } }) => {
-	const { data: orders, error } = await supabase
-		.from('orders')
-		.select(`
-			*,
-			order_items (
-				*,
-				products (
-					name
-				)
-			)
-		`)
-		.order('created_at', { ascending: false });
+import { error as httpError } from '@sveltejs/kit';
+import {
+	applyOrderFilters,
+	getOrderPageRange,
+	getPagination,
+	ORDER_LIST_SELECT,
+	parseOrderFilters
+} from '$lib/server/admin-orders.js';
+
+export const load = async ({ locals: { supabase }, url }) => {
+	const filters = parseOrderFilters(url, { singleDate: true });
+	const { from, to } = getOrderPageRange(filters);
+	const query = applyOrderFilters(
+		supabase.from('orders').select(ORDER_LIST_SELECT, { count: 'exact' }),
+		filters
+	)
+		.order('created_at', { ascending: false })
+		.range(from, to);
+	const { data: orders, count, error } = await query;
+
+	if (error) {
+		console.error('Unable to load admin orders:', error);
+		throw httpError(500, 'Daftar pesanan belum dapat dimuat.');
+	}
 
 	return {
 		orders: orders ?? [],
+		filters,
+		pagination: getPagination(count, filters)
 	};
 };
 

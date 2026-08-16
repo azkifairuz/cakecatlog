@@ -1,24 +1,39 @@
 <script>
 	import HeroCarousel from '$lib/components/HeroCarousel.svelte';
-	import TopPicksCarousel from '$lib/components/TopPicksCarousel.svelte';
 	import TopPicksSkeleton from '$lib/components/TopPicksSkeleton.svelte';
 	import CatalogSkeleton from '$lib/components/CatalogSkeleton.svelte';
-	import QuickAddModal from '$lib/components/QuickAddModal.svelte';
 	import aboutImage from '$lib/assets/about.jpeg';
+	import aboutImageAvif from '$lib/assets/about.avif';
 	import { getImageUrl } from '$lib/image-url.js';
 	import { getStartFromPrice } from '$lib/pricing.js';
 	import { getI18n } from '$lib/i18n.svelte.js';
+	import { onMount } from 'svelte';
 	
 	let { data } = $props();
 	const i18n = getI18n();
 
 	let isQuickAddOpen = $state(false);
 	let selectedProduct = $state(null);
+	let TopPicksCarouselComponent = $state();
+	let QuickAddModalComponent = $state();
+	let quickAddModalPromise;
+
+	async function loadQuickAddModal() {
+		quickAddModalPromise ??= import('$lib/components/QuickAddModal.svelte');
+		QuickAddModalComponent = (await quickAddModalPromise).default;
+	}
 
 	function openQuickAdd(product) {
 		selectedProduct = product;
 		isQuickAddOpen = true;
+		void loadQuickAddModal();
 	}
+
+	onMount(() => {
+		void import('$lib/components/TopPicksCarousel.svelte').then(
+			(module) => (TopPicksCarouselComponent = module.default)
+		);
+	});
 
 	let selectedCategory = $state('All');
 	let categoryProducts = $state({});
@@ -63,7 +78,15 @@
 </svelte:head>
 
 {#await data.banners}
-  <div class="h-125 bg-[#FFFBF7] animate-pulse rounded-3xl"></div>
+	<section class="relative flex h-[100dvh] items-center justify-center overflow-hidden bg-[#4A3B32] px-6 text-center">
+		<div class="absolute inset-0 bg-[radial-gradient(circle_at_top,#95724E_0%,#4A3B32_58%)] opacity-80"></div>
+		<div class="relative z-10 flex max-w-lg flex-col items-center gap-6 text-white">
+			<p class="text-xs font-bold uppercase tracking-[0.3em] text-white/75">{i18n.t('hero.eyebrow')}</p>
+			<h1 class="font-pinyon text-6xl leading-none drop-shadow-lg md:text-8xl lg:text-9xl">dessertbyfir</h1>
+			<p class="text-base leading-relaxed text-white/85 sm:text-lg">{i18n.t('hero.description')}</p>
+			<a href="#catalog" class="rounded-full border border-white/40 bg-white/10 px-10 py-4 text-sm font-bold tracking-widest text-white">{i18n.t('hero.cta')}</a>
+		</div>
+	</section>
 {:then banners}
   <HeroCarousel {banners} />
 {/await}
@@ -71,7 +94,11 @@
 {#await data.topPicks}
   <TopPicksSkeleton />
 {:then topPicks}
-  <TopPicksCarousel {topPicks} onQuickAdd={openQuickAdd} />
+	{#if TopPicksCarouselComponent}
+		<TopPicksCarouselComponent {topPicks} onQuickAdd={openQuickAdd} />
+	{:else}
+		<TopPicksSkeleton />
+	{/if}
 {/await}
 
 
@@ -79,11 +106,14 @@
 <section id="about" class="py-24 bg-white relative overflow-hidden">
 	<div class="container mx-auto px-6 lg:px-12 flex flex-col md:flex-row items-center gap-16">
 		<div class="md:w-1/2 relative">
-			<img src={aboutImage} alt={i18n.t('home.aboutImageAlt')} class="rounded-[2rem] w-full max-w-md mx-auto shadow-2xl relative z-10" loading="lazy" decoding="async" />
+			<picture>
+				<source srcset={aboutImageAvif} type="image/avif" />
+				<img src={aboutImage} width="1200" height="1200" alt={i18n.t('home.aboutImageAlt')} class="rounded-[2rem] w-full max-w-md mx-auto shadow-2xl relative z-10" loading="lazy" decoding="async" />
+			</picture>
 			<div class="absolute -bottom-8 -left-8 w-64 h-64 bg-[#FFFBF7] rounded-full -z-10"></div>
 		</div>
 		<div class="md:w-1/2">
-			<h2 class="text-3xl lg:text-4xl font-bold text-[#4A3B32] mb-6 font-['Playfair_Display']">{i18n.t('home.aboutTitle')}</h2>
+			<h2 class="mb-6 font-serif text-3xl font-bold text-[#4A3B32] lg:text-4xl">{i18n.t('home.aboutTitle')}</h2>
 			<div class="space-y-4 text-[#4A3B32]/70 text-[15px] leading-relaxed">
 				<p>
 					{i18n.t('home.aboutParagraph1')}
@@ -102,7 +132,7 @@
 <!-- FEATURES SECTION -->
 <section id="features" class="py-24 bg-[#FFFBF7]">
 	<div class="container mx-auto px-6 text-center mb-16">
-		<h2 class="text-3xl font-bold text-[#4A3B32] mb-4 font-['Playfair_Display']">{i18n.t('home.featuresTitle')}</h2>
+		<h2 class="mb-4 font-serif text-3xl font-bold text-[#4A3B32]">{i18n.t('home.featuresTitle')}</h2>
 		<p class="text-[#4A3B32]/60 text-sm max-w-xl mx-auto">{i18n.t('home.featuresDescription')}</p>
 	</div>
 	<div class="container mx-auto grid max-w-5xl grid-cols-4 gap-x-2 gap-y-8 px-4 text-center sm:gap-x-6 sm:px-6 lg:gap-12">
@@ -142,13 +172,13 @@
 </section>
 
 
-{#await data.products}
+{#await data.catalog}
   <CatalogSkeleton />
-{:then products}
+{:then catalog}
 <!-- CATALOG SECTION -->
 <section id="catalog" class="py-24 bg-white">
 	<div class="container mx-auto px-6 text-center mb-16">
-		<h2 class="text-3xl font-bold text-[#4A3B32] mb-8 font-['Playfair_Display']">{i18n.t('home.catalogTitle')}</h2>
+		<h2 class="mb-8 font-serif text-3xl font-bold text-[#4A3B32]">{i18n.t('home.catalogTitle')}</h2>
 		
 		<!-- Category Pills -->
 		<div class="relative -mx-6 sm:mx-0">
@@ -163,7 +193,7 @@
 			>
 				{i18n.t('home.allCategory')}
 			</button>
-			{#each data.categories as category}
+			{#each catalog.categories as category}
 				<button 
 					class="shrink-0 snap-start sm:snap-align-none whitespace-nowrap px-6 py-2 rounded-full border text-[13px] font-semibold tracking-wide transition-all {selectedCategory === category.slug ? 'border-primary bg-primary text-white' : 'border-slate-200 text-[#4A3B32] hover:border-primary'}"
 					onclick={() => selectCategory(category.slug)}
@@ -183,7 +213,7 @@
 			<div class="py-16 text-center text-sm text-red-500">Unable to load products. Please choose the category again.</div>
 		{:else}
 		<div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-6 sm:gap-x-6 sm:gap-y-12">
-			{#each getVisibleProducts(products) as product}
+			{#each getVisibleProducts(catalog.products) as product}
 				{@const primaryImg = product.product_images?.find(img => img.is_primary) || product.product_images?.[0]}
 				<div class="bg-white rounded-3xl p-3 sm:p-4 border border-slate-100 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_30px_-10px_rgba(140,90,53,0.15)] hover:-translate-y-1 transition-all duration-300 group flex flex-col h-full relative">
 					<!-- Card Link Cover (Makes the whole top part clickable) -->
@@ -230,7 +260,7 @@
 			{/each}
 		</div>
 		{/if}
-		{#if products.length > 0}
+		{#if catalog.products.length > 0}
 			<div class="mt-12 flex justify-center">
 				<a href={selectedCategory === 'All' ? '/catalog' : `/catalog?category=${encodeURIComponent(selectedCategory)}`} class="inline-flex items-center justify-center rounded-full bg-primary px-8 py-3 text-sm font-bold tracking-wide text-white shadow-lg shadow-primary/15 transition-all hover:bg-[#724828] hover:shadow-xl">
 					{i18n.t('home.loadMore')}
@@ -242,4 +272,6 @@
 {/await}
 
 
-<QuickAddModal bind:isOpen={isQuickAddOpen} product={selectedProduct} />
+{#if QuickAddModalComponent}
+	<QuickAddModalComponent bind:isOpen={isQuickAddOpen} product={selectedProduct} />
+{/if}

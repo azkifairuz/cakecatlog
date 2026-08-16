@@ -1,5 +1,7 @@
 <script>
 	import { enhance } from '$app/forms';
+	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import * as Card from '$lib/components/ui/card';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
@@ -8,8 +10,11 @@
 	import DatePicker from '$lib/components/DatePicker.svelte';
 	import { Label } from '$lib/components/ui/label';
 	import { fly, fade } from 'svelte/transition';
-	import * as XLSX from 'xlsx';
-	import { AdminPage, AdminPageHeader, AdminSearchField, AdminViewToggle } from '$lib/components/admin';
+	import AdminPage from '$lib/components/admin/AdminPage.svelte';
+	import AdminPageHeader from '$lib/components/admin/AdminPageHeader.svelte';
+	import AdminSearchField from '$lib/components/admin/AdminSearchField.svelte';
+	import AdminViewToggle from '$lib/components/admin/AdminViewToggle.svelte';
+	import { onDestroy, untrack } from 'svelte';
 	
 	let { data, form } = $props();
 
@@ -62,32 +67,63 @@
 	let calculatedTotal = $derived(Number(draftCakePrice || 0) + Number(draftDeliveryFee || 0));
 
 	// Filters State
-	let todayStr = new Date().toISOString().split('T')[0];
-	let searchQuery = $state('');
-	let statusFilter = $state('All');
-	let dateFilter = $state(todayStr);
-	let dateTypeFilter = $state('delivery_date');
+	let searchQuery = $state(untrack(() => data.filters.q));
+	let statusFilter = $state(untrack(() => data.filters.status));
+	let dateFilter = $state(untrack(() => data.filters.date));
+	let dateTypeFilter = $state(untrack(() => data.filters.dateType));
 	let viewMode = $state('card');
+	let searchTimer;
 
-	let filteredOrders = $derived(data.orders.filter(order => {
-		const matchesSearch = !searchQuery || 
-			order.customer_name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-			order.email?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-			order.order_number?.toString().includes(searchQuery);
-		
-		const matchesStatus = statusFilter === 'All' || order.status === statusFilter;
-		
-		let targetDate = '';
-		if (dateTypeFilter === 'created_at') {
-			targetDate = order.created_at ? order.created_at.split('T')[0] : '';
-		} else {
-			targetDate = order.delivery_date || '';
-		}
-		
-		const matchesDate = !dateFilter || targetDate === dateFilter;
+	let filteredOrders = $derived(data.orders);
+	let pagination = $derived(data.pagination);
+	let hasActiveFilters = $derived(Boolean(searchQuery || statusFilter !== 'All' || dateFilter || dateTypeFilter !== 'delivery_date'));
+	let exportHref = $derived(`/admin/dashboard/orders/export?${page.url.searchParams.toString()}`);
 
-		return matchesSearch && matchesStatus && matchesDate;
-	}));
+	$effect(() => {
+		searchQuery = data.filters.q;
+		statusFilter = data.filters.status;
+		dateFilter = data.filters.date;
+		dateTypeFilter = data.filters.dateType;
+	});
+
+	function getFilterHref(overrides = {}) {
+		const values = {
+			q: searchQuery,
+			status: statusFilter,
+			date_type: dateTypeFilter,
+			date: dateFilter,
+			page: 1,
+			...overrides
+		};
+		const params = new URLSearchParams();
+		if (values.q) params.set('q', values.q);
+		if (values.status !== 'All') params.set('status', values.status);
+		if (values.date_type !== 'delivery_date') params.set('date_type', values.date_type);
+		params.set('date', values.date ?? '');
+		if (Number(values.page) > 1) params.set('page', String(values.page));
+		const query = params.toString();
+		return `${page.url.pathname}${query ? `?${query}` : ''}`;
+	}
+
+	function navigateFilters(overrides = {}) {
+		return goto(getFilterHref(overrides), { replaceState: true, keepFocus: true, noScroll: true });
+	}
+
+	function queueSearch(value) {
+		searchQuery = value;
+		clearTimeout(searchTimer);
+		searchTimer = setTimeout(() => navigateFilters({ q: value, page: 1 }), 300);
+	}
+
+	function resetFilters() {
+		searchQuery = '';
+		statusFilter = 'All';
+		dateFilter = '';
+		dateTypeFilter = 'delivery_date';
+		navigateFilters({ q: '', status: 'All', date: '', date_type: 'delivery_date' });
+	}
+
+	onDestroy(() => clearTimeout(searchTimer));
 
 	function openDrawer(order) {
 		selectedOrder = order;
@@ -146,51 +182,13 @@
 		sendingEmailInvoice = false;
 	}
 
-	function exportToExcel() {
-		const rows = filteredOrders.map((order, i) => ({
-			'No': i + 1,
-			'No Order': order.order_number,
-			'Nama Pelanggan': order.customer_name,
-			'No HP': order.phone_number,
-			'Email': order.email ?? '-',
-			'Metode': getDeliveryOptionLabel(order),
-			'Produk': order.products?.name ?? '-',
-			'Ukuran': order.cake_size ?? '-',
-			'Warna': order.cake_color ?? '-',
-			'Rasa': order.cake_flavor ?? '-',
-			'Mahkota': order.crown_option ?? '-',
-			'Glitter': order.add_edible_glitter ?? '-',
-			'Addons': (order.customized_options?.addons ?? []).map((addon) => `${addon.category}: ${addon.name}`).join(', ') || '-',
-			'Qty': order.quantity,
-			'Tanggal Kirim': order.delivery_date ?? '-',
-			'Waktu Kirim': order.delivery_time ?? '-',
-			'Alamat': getDeliveryOption(order) === 'delivery' ? (order.address ?? '-') : 'Pickup',
-			'Status': order.status,
-			'Total Harga': order.amount ?? 0,
-			'Catatan': order.notes ?? '-'
-		}));
-
-		const ws = XLSX.utils.json_to_sheet(rows);
-		ws['!cols'] = [
-			{ wch: 4 }, { wch: 10 }, { wch: 22 }, { wch: 16 },
-			{ wch: 26 }, { wch: 12 }, { wch: 20 }, { wch: 10 },
-			{ wch: 10 }, { wch: 14 }, { wch: 12 }, { wch: 12 },
-			{ wch: 8 }, { wch: 16 }, { wch: 12 }, { wch: 30 },
-			{ wch: 14 }, { wch: 16 }, { wch: 28 }
-		];
-		const wb = XLSX.utils.book_new();
-		XLSX.utils.book_append_sheet(wb, ws, 'Daftar Pesanan');
-
-		const filterLabel = dateFilter || 'semua';
-		XLSX.writeFile(wb, `Daftar_Pesanan_${filterLabel}.xlsx`);
-	}
 </script>
 
 <AdminPage>
 <AdminPageHeader title="Daftar Pesanan" description="Cari, filter, dan kelola pesanan pelanggan dari satu tempat.">
 	{#snippet actions()}
 		<AdminViewToggle bind:value={viewMode} />
-		<Button onclick={exportToExcel} variant="outline">
+		<Button href={exportHref} variant="outline">
 			<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 011.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
 			Export Excel
 		</Button>
@@ -200,13 +198,13 @@
 <div class="flex flex-col items-center gap-3 rounded-xl border bg-card p-3 shadow-sm lg:flex-row">
 	<!-- Search -->
 	<div class="w-full lg:flex-1">
-		<AdminSearchField bind:value={searchQuery} placeholder="Cari nama, email, atau nomor order..." label="Cari pesanan" />
+		<AdminSearchField bind:value={searchQuery} onValueChange={queueSearch} placeholder="Cari nama, email, atau nomor order..." label="Cari pesanan" />
 	</div>
 	
 	<div class="grid grid-cols-2 md:flex items-center gap-2 md:gap-3 w-full lg:w-auto">
 		<!-- Date Type Filter -->
 		<div class="col-span-1 md:w-auto">
-			<select bind:value={dateTypeFilter} class="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
+			<select bind:value={dateTypeFilter} onchange={(event) => navigateFilters({ date_type: event.currentTarget.value })} class="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
 				<option value="delivery_date">Tgl Kirim</option>
 				<option value="created_at">Tgl Order</option>
 			</select>
@@ -214,12 +212,12 @@
 
 		<!-- Date Filter -->
 		<div class="col-span-1 md:w-auto">
-			<DatePicker bind:value={dateFilter} class="h-10 w-full rounded-lg md:w-[150px]" placeholder="Semua Tanggal" />
+			<DatePicker bind:value={dateFilter} onValueChange={(value) => navigateFilters({ date: value })} class="h-10 w-full rounded-lg md:w-[150px]" placeholder="Semua Tanggal" clearable />
 		</div>
 
 		<!-- Status Filter -->
 		<div class="col-span-2 md:col-span-1 md:w-auto">
-			<select bind:value={statusFilter} class="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/50 md:w-[150px]">
+			<select bind:value={statusFilter} onchange={(event) => navigateFilters({ status: event.currentTarget.value })} class="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/50 md:w-[150px]">
 				<option value="All">Semua Status</option>
 				<option value="Pending">Pending</option>
 				<option value="Diproses">Diproses</option>
@@ -230,13 +228,8 @@
 	</div>
 
 	<!-- Reset Button -->
-	{#if searchQuery || statusFilter !== 'All' || dateFilter !== todayStr || dateTypeFilter !== 'delivery_date'}
-		<Button variant="ghost" class="h-11 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 shrink-0 w-full lg:w-auto" onclick={() => {
-			searchQuery = '';
-			statusFilter = 'All';
-			dateFilter = todayStr;
-			dateTypeFilter = 'delivery_date';
-		}}>
+	{#if hasActiveFilters}
+		<Button variant="ghost" class="h-11 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 shrink-0 w-full lg:w-auto" onclick={resetFilters}>
 			Reset Filter
 		</Button>
 	{/if}
@@ -323,21 +316,14 @@
 		<div class="col-span-full flex flex-col items-center justify-center py-16 text-slate-400 bg-white border border-dashed border-slate-200 rounded-2xl">
 			<svg class="w-12 h-12 mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
 			<p class="font-medium text-slate-500">
-				{#if data.orders.length === 0}
-					Belum ada pesanan masuk sama sekali.
-				{:else}
+				{#if hasActiveFilters}
 					Tidak ada pesanan yang sesuai dengan filter.
+				{:else}
+					Belum ada pesanan masuk sama sekali.
 				{/if}
 			</p>
-			{#if searchQuery || statusFilter !== 'All' || dateFilter !== '' || dateTypeFilter !== 'delivery_date'}
-				<Button size="sm" class="mt-4 rounded-full" onclick={() => {
-					searchQuery = '';
-					statusFilter = 'All';
-					dateFilter = ''; // Show all dates
-					dateTypeFilter = 'delivery_date';
-				}}>
-					Tampilkan Semua Pesanan
-				</Button>
+			{#if hasActiveFilters}
+				<Button size="sm" class="mt-4 rounded-full" onclick={resetFilters}>Tampilkan Semua Pesanan</Button>
 			{/if}
 		</div>
 	{/each}
@@ -403,12 +389,28 @@
 					{:else}
 						<Table.Row>
 							<Table.Cell colspan={7} class="h-32 text-center text-muted-foreground">
-								{data.orders.length === 0 ? 'Belum ada pesanan masuk.' : 'Tidak ada pesanan yang sesuai dengan filter.'}
+								<div class="flex flex-col items-center gap-3">
+									<span>{hasActiveFilters ? 'Tidak ada pesanan yang sesuai dengan filter.' : 'Belum ada pesanan masuk.'}</span>
+									{#if hasActiveFilters}
+										<Button size="sm" onclick={resetFilters}>Tampilkan Semua Pesanan</Button>
+									{/if}
+								</div>
 							</Table.Cell>
 						</Table.Row>
 					{/each}
 				</Table.Body>
 			</Table.Root>
+		</div>
+	</div>
+{/if}
+
+{#if pagination.totalItems > 0}
+	<div class="flex flex-col gap-3 rounded-xl border bg-card px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+		<p class="text-muted-foreground">Menampilkan <span class="font-semibold text-foreground">{pagination.from}-{pagination.to}</span> dari <span class="font-semibold text-foreground">{pagination.totalItems}</span> pesanan</p>
+		<div class="flex items-center gap-2">
+			<Button href={getFilterHref({ page: pagination.page - 1 })} variant="outline" size="sm" disabled={pagination.page <= 1}>Sebelumnya</Button>
+			<span class="min-w-20 text-center font-medium">{pagination.page} / {pagination.totalPages}</span>
+			<Button href={getFilterHref({ page: pagination.page + 1 })} variant="outline" size="sm" disabled={pagination.page >= pagination.totalPages}>Berikutnya</Button>
 		</div>
 	</div>
 {/if}

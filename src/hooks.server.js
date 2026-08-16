@@ -6,6 +6,8 @@ const PUBLIC_CACHE_CONTROL = 'public, max-age=0, s-maxage=60, stale-while-revali
 const NO_STORE_CACHE_CONTROL = 'no-store, max-age=0';
 
 export const handle = async ({ event, resolve }) => {
+	const requestStartedAt = performance.now();
+	let authDuration = 0;
 	event.locals.supabase = createServerClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
 		cookies: {
 			getAll: () => event.cookies.getAll(),
@@ -28,43 +30,45 @@ export const handle = async ({ event, resolve }) => {
 	 * JWT before returning the session.
 	 */
 	event.locals.safeGetSession = async () => {
+		const authStartedAt = performance.now();
 		const {
 			data: { session },
+			error: sessionError
 		} = await event.locals.supabase.auth.getSession();
 		if (!session) {
-			return { session: null, user: null };
+			authDuration += performance.now() - authStartedAt;
+			return { session: null, user: null, claims: null, error: sessionError };
 		}
 
-		const {
-			data: { user },
-			error,
-		} = await event.locals.supabase.auth.getUser();
-		if (error) {
-			// JWT validation has failed
-			return { session: null, user: null };
+		const { data, error } = await event.locals.supabase.auth.getClaims(session.access_token);
+		authDuration += performance.now() - authStartedAt;
+
+		if (error || !data?.claims) {
+			return { session: null, user: null, claims: null, error };
 		}
 
-		return { session, user };
+		return { session, user: null, claims: data.claims, error: null };
 	};
 
 	const isAdminRoute = event.url.pathname.startsWith('/admin');
 	const isAdminLoginRoute = event.url.pathname === '/admin/login';
 	let session = null;
+	let claims = null;
 
 	if (isAdminRoute) {
-		({ session } = await event.locals.safeGetSession());
+		({ session, claims } = await event.locals.safeGetSession());
 	}
 	
 	// Protect admin routes
 	if (isAdminRoute && !isAdminLoginRoute) {
-		if (!session) {
+		if (!session || !claims) {
 			// Not authenticated, redirect to login
 			throw redirect(303, '/admin/login');
 		}
 	}
 	
 	// Redirect logged-in users away from login page
-	if (isAdminLoginRoute && session) {
+	if (isAdminLoginRoute && session && claims) {
 		throw redirect(303, '/admin/dashboard');
 	}
 
@@ -81,6 +85,10 @@ export const handle = async ({ event, resolve }) => {
 			response.headers.set('cache-control', PUBLIC_CACHE_CONTROL);
 		}
 	}
+
+	const timings = [`app;dur=${(performance.now() - requestStartedAt).toFixed(1)}`];
+	if (authDuration > 0) timings.unshift(`auth;dur=${authDuration.toFixed(1)}`);
+	response.headers.set('server-timing', timings.join(', '));
 
 	return response;
 };

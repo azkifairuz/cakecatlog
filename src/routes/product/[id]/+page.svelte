@@ -199,7 +199,7 @@
 						</span>
 					{/if}
 					
-					<h1 class="text-4xl md:text-5xl font-bold text-[#4A3B32] mb-4 font-['Playfair_Display'] leading-tight">{product.name}</h1>
+					<h1 class="mb-4 font-serif text-4xl font-bold leading-tight text-[#4A3B32] md:text-5xl">{product.name}</h1>
 					<p class="mb-1 text-xs font-bold uppercase tracking-wider text-[#4A3B32]/45">{i18n.t('home.startFrom')}</p>
 					<p class="text-3xl font-bold text-primary mb-8">{formatCurrency(startFromPrice)}</p>
 				</div>

@@ -5,8 +5,12 @@
 	import { Label } from '$lib/components/ui/label';
 	import { Textarea } from '$lib/components/ui/textarea';
 	import Loading from '$lib/components/Loading.svelte';
-	import { Clock, MapPin, MessageCircle, Save } from 'lucide-svelte';
-	import { AdminPage, AdminPageHeader } from '$lib/components/admin';
+	import Clock from '@lucide/svelte/icons/clock';
+	import MapPin from '@lucide/svelte/icons/map-pin';
+	import MessageCircle from '@lucide/svelte/icons/message-circle';
+	import Save from '@lucide/svelte/icons/save';
+	import AdminPage from '$lib/components/admin/AdminPage.svelte';
+	import AdminPageHeader from '$lib/components/admin/AdminPageHeader.svelte';
 
 	let { data, form } = $props();
 

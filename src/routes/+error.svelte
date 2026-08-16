@@ -1,6 +1,8 @@
 <script>
 	import { page } from '$app/stores';
-	import { Home, Search, MessageCircle } from 'lucide-svelte';
+	import Home from '@lucide/svelte/icons/house';
+	import MessageCircle from '@lucide/svelte/icons/message-circle';
+	import Search from '@lucide/svelte/icons/search';
 
 	let isNotFound = $derived($page.status === 404);
 </script>
@@ -25,7 +27,7 @@
 		<p class="mb-4 text-xs font-bold uppercase tracking-[0.28em] text-primary/80">
 			{isNotFound ? '404 - Not Found' : `Error ${$page.status}`}
 		</p>
-		<h1 class="max-w-2xl font-['Playfair_Display'] text-4xl font-bold leading-tight sm:text-5xl">
+		<h1 class="max-w-2xl font-serif text-4xl font-bold leading-tight sm:text-5xl">
 			{isNotFound ? 'Halaman yang kamu cari tidak ditemukan.' : 'Ada kendala saat membuka halaman ini.'}
 		</h1>
 		<p class="mt-5 max-w-xl text-sm leading-7 text-[#4A3B32]/65 sm:text-base">
