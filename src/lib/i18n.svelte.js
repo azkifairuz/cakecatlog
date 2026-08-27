@@ -202,6 +202,25 @@ export const translations = {
 			datePastError: 'Tanggal pengiriman tidak boleh di masa lalu!',
 			processError: 'Terjadi kesalahan saat memproses pesanan Anda.'
 		},
+		orderForm: {
+			title: 'Form Pembelian Kue | dessertbyfir',
+			subtitle: 'Pesan kue favorit Anda secara langsung dan cepat.',
+			selectCake: 'Pilih Kue',
+			chooseCakePlaceholder: 'Cari atau pilih varian kue...',
+			cakeInfo: 'Informasi Kue',
+			cakeDetails: 'Spesifikasi & Pilihan Ukuran',
+			changeCake: 'Ganti Pilihan Kue',
+			allCakes: 'Semua Kue',
+			searchCake: 'Cari kue...',
+			noCakeFound: 'Kue tidak ditemukan',
+			submitOrder: 'Kirim Pesanan Sekarang',
+			submitting: 'Memproses pesanan...',
+			bannerDefault: 'Form Pemesanan Resmi dessertbyfir',
+			selectMethod: 'Pilih Metode Pengambilan/Pengiriman',
+			personalData: 'Data Pemesan',
+			productUnavailable: 'Kue yang dipilih saat ini sedang tidak tersedia.',
+			requiredFieldWarning: 'Mohon lengkapi semua field yang wajib diisi.'
+		},
 		server: {
 			invalidCart: 'Data keranjang tidak valid',
 			emptyCart: 'Keranjang kosong',
@@ -401,6 +420,25 @@ export const translations = {
 			backToCatalog: 'Back to Catalog',
 			datePastError: 'Delivery date cannot be in the past!',
 			processError: 'Something went wrong while processing your order.'
+		},
+		orderForm: {
+			title: 'Cake Purchase Form | dessertbyfir',
+			subtitle: 'Order your favorite cake directly and quickly.',
+			selectCake: 'Select Cake',
+			chooseCakePlaceholder: 'Search or choose a cake...',
+			cakeInfo: 'Cake Information',
+			cakeDetails: 'Specifications & Size Options',
+			changeCake: 'Change Selected Cake',
+			allCakes: 'All Cakes',
+			searchCake: 'Search cakes...',
+			noCakeFound: 'No cake found',
+			submitOrder: 'Send Order Now',
+			submitting: 'Processing order...',
+			bannerDefault: 'Official dessertbyfir Order Form',
+			selectMethod: 'Choose Pickup / Delivery Method',
+			personalData: 'Customer Information',
+			productUnavailable: 'The selected cake is currently unavailable.',
+			requiredFieldWarning: 'Please complete all required fields.'
 		},
 		server: {
 			invalidCart: 'Cart data is invalid',

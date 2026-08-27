@@ -8,6 +8,7 @@
 	import { Toaster } from '$lib/components/ui/sonner';
 	import { cn } from '$lib/utils';
 	import ChartBar from '@lucide/svelte/icons/chart-bar';
+	import FileText from '@lucide/svelte/icons/file-text';
 	import Image from '@lucide/svelte/icons/image';
 	import Info from '@lucide/svelte/icons/info';
 	import ListPlus from '@lucide/svelte/icons/list-plus';
@@ -24,6 +25,7 @@
 	const navItems = [
 		{ href: '/admin/dashboard', label: 'Analytics', icon: ChartBar },
 		{ href: '/admin/dashboard/orders', label: 'Orders', icon: ShoppingCart },
+		{ href: '/admin/dashboard/order-forms', label: 'Form Pembelian', icon: FileText },
 		{ href: '/admin/dashboard/products', label: 'Products', icon: Package },
 		{ href: '/admin/dashboard/categories', label: 'Categories', icon: Tags },
 		{ href: '/admin/dashboard/addons', label: 'Addons', icon: ListPlus },
