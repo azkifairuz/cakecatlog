@@ -4,6 +4,8 @@
 	import { getI18n } from '$lib/i18n.svelte.js';
 	import { getSizePriceOptions, parsePrice } from '$lib/pricing.js';
 	import Loading from '$lib/components/Loading.svelte';
+	import PhoneNumberField from '$lib/components/PhoneNumberField.svelte';
+	import { normalizePhoneNumber, PhoneNumberError } from '$lib/phone-number.js';
 
 
 	let { data } = $props();
@@ -66,6 +68,19 @@
 			return;
 		}
 
+		let normalizedPhoneNumber;
+		try {
+			normalizedPhoneNumber = normalizePhoneNumber(formData.get('phone_number'), {
+				country: String(formData.get('phone_country') || 'ID').toUpperCase()
+			});
+		} catch (error) {
+			loading = false;
+			errorMsg = error instanceof PhoneNumberError
+				? i18n.t('server.invalidWhatsapp')
+				: i18n.t('order.processError');
+			return;
+		}
+
 		try {
 			let reference_image_url = null;
 			const file = formData.get('reference_image');
@@ -94,7 +109,7 @@
 				product_id: product.id,
 				product_variant_id: selectedSizeOption?.id ?? null,
 				customer_name: formData.get('customer_name'),
-				phone_number: formData.get('phone_number'),
+				phone_number: normalizedPhoneNumber,
 				address: formData.get('address'),
 				email: String(formData.get('email') || '').trim().toLowerCase(),
 				cake_size: formData.get('cake_size'),
@@ -202,10 +217,13 @@
 						<label for="email" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">{i18n.t('form.email')} <span class="text-red-400">{i18n.t('form.required')}</span></label>
 						<input type="email" id="email" name="email" required placeholder={i18n.t('form.emailPlaceholder')} class="w-full px-4 py-3.5 bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl text-[15px] placeholder-slate-400 focus:outline-none focus:border-slate-800 transition-all" />
 					</div>
-					<div>
-						<label for="phone_number" class="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">{i18n.t('form.whatsapp')} <span class="text-red-400">{i18n.t('form.required')}</span></label>
-						<input type="tel" inputmode="numeric" pattern="[0-9]*" oninput={(e) => { e.currentTarget.value = e.currentTarget.value.replace(/[^0-9]/g, ''); }} id="phone_number" name="phone_number" required placeholder={i18n.t('form.whatsappPlaceholder')} class="w-full px-4 py-3.5 bg-slate-50 border-2 border-transparent focus:bg-white rounded-xl text-[15px] placeholder-slate-400 focus:outline-none focus:border-slate-800 transition-all" />
-					</div>
+					<PhoneNumberField
+						locale={i18n.locale}
+						label={i18n.t('form.whatsapp')}
+						placeholder={i18n.t('form.whatsappPlaceholder')}
+						description={i18n.t('form.whatsappDescription')}
+						required
+					/>
 				</div>
 			</div>
 

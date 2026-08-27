@@ -2,6 +2,7 @@ import { normalizeLocale, translate } from '$lib/i18n.svelte.js';
 import { normalizeSiteInfo } from '$lib/site-info.js';
 import { sendOrderConfirmationEmail } from '$lib/server/order-confirmation-email.js';
 import { getAddonSelectionPrice, getProductAddons, parsePrice } from '$lib/pricing.js';
+import { normalizePhoneNumber, PhoneNumberError } from '$lib/phone-number.js';
 
 const ORDER_CONFIRMATION_SELECT = `
 	*,
@@ -170,7 +171,8 @@ export const actions = {
 		
 		const customer_name = formData.get('customer_name');
 		const email = String(formData.get('email') || '').trim().toLowerCase();
-		const phone_number = formData.get('phone_number');
+		const submittedPhoneNumber = formData.get('phone_number');
+		const phoneCountry = String(formData.get('phone_country') || 'ID').toUpperCase();
 		const rawDeliveryOption = formData.get('delivery_option');
 		const delivery_option = rawDeliveryOption === 'pickup' || rawDeliveryOption === 'delivery' ? rawDeliveryOption : null;
 		const submittedAddress = String(formData.get('address') || '').trim();
@@ -185,6 +187,16 @@ export const actions = {
 
 		if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
 			return { success: false, error: translate(locale, 'server.invalidEmail') };
+		}
+
+		let phone_number;
+		try {
+			phone_number = normalizePhoneNumber(submittedPhoneNumber, { country: phoneCountry });
+		} catch (error) {
+			if (error instanceof PhoneNumberError) {
+				return { success: false, error: translate(locale, 'server.invalidWhatsapp') };
+			}
+			throw error;
 		}
 
 		if (delivery_option === 'delivery' && !submittedAddress) {

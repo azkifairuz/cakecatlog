@@ -38,6 +38,7 @@
 		"@vercel/speed-insights": "^2.0.0",
 		"embla-carousel-autoplay": "^8.6.0",
 		"flatpickr": "^4.6.13",
+		"libphonenumber-js": "^1.13.12",
 		"xlsx": "^0.18.5"
 	}
 }

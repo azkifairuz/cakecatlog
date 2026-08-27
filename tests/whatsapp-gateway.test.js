@@ -3,21 +3,23 @@ import test from 'node:test';
 import {
 	WhatsAppGatewayError,
 	createWhatsAppGateway,
-	normalizeIndonesianWhatsAppNumber
+	normalizeWhatsAppNumber
 } from '../src/lib/server/whatsapp-gateway.js';
 
-test('normalizes supported Indonesian WhatsApp number formats', () => {
-	assert.equal(normalizeIndonesianWhatsAppNumber('0812-3456-7890'), '6281234567890');
-	assert.equal(normalizeIndonesianWhatsAppNumber('+62 812 3456 7890'), '6281234567890');
-	assert.equal(normalizeIndonesianWhatsAppNumber('6281234567890'), '6281234567890');
+test('normalizes supported local and international WhatsApp number formats', () => {
+	assert.equal(normalizeWhatsAppNumber('0812-3456-7890'), '6281234567890');
+	assert.equal(normalizeWhatsAppNumber('+62 812 3456 7890'), '6281234567890');
+	assert.equal(normalizeWhatsAppNumber('6281234567890'), '6281234567890');
+	assert.equal(normalizeWhatsAppNumber('+60 12-819 0553'), '60128190553');
+	assert.equal(normalizeWhatsAppNumber('60128190553'), '60128190553');
 });
 
-test('rejects invalid or non-Indonesian recipients', () => {
-	assert.throws(() => normalizeIndonesianWhatsAppNumber('customer@example.com'), {
+test('rejects invalid recipients', () => {
+	assert.throws(() => normalizeWhatsAppNumber('customer@example.com'), {
 		name: 'WhatsAppGatewayError',
 		code: 'INVALID_RECIPIENT'
 	});
-	assert.throws(() => normalizeIndonesianWhatsAppNumber('+1 202 555 0100'), {
+	assert.throws(() => normalizeWhatsAppNumber('1234'), {
 		name: 'WhatsAppGatewayError',
 		code: 'INVALID_RECIPIENT'
 	});

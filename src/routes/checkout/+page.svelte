@@ -6,6 +6,7 @@
 	import { enhance } from '$app/forms';
 	import { getI18n } from '$lib/i18n.svelte.js';
 	import Loading from '$lib/components/Loading.svelte';
+	import PhoneNumberField from '$lib/components/PhoneNumberField.svelte';
 	
 	let { form } = $props();
 	const i18n = getI18n();
@@ -176,8 +177,13 @@
 								<input type="email" id="email" name="email" required placeholder={i18n.t('form.emailPlaceholder')} class="w-full px-4 py-3.5 bg-slate-50 border border-primary/20 focus:bg-white rounded-xl text-[15px] placeholder-slate-400 focus:outline-none focus:border-primary transition-all" />
 							</div>
 							<div class="md:col-span-2">
-								<label for="phone_number" class="block text-[13px] font-semibold text-[#4A3B32] mb-1.5 uppercase tracking-wide">{i18n.t('form.whatsapp')} <span class="text-red-400">{i18n.t('form.required')}</span></label>
-								<input type="tel" inputmode="numeric" pattern="[0-9]*" oninput={(e) => { e.currentTarget.value = e.currentTarget.value.replace(/[^0-9]/g, ''); }} id="phone_number" name="phone_number" required placeholder={i18n.t('form.whatsappPlaceholder')} class="w-full px-4 py-3.5 bg-slate-50 border border-primary/20 focus:bg-white rounded-xl text-[15px] placeholder-slate-400 focus:outline-none focus:border-primary transition-all" />
+								<PhoneNumberField
+									locale={i18n.locale}
+									label={i18n.t('form.whatsapp')}
+									placeholder={i18n.t('form.whatsappPlaceholder')}
+									description={i18n.t('form.whatsappDescription')}
+									required
+								/>
 							</div>
 						</div>
 

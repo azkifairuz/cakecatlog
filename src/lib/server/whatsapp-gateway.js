@@ -1,3 +1,5 @@
+import { PhoneNumberError, toWhatsAppDigits } from '../phone-number.js';
+
 const DEFAULT_TIMEOUT_MS = 25_000;
 const MAX_MESSAGE_LENGTH = 4_096;
 
@@ -11,28 +13,16 @@ export class WhatsAppGatewayError extends Error {
 	}
 }
 
-export function normalizeIndonesianWhatsAppNumber(value) {
-	const input = String(value ?? '').trim();
-	if (!input || !/^\+?[\d\s()-]+$/.test(input)) {
-		throw new WhatsAppGatewayError('Format nomor WhatsApp pelanggan tidak valid.', {
-			code: 'INVALID_RECIPIENT',
-			status: 400
-		});
-	}
-
-	let digits = input.replace(/\D/g, '');
-	if (digits.startsWith('0')) {
-		digits = `62${digits.slice(1)}`;
-	}
-
-	if (!digits.startsWith('62') || !/^\d{8,15}$/.test(digits)) {
+export function normalizeWhatsAppNumber(value) {
+	try {
+		return toWhatsAppDigits(value);
+	} catch (error) {
+		if (!(error instanceof PhoneNumberError)) throw error;
 		throw new WhatsAppGatewayError(
-			'Nomor WhatsApp harus menggunakan format Indonesia, contoh 081234567890 atau +6281234567890.',
+			'Nomor WhatsApp tidak valid. Gunakan nomor lokal Indonesia atau format internasional, contoh 081234567890 atau +60128190553.',
 			{ code: 'INVALID_RECIPIENT', status: 400 }
 		);
 	}
-
-	return digits;
 }
 
 export function createWhatsAppGateway({ baseUrl, apiKey, fetchFn = fetch, timeoutMs = DEFAULT_TIMEOUT_MS }) {
@@ -124,7 +114,7 @@ export function createWhatsAppGateway({ baseUrl, apiKey, fetchFn = fetch, timeou
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
-					to: normalizeIndonesianWhatsAppNumber(to),
+					to: normalizeWhatsAppNumber(to),
 					message: normalizedMessage
 				})
 			});
