@@ -112,7 +112,7 @@ export const load = async ({ url, locals: { supabase } }) => {
 		products,
 		globalAddons,
 		siteInfo,
-		initialProductId: initialProduct ? initialProduct.id : (products.length === 1 ? products[0].id : '')
+		initialProductId: initialProduct?.id ?? ''
 	};
 };
 

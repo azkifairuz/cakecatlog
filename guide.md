@@ -138,7 +138,7 @@ Setelah produk berhasil disimpan, admin dapat melihat ringkasan produk melalui m
 
 ---
 
-### 8. Tampilan Pilihan Produk di Sisi Pelanggan (User)
+### 8. Tampilna Pilihan Produk di Sisi Pelanggan (User)
 Berikut adalah tampilan popup kustomisasi produk ketika pelanggan (user) memilih kue untuk ditambahkan ke keranjang belanja (*Add to Cart*).
 
 ![Hasil Pilihan di Sisi User](/Users/macbookprom1/images/8.%20dihalam%20user,%20field%20pilihan%20nya%20akna%20mengikiti%20product%20addons%20konfigurasi%20global%20ataupun%20custom%20per%20product.png)

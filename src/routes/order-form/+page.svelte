@@ -13,8 +13,7 @@
 		getDynamicAddonGroups,
 		getSizePriceOptions,
 		getSizePrice,
-		getStartFromPrice,
-		parsePrice
+		getStartFromPrice
 	} from '$lib/pricing.js';
 	import { getI18n } from '$lib/i18n.svelte.js';
 	import Sparkles from '@lucide/svelte/icons/sparkles';
@@ -35,11 +34,11 @@
 	let siteInfo = $derived(data.siteInfo);
 
 	let selectedProductId = $state('');
-	let selectedProduct = $derived(products.find((p) => p.id === selectedProductId) ?? products[0] ?? null);
+	let selectedProduct = $derived(products.find((p) => p.id === selectedProductId) ?? null);
 
 	$effect(() => {
-		if (!selectedProductId && (data.initialProductId || products[0]?.id)) {
-			selectedProductId = data.initialProductId || products[0]?.id || '';
+		if (!selectedProductId && data.initialProductId) {
+			selectedProductId = data.initialProductId;
 		}
 	});
 
@@ -88,18 +87,6 @@
 			.filter(Boolean)
 	);
 
-	let darkColorSurcharge = $derived(
-		selectedAddons.reduce((sum, addon) => sum + (addon.is_dark_color ? parsePrice(addon.dark_color_surcharge) : 0), 0)
-	);
-	let addonUnitPrice = $derived(
-		selectedAddons.reduce((sum, addon) => sum + getAddonSelectionPrice(addon), 0)
-	);
-	let cakeTopperAddon = $derived(selectedAddons.find((addon) => addon.category_key === 'cake_topper') ?? null);
-	let cakeTopperFee = $derived(cakeTopperAddon ? getAddonSelectionPrice(cakeTopperAddon) : 0);
-
-	let estimatedUnitPrice = $derived(selectedSizePrice + addonUnitPrice);
-	let estimatedSubtotal = $derived(estimatedUnitPrice * Math.max(Number(quantity) || 1, 1));
-
 	let primaryImage = $derived(
 		selectedProduct?.product_images?.find((img) => img.is_primary)?.image_url ||
 		selectedProduct?.product_images?.[0]?.image_url ||
@@ -114,14 +101,6 @@
 
 	const d = new Date();
 	const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-
-	function formatCurrency(amount) {
-		return new Intl.NumberFormat(i18n.locale === 'en' ? 'en-US' : 'id-ID', {
-			style: 'currency',
-			currency: 'IDR',
-			maximumFractionDigits: 0
-		}).format(amount || 0);
-	}
 
 	function handleFormSubmit(event) {
 		const form = event.target;
@@ -247,7 +226,6 @@
 										</div>
 										<div class="min-w-0 flex-1">
 											<p class="font-bold text-sm text-[#4A3B32] truncate">{prod.name}</p>
-											<p class="text-xs text-primary font-semibold">{formatCurrency(getStartFromPrice(prod))}</p>
 											{#if prod.categories?.name}
 												<span class="inline-block mt-0.5 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
 													{prod.categories.name}
@@ -278,10 +256,6 @@
 								{/if}
 								<h3 class="font-serif text-xl font-bold text-[#4A3B32] leading-snug">{selectedProduct.name}</h3>
 								<p class="text-xs text-[#4A3B32]/60 mt-1 line-clamp-2">{selectedProduct.description || i18n.t('product.fallbackDescription')}</p>
-								<div class="mt-2 flex items-baseline gap-2">
-									<span class="text-[11px] uppercase font-bold text-[#4A3B32]/50">{i18n.t('home.startFrom')}</span>
-									<span class="text-base font-extrabold text-primary">{formatCurrency(getStartFromPrice(selectedProduct))}</span>
-								</div>
 							</div>
 						</div>
 
@@ -349,8 +323,8 @@
 									</Select.Trigger>
 									<Select.Content class="rounded-xl border-primary/10 bg-white text-[#4A3B32] shadow-xl">
 										{#each sizePriceOptions as option}
-											<Select.Item value={option.label} label={`${option.label} - ${formatCurrency(option.price)}`}>
-												{option.label} - {formatCurrency(option.price)}
+											<Select.Item value={option.label} label={option.label}>
+												{option.label}
 											</Select.Item>
 										{/each}
 									</Select.Content>
@@ -393,9 +367,8 @@
 											<Select.Content class="rounded-xl border-primary/10 bg-white text-[#4A3B32] shadow-xl">
 												<Select.Group>
 													{#each group.addons as addon (addon.id)}
-														{@const addonPrice = getAddonSelectionPrice(addon)}
 														<Select.Item value={addon.id} label={addon.name}>
-															{addon.name}{addonPrice > 0 ? ` (+${formatCurrency(addonPrice)})` : ''}
+															{addon.name}
 														</Select.Item>
 													{/each}
 												</Select.Group>
@@ -612,7 +585,7 @@
 							<div class="min-w-0 flex-1">
 								<h4 class="font-bold text-sm text-[#4A3B32] truncate">{selectedProduct.name}</h4>
 								<p class="text-xs text-[#4A3B32]/60">{selectedSize || 'Ukuran'}</p>
-								<p class="text-xs font-semibold text-primary">{Math.max(Number(quantity) || 1, 1)}x @ {formatCurrency(estimatedUnitPrice)}</p>
+								<p class="text-xs font-semibold text-primary">{Math.max(Number(quantity) || 1, 1)}x</p>
 							</div>
 						</div>
 
@@ -620,51 +593,10 @@
 							<div class="rounded-xl bg-[#FFFBF7] p-3 text-xs space-y-1 border border-primary/10">
 								<p class="font-bold text-[11px] uppercase tracking-wider text-[#4A3B32]/50">Kustomisasi:</p>
 								{#each selectedAddons as addon}
-									<div class="flex justify-between text-[#4A3B32]/80">
-										<span>{addon.category}: {addon.name}</span>
-										{#if getAddonSelectionPrice(addon) > 0}
-											<span class="font-medium text-primary">+{formatCurrency(getAddonSelectionPrice(addon))}</span>
-										{/if}
-									</div>
+									<p class="text-[#4A3B32]/80">{addon.category}: {addon.name}</p>
 								{/each}
 							</div>
 						{/if}
-
-						<hr class="border-primary/10" />
-
-						<div class="space-y-2 text-xs text-[#4A3B32]/70">
-							<div class="flex justify-between">
-								<span>{i18n.t('pricing.sizePrice')}</span>
-								<span class="font-semibold text-[#4A3B32]">{formatCurrency(selectedSizePrice)}</span>
-							</div>
-							{#if darkColorSurcharge > 0}
-								<div class="flex justify-between">
-									<span>{i18n.t('pricing.darkColorSurcharge')}</span>
-									<span class="font-semibold text-[#4A3B32]">{formatCurrency(darkColorSurcharge)}</span>
-								</div>
-							{/if}
-							{#if cakeTopperFee > 0}
-								<div class="flex justify-between">
-									<span>{i18n.t('pricing.cakeTopper')}</span>
-									<span class="font-semibold text-[#4A3B32]">{formatCurrency(cakeTopperFee)}</span>
-								</div>
-							{/if}
-							<div class="flex justify-between">
-								<span>{i18n.t('pricing.qty')}</span>
-								<span class="font-semibold text-[#4A3B32]">{Math.max(Number(quantity) || 1, 1)}x</span>
-							</div>
-						</div>
-
-						<div class="rounded-2xl bg-[#FFFBF7] p-4 border border-primary/15">
-							<div class="flex items-center justify-between">
-								<span class="text-xs font-bold uppercase tracking-wider text-[#4A3B32]/60">{i18n.t('pricing.estimatedTotal')}</span>
-								<span class="text-xl font-black text-primary">{formatCurrency(estimatedSubtotal)}</span>
-							</div>
-						</div>
-
-						<p class="text-[11px] leading-relaxed text-[#4A3B32]/50 text-center">
-							{i18n.t('pricing.finalInvoiceNote')}
-						</p>
 
 						<button
 							form="direct-order-form"
