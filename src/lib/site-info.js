@@ -4,7 +4,7 @@ export const DEFAULT_SITE_INFO = {
 	pickup_store_hours: 'Store Hours: 09:00 - 18:00',
 	pickup_manager_hours: 'Manager Hours: 09:00 - 20:00',
 	address: 'Alamat toko belum diatur',
-	whatsapp_number: '0812-3456-7890'
+	whatsapp_number: '6285883749714'
 };
 
 export function normalizeSiteInfo(siteInfo = {}) {
@@ -15,6 +15,7 @@ export function normalizeSiteInfo(siteInfo = {}) {
 }
 
 export function getWhatsAppHref(number) {
-	const normalized = number?.replace(/\D/g, '');
+	const digits = String(number ?? '').replace(/\D/g, '');
+	const normalized = digits.startsWith('0') ? `62${digits.slice(1)}` : digits;
 	return normalized ? `https://wa.me/${normalized}` : null;
 }

@@ -4,7 +4,7 @@ create table if not exists public.site_contact_info (
 	pickup_store_hours text not null default 'Store Hours: 09:00 - 18:00',
 	pickup_manager_hours text not null default 'Manager Hours: 09:00 - 20:00',
 	address text not null default 'Alamat toko belum diatur',
-	whatsapp_number text not null default '0812-3456-7890',
+	whatsapp_number text not null default '6285883749714',
 	created_at timestamptz not null default now(),
 	updated_at timestamptz not null default now(),
 	constraint site_contact_info_single_row check (id = 'main')
@@ -23,7 +23,7 @@ insert into public.site_contact_info (
 	'Store Hours: 09:00 - 18:00',
 	'Manager Hours: 09:00 - 20:00',
 	'Alamat toko belum diatur',
-	'0812-3456-7890'
+	'6285883749714'
 )
 on conflict (id) do nothing;
 
