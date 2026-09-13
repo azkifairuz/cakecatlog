@@ -17,3 +17,6 @@ test('keeps an Indonesian international number unchanged in the WhatsApp link', 
 test('does not create a WhatsApp link from an empty value', () => {
 	assert.equal(getWhatsAppHref(''), null);
 });
+
+
+

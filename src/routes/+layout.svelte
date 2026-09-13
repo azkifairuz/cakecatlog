@@ -8,6 +8,7 @@
 	import { cart } from '$lib/stores/cart.svelte.js';
 	import { getWhatsAppHref, normalizeSiteInfo } from '$lib/site-info.js';
 	import { createI18n, languageOptions, setI18n } from '$lib/i18n.svelte.js';
+	import WhatsAppFab from '$lib/components/WhatsAppFab.svelte';
 
 	let { children, data } = $props();
 	const i18n = setI18n(createI18n(untrack(() => data?.locale)));
@@ -145,6 +146,9 @@
 				</div>
 			</div>
 		</footer>
+
+		<!-- Global WhatsApp FAB -->
+		<WhatsAppFab href={whatsappHref} />
 
 		<!-- Global Cart Drawer -->
 		{#if CartDrawerComponent}

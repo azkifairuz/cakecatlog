@@ -21,7 +21,8 @@ export const translations = {
 			about: 'Tentang Kami',
 			catalog: 'Katalog',
 			features: 'Keunggulan',
-			openCart: 'Buka keranjang'
+			openCart: 'Buka keranjang',
+			chatWhatsapp: 'Chat WhatsApp'
 		},
 		footer: {
 			pickup: 'Pickup',
@@ -240,7 +241,8 @@ export const translations = {
 			about: 'About Us',
 			catalog: 'Catalog',
 			features: 'Highlights',
-			openCart: 'Open cart'
+			openCart: 'Open cart',
+			chatWhatsapp: 'Chat WhatsApp'
 		},
 		footer: {
 			pickup: 'Pickup',
