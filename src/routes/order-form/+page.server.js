@@ -1,6 +1,7 @@
 import { error as httpError } from '@sveltejs/kit';
 import { normalizeLocale, translate } from '$lib/i18n.svelte.js';
 import { normalizeSiteInfo } from '$lib/site-info.js';
+import { sendAdminOrderNotification } from '$lib/server/admin-order-notification.js';
 import { sendOrderConfirmationEmail } from '$lib/server/order-confirmation-email.js';
 import { getAddonSelectionPrice, getProductAddons, parsePrice } from '$lib/pricing.js';
 import { normalizePhoneNumber, PhoneNumberError } from '$lib/phone-number.js';
@@ -393,13 +394,26 @@ export const actions = {
 			]);
 
 			if (freshOrder) {
-				const emailResult = await sendOrderConfirmationEmail(freshOrder, normalizeSiteInfo(freshSiteInfo));
-				if (!emailResult.success && !emailResult.skipped) {
-					console.error('Confirmation email failed:', emailResult.message);
+				const normalizedSiteInfo = normalizeSiteInfo(freshSiteInfo);
+				try {
+					const emailResult = await sendOrderConfirmationEmail(freshOrder, normalizedSiteInfo);
+					if (!emailResult.success && !emailResult.skipped) {
+						console.error('Confirmation email failed:', emailResult.message);
+					}
+				} catch (emailEx) {
+					console.error('Confirmation email error:', emailEx);
+				}
+				try {
+					const adminNotificationResult = await sendAdminOrderNotification(freshOrder, normalizedSiteInfo);
+					if (!adminNotificationResult.success) {
+						console.error('Admin order notification failed:', adminNotificationResult.results);
+					}
+				} catch (adminNotificationEx) {
+					console.error('Admin order notification error:', adminNotificationEx);
 				}
 			}
-		} catch (emailEx) {
-			console.error('Confirmation email error:', emailEx);
+		} catch (notificationEx) {
+			console.error('Order notification data load error:', notificationEx);
 		}
 
 		return { success: true, orderId };

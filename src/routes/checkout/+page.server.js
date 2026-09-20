@@ -1,5 +1,6 @@
 import { normalizeLocale, translate } from '$lib/i18n.svelte.js';
 import { normalizeSiteInfo } from '$lib/site-info.js';
+import { sendAdminOrderNotification } from '$lib/server/admin-order-notification.js';
 import { sendOrderConfirmationEmail } from '$lib/server/order-confirmation-email.js';
 import { getAddonSelectionPrice, getProductAddons, parsePrice } from '$lib/pricing.js';
 import { normalizePhoneNumber, PhoneNumberError } from '$lib/phone-number.js';
@@ -334,13 +335,26 @@ export const actions = {
 			]);
 
 			if (order) {
-				const emailResult = await sendOrderConfirmationEmail(order, normalizeSiteInfo(siteInfo));
-				if (!emailResult.success && !emailResult.skipped) {
-					console.error('Order confirmation email failed:', emailResult.message);
+				const normalizedSiteInfo = normalizeSiteInfo(siteInfo);
+				try {
+					const emailResult = await sendOrderConfirmationEmail(order, normalizedSiteInfo);
+					if (!emailResult.success && !emailResult.skipped) {
+						console.error('Order confirmation email failed:', emailResult.message);
+					}
+				} catch (emailError) {
+					console.error('Order confirmation email error:', emailError);
+				}
+				try {
+					const adminNotificationResult = await sendAdminOrderNotification(order, normalizedSiteInfo);
+					if (!adminNotificationResult.success) {
+						console.error('Admin order notification failed:', adminNotificationResult.results);
+					}
+				} catch (adminNotificationError) {
+					console.error('Admin order notification error:', adminNotificationError);
 				}
 			}
-		} catch (emailError) {
-			console.error('Order confirmation email error:', emailError);
+		} catch (notificationError) {
+			console.error('Order notification data load error:', notificationError);
 		}
 
 		return { success: true, orderId };
