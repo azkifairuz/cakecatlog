@@ -1,7 +1,8 @@
 import { normalizeSiteInfo } from '$lib/site-info.js';
 import { normalizeLocale } from '$lib/i18n.svelte.js';
+import { getSiteInfo } from '$lib/api/public.js';
 
-export const load = async ({ locals: { supabase }, request, url }) => {
+export const load = async ({ request, url, fetch }) => {
 	const locale = normalizeLocale(request.headers.get('accept-language'));
 
 	if (url.pathname.startsWith('/admin')) {
@@ -11,14 +12,11 @@ export const load = async ({ locals: { supabase }, request, url }) => {
 		};
 	}
 
-	const siteInfo = supabase
-		.from('site_contact_info')
-		.select('*')
-		.eq('id', 'main')
-		.maybeSingle()
-		.then(({ data, error }) => {
-			if (error) console.error('Unable to load public site info:', error);
-			return normalizeSiteInfo(data);
+	const siteInfo = getSiteInfo(fetch)
+		.then((data) => normalizeSiteInfo(data))
+		.catch((error) => {
+			console.error('Unable to load public site info:', error);
+			return normalizeSiteInfo();
 		});
 
 	return {

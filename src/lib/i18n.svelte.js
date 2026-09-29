@@ -67,7 +67,18 @@ export const translations = {
 			eyebrow: 'Katalog Lengkap',
 			title: 'Semua Koleksi Kue',
 			description:
-				'Jelajahi seluruh pilihan kue dessertbyfir dan pilih desain yang paling cocok untuk momen spesial Anda.'
+				'Jelajahi seluruh pilihan kue dessertbyfir dan pilih desain yang paling cocok untuk momen spesial Anda.',
+			searchPlaceholder: 'Cari kue impianmu...',
+			searchAriaLabel: 'Cari produk katalog',
+			clearSearch: 'Hapus pencarian',
+			sortBy: 'Urutkan:',
+			sortLatest: 'Terbaru',
+			sortPriceLow: 'Harga Terendah',
+			sortPriceHigh: 'Harga Tertinggi',
+			sortNameAsc: 'Nama (A - Z)',
+			sortNameDesc: 'Nama (Z - A)',
+			emptySearch: 'Tidak ada produk yang cocok dengan pencarian Anda.',
+			resetFilters: 'Reset Filter'
 		},
 		topPicks: {
 			eyebrow: 'Pilihan Favorit',
@@ -287,7 +298,18 @@ export const translations = {
 			eyebrow: 'Full Catalog',
 			title: 'All Cake Collections',
 			description:
-				'Explore every dessertbyfir cake option and choose the design that fits your special moment best.'
+				'Explore every dessertbyfir cake option and choose the design that fits your special moment best.',
+			searchPlaceholder: 'Search cakes...',
+			searchAriaLabel: 'Search catalog products',
+			clearSearch: 'Clear search',
+			sortBy: 'Sort by:',
+			sortLatest: 'Newest',
+			sortPriceLow: 'Price: Low to High',
+			sortPriceHigh: 'Price: High to Low',
+			sortNameAsc: 'Name (A - Z)',
+			sortNameDesc: 'Name (Z - A)',
+			emptySearch: 'No cakes matched your search.',
+			resetFilters: 'Reset Filters'
 		},
 		topPicks: {
 			eyebrow: 'Customer Favorites',

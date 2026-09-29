@@ -1,51 +1,19 @@
 export const ORDER_PAGE_SIZE = 24;
 export const DASHBOARD_PAGE_SIZE = 12;
 
-export const ORDER_LIST_SELECT = `
-	id,
-	order_number,
-	customer_name,
-	phone_number,
-	email,
-	delivery_option,
-	delivery_date,
-	delivery_time,
-	address,
-	status,
-	amount,
-	cake_price,
-	delivery_fee,
-	delivery_vehicle,
-	cake_size,
-	cake_color,
-	cake_flavor,
-	crown_option,
-	add_edible_glitter,
-	customized_options,
-	quantity,
-	cake_text,
-	proof_of_transfer,
-	created_at,
-	products (name),
-	order_items (
-		id,
-		product_id,
-		quantity,
-		cake_size,
-		cake_text,
-		cake_topper_fee,
-		customized_options,
-		dark_color_surcharge,
-		estimated_subtotal,
-		gift_card_text,
-		has_cake_topper,
-		reference_image_url,
-		size_price,
-		products (name)
-	)
-`;
-
-const VALID_STATUSES = new Set(['Pending', 'Diproses', 'Selesai', 'Batal/Refund']);
+const VALID_STATUSES = new Set([
+	'Pending',
+	'Diproses',
+	'Selesai',
+	'Batal/Refund',
+	'Confirmed',
+	'Paid',
+	'Processing',
+	'Ready',
+	'Delivered',
+	'Completed',
+	'Cancelled'
+]);
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 export function getJakartaDate(date = new Date()) {
@@ -69,7 +37,7 @@ function normalizePage(value) {
 	return Number.isInteger(page) && page > 0 ? page : 1;
 }
 
-export function parseOrderFilters(url, { singleDate = false, pageSize = ORDER_PAGE_SIZE } = {}) {
+export function parseOrderFilters(url, { singleDate = false, pageSize = ORDER_PAGE_SIZE, defaultAll = false } = {}) {
 	const today = getJakartaDate();
 	const q = String(url.searchParams.get('q') ?? '').trim().slice(0, 100);
 	const requestedStatus = String(url.searchParams.get('status') ?? 'All');
@@ -79,10 +47,24 @@ export function parseOrderFilters(url, { singleDate = false, pageSize = ORDER_PA
 	let start;
 	let end;
 
-	if (singleDate) {
+	if (url.searchParams.has('start') || url.searchParams.has('end')) {
+		const rawStart = url.searchParams.get('start');
+		const rawEnd = url.searchParams.get('end');
+		if (rawStart === '' && (rawEnd === '' || rawEnd === null)) {
+			start = '';
+			end = '';
+		} else {
+			start = normalizeDate(rawStart, today);
+			end = normalizeDate(rawEnd, today);
+			if (end < start) [start, end] = [end, start];
+		}
+	} else if (singleDate || (url.searchParams.has('date') && !url.searchParams.has('start') && !url.searchParams.has('end'))) {
 		const requestedDate = url.searchParams.get('date');
 		start = requestedDate === '' ? '' : normalizeDate(requestedDate, today);
 		end = start;
+	} else if (defaultAll) {
+		start = '';
+		end = '';
 	} else {
 		start = normalizeDate(url.searchParams.get('start'), today);
 		end = normalizeDate(url.searchParams.get('end'), today);
@@ -96,38 +78,10 @@ export function parseOrderFilters(url, { singleDate = false, pageSize = ORDER_PA
 		dateType,
 		start,
 		end,
-		date: singleDate ? start : undefined,
+		date: start === end ? start : undefined,
 		page,
 		pageSize
 	};
-}
-
-function sanitizeSearch(value) {
-	return value.replace(/[,%()]/g, ' ').replace(/\s+/g, ' ').trim();
-}
-
-export function applyOrderFilters(query, filters, { forceStatus } = {}) {
-	const status = forceStatus ?? filters.status;
-	if (status && status !== 'All') query = query.eq('status', status);
-
-	if (filters.start && filters.end) {
-		if (filters.dateType === 'created_at') {
-			query = query
-				.gte('created_at', `${filters.start}T00:00:00+07:00`)
-				.lte('created_at', `${filters.end}T23:59:59.999+07:00`);
-		} else {
-			query = query.gte('delivery_date', filters.start).lte('delivery_date', filters.end);
-		}
-	}
-
-	const search = sanitizeSearch(filters.q);
-	if (search) {
-		const clauses = [`customer_name.ilike.%${search}%`, `email.ilike.%${search}%`];
-		if (/^\d+$/.test(search)) clauses.push(`order_number.eq.${search}`);
-		query = query.or(clauses.join(','));
-	}
-
-	return query;
 }
 
 export function getPagination(count, filters) {

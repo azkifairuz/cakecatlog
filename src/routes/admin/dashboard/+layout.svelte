@@ -1,14 +1,22 @@
 <script>
 	import { navigating, page } from '$app/state';
+	import { onMount, setContext } from 'svelte';
+	import { clearAdminToken } from '$lib/api/auth.js';
+	import { createAdminNotificationCenter } from '$lib/admin-notification-center.svelte.js';
+	import { revokeAdminPushSubscription } from '$lib/admin-notifications.js';
 	import AdminRouteSkeleton from '$lib/components/admin/AdminRouteSkeleton.svelte';
 	import AdminSidebar from '$lib/components/admin/AdminSidebar.svelte';
+	import AdminInstallButton from '$lib/components/admin/AdminInstallButton.svelte';
+	import AdminNotificationBell from '$lib/components/admin/AdminNotificationBell.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import * as Sheet from '$lib/components/ui/sheet';
 	import * as Sidebar from '$lib/components/ui/sidebar';
 	import { Toaster } from '$lib/components/ui/sonner';
 	import { cn } from '$lib/utils';
 	import ChartBar from '@lucide/svelte/icons/chart-bar';
+	import Bell from '@lucide/svelte/icons/bell';
 	import FileText from '@lucide/svelte/icons/file-text';
+	import History from '@lucide/svelte/icons/history';
 	import Image from '@lucide/svelte/icons/image';
 	import Info from '@lucide/svelte/icons/info';
 	import ListPlus from '@lucide/svelte/icons/list-plus';
@@ -18,24 +26,20 @@
 	import Package from '@lucide/svelte/icons/package';
 	import ShoppingCart from '@lucide/svelte/icons/shopping-cart';
 	import Tags from '@lucide/svelte/icons/tags';
+	import Users from '@lucide/svelte/icons/users';
+	import ShieldCheck from '@lucide/svelte/icons/shield-check';
+	import Wallet from '@lucide/svelte/icons/wallet';
 
-	let { children } = $props();
+	let { children, data } = $props();
+	const notifications = createAdminNotificationCenter();
+	setContext('admin-notifications', notifications);
 	let sidebarOpen = $state(false);
 	let mobileMoreOpen = $state(false);
-	const navItems = [
-		{ href: '/admin/dashboard', label: 'Analytics', icon: ChartBar },
-		{ href: '/admin/dashboard/orders', label: 'Orders', icon: ShoppingCart },
-		{ href: '/admin/dashboard/order-forms', label: 'Form Pembelian', icon: FileText },
-		{ href: '/admin/dashboard/products', label: 'Products', icon: Package },
-		{ href: '/admin/dashboard/categories', label: 'Categories', icon: Tags },
-		{ href: '/admin/dashboard/addons', label: 'Addons', icon: ListPlus },
-		{ href: '/admin/dashboard/banners', label: 'Banners', icon: Image },
-		{ href: '/admin/dashboard/site-info', label: 'Info Toko', icon: Info },
-		{ href: '/admin/dashboard/whatsapp', label: 'WhatsApp', icon: MessageCircle }
-	];
-	const primaryMobileNav = navItems.slice(0, 3);
-	const secondaryMobileNav = navItems.slice(3);
-	const pageTitles = Object.fromEntries(navItems.map((item) => [item.href, item.label]));
+	const iconMap = { ChartBar, BarChart3: ChartBar, LayoutDashboard: ChartBar, ShoppingCart, FileText, Bell, Package, Tags, ListPlus, Image, Wallet, Users, ShieldCheck, Menu, Info, MessageCircle, History };
+	let navItems = $derived((data.adminMenus || []).map((item) => ({ href: item.url, label: item.name, icon: iconMap[item.icon] || Menu })));
+	let primaryMobileNav = $derived(navItems.slice(0, 3));
+	let secondaryMobileNav = $derived(navItems.slice(3));
+	let pageTitles = $derived(Object.fromEntries(navItems.map((item) => [item.href, item.label])));
 	let displayPath = $derived(navigating.to?.url.pathname ?? page.url.pathname);
 	let isNavigating = $derived(Boolean(navigating.to && navigating.to.url.href !== page.url.href));
 	let pageTitle = $derived(pageTitles[displayPath] ?? 'Dashboard');
@@ -44,16 +48,42 @@
 	function isActive(href) {
 		return href === '/admin/dashboard' ? displayPath === href : displayPath.startsWith(href);
 	}
+
+	async function handleLogout(event) {
+		event.preventDefault();
+		const form = event.currentTarget;
+		try {
+			await Promise.race([
+				revokeAdminPushSubscription(),
+				new Promise((resolve) => setTimeout(resolve, 2000))
+			]);
+		} catch {
+			// Logout must continue if the push service is unavailable.
+		}
+		clearAdminToken();
+		form.submit();
+	}
+
+	onMount(() => {
+		notifications.start();
+		return () => notifications.stop();
+	});
 </script>
 
 <svelte:head><title>{pageTitle} | dessertbyfir Admin</title></svelte:head>
 
 <Sidebar.Provider bind:open={sidebarOpen} class="bg-muted/40 text-foreground" style="--sidebar-width: 14rem; --sidebar-width-icon: 4.5rem;">
-	<AdminSidebar {navItems} activePath={displayPath} />
+	<AdminSidebar {navItems} activePath={displayPath} onLogout={handleLogout} />
 	<Sidebar.Inset class="min-w-0 bg-muted/40">
 			<header class="sticky top-0 z-30 flex h-14 items-center border-b bg-background/95 px-4 backdrop-blur md:hidden">
 				<span class="font-semibold text-primary">dessertbyfir Admin</span>
-				<span class="ml-auto text-sm text-muted-foreground">{pageTitle}</span>
+				<span class="ml-auto mr-2 truncate text-sm text-muted-foreground">{pageTitle}</span>
+				<AdminNotificationBell count={notifications.state.unreadCount} />
+				<AdminInstallButton compact />
+			</header>
+			<header class="sticky top-0 z-30 hidden h-14 items-center justify-end gap-2 border-b bg-background/95 px-5 backdrop-blur md:flex lg:px-6">
+				<AdminNotificationBell count={notifications.state.unreadCount} />
+				<AdminInstallButton />
 			</header>
 			<main class="min-w-0 overflow-x-hidden p-4 pb-24 md:p-5 md:pb-5 lg:p-6" aria-busy={isNavigating}>
 				<span class="sr-only" aria-live="polite">{isNavigating ? `Memuat halaman ${pageTitle}` : ''}</span>
@@ -87,7 +117,7 @@
 				<a href={item.href} onclick={() => (mobileMoreOpen = false)} class={cn('flex h-12 items-center gap-3 rounded-lg border px-3 text-sm font-medium', isActive(item.href) ? 'border-primary bg-primary/10 text-primary' : 'bg-background text-foreground')}><Icon class="size-4" />{item.label}</a>
 			{/each}
 		</nav>
-		<form action="/admin/logout" method="POST"><Button type="submit" variant="outline" class="w-full"><LogOut data-icon="inline-start" />Logout</Button></form>
+		<form action="/admin/logout" method="POST" onsubmit={handleLogout}><Button type="submit" variant="outline" class="w-full"><LogOut data-icon="inline-start" />Logout</Button></form>
 	</Sheet.Content>
 </Sheet.Root>
 

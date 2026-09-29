@@ -1,56 +1,61 @@
-export const load = async ({ locals: { supabase } }) => {
-	const { data: categories, error } = await supabase
-		.from('categories')
-		.select('*')
-		.order('created_at', { ascending: false });
+import { fail } from '@sveltejs/kit';
+import {
+	getAdminCategories,
+	createAdminCategory,
+	deleteAdminCategory
+} from '$lib/api/admin.js';
+import { handleAdminAuthError } from '$lib/api/auth.js';
 
-	return {
-		categories: categories ?? [],
-	};
+export const load = async ({ locals, fetch, cookies }) => {
+	try {
+		const categories = await getAdminCategories(locals.adminToken, fetch);
+		return {
+			categories: Array.isArray(categories) ? categories : []
+		};
+	} catch (err) {
+		handleAdminAuthError(err, cookies);
+		console.error('Failed to load admin categories:', err);
+		return {
+			categories: []
+		};
+	}
 };
 
-function generateSlug(text) {
-	return text
-		.toString()
-		.toLowerCase()
-		.trim()
-		.replace(/\s+/g, '-')        // Replace spaces with -
-		.replace(/[^\w\-]+/g, '')    // Remove all non-word chars
-		.replace(/\-\-+/g, '-');     // Replace multiple - with single -
-}
-
 export const actions = {
-	createCategory: async ({ request, locals: { supabase } }) => {
+	createCategory: async ({ request, locals, fetch, cookies }) => {
 		const formData = await request.formData();
-		const name = formData.get('name');
+		const name = String(formData.get('name') || '').trim();
 
-		if (!name) return { success: false, error: 'Name is required' };
+		if (!name) return fail(400, { success: false, error: 'Nama kategori wajib diisi' });
 
-		const slug = generateSlug(name);
-
-		const { error } = await supabase
-			.from('categories')
-			.insert({ name, slug });
-
-		if (error) {
-			// Handle unique constraint violations easily
-			if (error.code === '23505') {
-				return { success: false, error: 'Kategori dengan nama ini sudah ada.' };
-			}
-			return { success: false, error: error.message };
+		try {
+			await createAdminCategory({ name }, locals.adminToken, fetch);
+			return { success: true };
+		} catch (err) {
+			handleAdminAuthError(err, cookies);
+			console.error('Create category error:', err);
+			return fail(400, {
+				success: false,
+				error: err?.message || 'Gagal menambahkan kategori.'
+			});
 		}
-		
-		return { success: true };
 	},
-	deleteCategory: async ({ request, locals: { supabase } }) => {
+	deleteCategory: async ({ request, locals, fetch, cookies }) => {
 		const formData = await request.formData();
 		const id = formData.get('id');
 
-		if (!id) return { success: false, error: 'Missing ID' };
+		if (!id) return fail(400, { success: false, error: 'Missing ID' });
 
-		const { error } = await supabase.from('categories').delete().eq('id', id);
-
-		if (error) return { success: false, error: error.message };
-		return { success: true };
+		try {
+			await deleteAdminCategory(id, locals.adminToken, fetch);
+			return { success: true };
+		} catch (err) {
+			handleAdminAuthError(err, cookies);
+			console.error('Delete category error:', err);
+			return fail(400, {
+				success: false,
+				error: err?.message || 'Gagal menghapus kategori.'
+			});
+		}
 	}
 };

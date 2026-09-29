@@ -90,7 +90,7 @@
 	let selectedExistingCount = $derived(
 		customizeAddons
 			? getEffectiveSelectedAddonCount(globalAddons, productAddonStates)
-			: globalAddons.filter((addon) => addon.is_active !== false).length
+			: 0
 	);
 	let summarySelectedCount = $derived(selectedExistingCount + (customizeAddons ? newAddonRows.length : 0));
 	let summaryTotalCount = $derived(globalAddons.length + (customizeAddons ? newAddonRows.length : 0));
@@ -236,28 +236,28 @@
 		<div class="flex min-w-0 items-start gap-3">
 			<div class="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
 				<ListChecksIcon class="size-5" />
-			</div>
-			<div class="min-w-0">
-				<div class="flex flex-wrap items-center gap-2">
-					<h3 class="text-sm font-semibold text-foreground">Addons produk</h3>
-					<Badge variant={customizeAddons ? 'default' : 'secondary'}>
-						{customizeAddons ? 'Pilihan khusus' : 'Mengikuti global'}
-					</Badge>
 				</div>
-				<p class="mt-1 text-xs leading-relaxed text-muted-foreground">
-					{customizeAddons
-						? `${summarySelectedCount} dari ${summaryTotalCount} addon dipilih untuk produk ini.`
-						: `${selectedExistingCount} addon aktif mengikuti pengaturan global.`}
-				</p>
+				<div class="min-w-0">
+					<div class="flex flex-wrap items-center gap-2">
+						<h3 class="text-sm font-semibold text-foreground">Addons produk</h3>
+						<Badge variant={customizeAddons ? 'default' : 'secondary'}>
+							{customizeAddons ? 'Pilihan khusus' : 'Belum dipilih'}
+						</Badge>
+					</div>
+					<p class="mt-1 text-xs leading-relaxed text-muted-foreground">
+						{customizeAddons
+							? `${summarySelectedCount} dari ${summaryTotalCount} addon dipilih untuk produk ini.`
+							: 'Produk ini belum memiliki addon. Atur addon untuk menampilkan opsi tambahan di form order.'}
+					</p>
+				</div>
 			</div>
-		</div>
-		<div class="flex shrink-0 flex-wrap gap-2">
-			{#if customizeAddons}
-				<Button type="button" variant="ghost" size="sm" onclick={resetToGlobal}>
-					<RotateCcwIcon data-icon="inline-start" />
-					Ikuti global
-				</Button>
-			{/if}
+			<div class="flex shrink-0 flex-wrap gap-2">
+				{#if customizeAddons}
+					<Button type="button" variant="ghost" size="sm" onclick={resetToGlobal}>
+						<RotateCcwIcon data-icon="inline-start" />
+						Kosongkan
+					</Button>
+				{/if}
 			<Button type="button" variant="outline" size="sm" onclick={openEditor}>
 				<ListChecksIcon data-icon="inline-start" />
 				Atur addons

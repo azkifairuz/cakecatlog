@@ -1,24 +1,33 @@
 import { json } from '@sveltejs/kit';
-import { WhatsAppGatewayError } from '$lib/server/whatsapp-gateway.js';
-import { getWhatsAppGateway } from '$lib/server/whatsapp-gateway.server.js';
+import { getAdminWhatsAppStatus } from '$lib/api/admin.js';
+import { isAuthError } from '$lib/api/auth.js';
 
-export async function GET() {
+export async function GET({ locals, fetch, cookies }) {
 	try {
-		return json(await getWhatsAppGateway().getStatus(), {
+		const status = await getAdminWhatsAppStatus(locals.adminToken, fetch);
+		return json(status, {
 			headers: { 'Cache-Control': 'no-store' }
 		});
 	} catch (error) {
-		console.error('WhatsApp status error:', error);
-		const status = error instanceof WhatsAppGatewayError ? error.status : 502;
-		const headers = { 'Cache-Control': 'no-store' };
-		if (error instanceof WhatsAppGatewayError && error.retryAfterSeconds) {
-			headers['Retry-After'] = String(error.retryAfterSeconds);
+		if (isAuthError(error)) {
+			cookies.delete('admin_access_token', { path: '/' });
+			return json(
+				{
+					status: 'unauthorized',
+					qr: null,
+					message: 'Sesi login telah berakhir.'
+				},
+				{ status: 401, headers: { 'Cache-Control': 'no-store' } }
+			);
 		}
+		console.error('WhatsApp status error:', error);
+		const status = error?.status || 502;
+		const headers = { 'Cache-Control': 'no-store' };
 		return json(
 			{
 				status: 'error',
 				qr: null,
-				message: error instanceof WhatsAppGatewayError ? error.message : 'Tidak dapat menghubungi WhatsApp gateway.'
+				message: error?.message || 'Tidak dapat menghubungi WhatsApp gateway.'
 			},
 			{ status, headers }
 		);

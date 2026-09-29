@@ -1,45 +1,57 @@
-import { error as httpError } from '@sveltejs/kit';
-import { getOrderForms, slugify } from '$lib/server/order-forms.js';
+import {
+	getAdminOrderForms,
+	getAdminProducts,
+	getAdminSiteInfo,
+	createAdminOrderForm,
+	updateAdminOrderForm,
+	toggleAdminOrderFormStatus,
+	deleteAdminOrderForm
+} from '$lib/api/admin.js';
+import { adaptProducts } from '$lib/api/adapters.js';
 import { normalizeSiteInfo } from '$lib/site-info.js';
+import { slugify } from '$lib/order-forms.js';
+import { handleAdminAuthError } from '$lib/api/auth.js';
+import { fail } from '@sveltejs/kit';
 
-export const load = async ({ locals: { supabase } }) => {
-	const [productsRes, forms, siteInfoRes] = await Promise.all([
-		supabase
-			.from('products')
-			.select(`
-				id,
-				name,
-				base_price,
-				is_active,
-				is_available,
-				categories (
-					id,
-					name
-				),
-				product_images (
-					image_url,
-					is_primary
-				)
-			`)
-			.eq('is_active', true)
-			.order('name', { ascending: true }),
-		getOrderForms(supabase),
-		supabase.from('site_contact_info').select('*').eq('id', 'main').maybeSingle()
-	]);
-
-	if (productsRes.error) {
-		console.error('Failed to load products for admin order forms:', productsRes.error);
+export const load = async ({ locals, fetch, cookies }) => {
+	let productsRes, formsRes, siteInfoRes;
+	try {
+		[productsRes, formsRes, siteInfoRes] = await Promise.all([
+			getAdminProducts({ pageSize: 100 }, locals.adminToken, fetch),
+			getAdminOrderForms({ pageSize: 100 }, locals.adminToken, fetch),
+			getAdminSiteInfo(locals.adminToken, fetch)
+		]);
+	} catch (err) {
+		handleAdminAuthError(err, cookies);
+		console.error('Failed to load order forms page data:', err);
+		productsRes = { items: [] };
+		formsRes = { items: [] };
+		siteInfoRes = null;
 	}
 
+	const rawProducts = productsRes?.items || productsRes?.products || [];
+	const rawForms = formsRes?.items || formsRes?.orderForms || (Array.isArray(formsRes) ? formsRes : []);
+
+	const orderForms = rawForms.map((f) => ({
+		...f,
+		product_id: f.productId !== undefined ? f.productId : f.product_id,
+		is_active: f.isActive !== undefined ? f.isActive : f.is_active,
+		views_count: f.viewsCount !== undefined ? f.viewsCount : f.views_count,
+		orders_count: f.ordersCount !== undefined ? f.ordersCount : f.orders_count,
+		banner_text: f.bannerText !== undefined ? f.bannerText : f.banner_text,
+		created_at: f.createdAt !== undefined ? f.createdAt : f.created_at,
+		updated_at: f.updatedAt !== undefined ? f.updatedAt : f.updated_at
+	}));
+
 	return {
-		products: productsRes.data ?? [],
-		orderForms: forms,
-		siteInfo: normalizeSiteInfo(siteInfoRes.data)
+		products: adaptProducts(rawProducts),
+		orderForms,
+		siteInfo: normalizeSiteInfo(siteInfoRes)
 	};
 };
 
 export const actions = {
-	createForm: async ({ request, locals: { supabase } }) => {
+	createForm: async ({ request, locals, fetch, cookies }) => {
 		const formData = await request.formData();
 		const title = String(formData.get('title') || '').trim();
 		const rawSlug = String(formData.get('slug') || '').trim();
@@ -48,41 +60,37 @@ export const actions = {
 		const banner_text = String(formData.get('banner_text') || '').trim() || null;
 
 		if (!title) {
-			return { success: false, error: 'Judul form pembelian wajib diisi.' };
+			return fail(400, { success: false, error: 'Judul form pembelian wajib diisi.' });
 		}
 
 		const slug = slugify(rawSlug || title);
 		if (!slug) {
-			return { success: false, error: 'Slug form tidak valid.' };
+			return fail(400, { success: false, error: 'Slug form tidak valid.' });
 		}
 
 		const payload = {
 			title,
 			slug,
-			product_id: product_id || null,
+			productId: product_id || null,
 			description,
-			banner_text,
-			is_active: true
+			bannerText: banner_text,
+			isActive: true
 		};
 
-		const { data, error } = await supabase
-			.from('order_forms')
-			.insert(payload)
-			.select()
-			.single();
-
-		if (error) {
-			console.error('Create Order Form Error:', error);
-			if (error.code === '23505') {
-				return { success: false, error: 'Slug sudah digunakan oleh form lain. Gunakan slug yang berbeda.' };
-			}
-			return { success: false, error: error.message || 'Gagal membuat form pemesanan.' };
+		try {
+			const form = await createAdminOrderForm(payload, locals.adminToken, fetch);
+			return { success: true, form };
+		} catch (err) {
+			handleAdminAuthError(err, cookies);
+			console.error('Create order form error:', err);
+			return fail(400, {
+				success: false,
+				error: err?.message || 'Gagal membuat form pemesanan.'
+			});
 		}
-
-		return { success: true, form: data };
 	},
 
-	updateForm: async ({ request, locals: { supabase } }) => {
+	updateForm: async ({ request, locals, fetch, cookies }) => {
 		const formData = await request.formData();
 		const id = formData.get('id');
 		const title = String(formData.get('title') || '').trim();
@@ -92,68 +100,65 @@ export const actions = {
 		const banner_text = String(formData.get('banner_text') || '').trim() || null;
 
 		if (!id || !title) {
-			return { success: false, error: 'ID dan Judul form wajib diisi.' };
+			return fail(400, { success: false, error: 'ID dan Judul form wajib diisi.' });
 		}
 
 		const slug = slugify(rawSlug || title);
 		if (!slug) {
-			return { success: false, error: 'Slug form tidak valid.' };
+			return fail(400, { success: false, error: 'Slug form tidak valid.' });
 		}
 
-		const { error } = await supabase
-			.from('order_forms')
-			.update({
-				title,
-				slug,
-				product_id: product_id || null,
-				description,
-				banner_text,
-				updated_at: new Date().toISOString()
-			})
-			.eq('id', id);
+		const payload = {
+			title,
+			slug,
+			productId: product_id || null,
+			description,
+			bannerText: banner_text
+		};
 
-		if (error) {
-			console.error('Update Order Form Error:', error);
-			if (error.code === '23505') {
-				return { success: false, error: 'Slug sudah digunakan oleh form lain.' };
-			}
-			return { success: false, error: error.message };
+		try {
+			await updateAdminOrderForm(id, payload, locals.adminToken, fetch);
+			return { success: true };
+		} catch (err) {
+			handleAdminAuthError(err, cookies);
+			console.error('Update order form error:', err);
+			return fail(400, {
+				success: false,
+				error: err?.message || 'Gagal memperbarui form.'
+			});
 		}
-
-		return { success: true };
 	},
 
-	toggleStatus: async ({ request, locals: { supabase } }) => {
+	toggleStatus: async ({ request, locals, fetch, cookies }) => {
 		const formData = await request.formData();
 		const id = formData.get('id');
 		const is_active = formData.get('is_active') === 'true';
 
-		if (!id) return { success: false, error: 'ID form wajib diisi.' };
+		if (!id) return fail(400, { success: false, error: 'ID form wajib diisi.' });
 
-		const { error } = await supabase
-			.from('order_forms')
-			.update({
-				is_active,
-				updated_at: new Date().toISOString()
-			})
-			.eq('id', id);
-
-		if (error) return { success: false, error: error.message };
-		return { success: true };
+		try {
+			await toggleAdminOrderFormStatus(id, !is_active, locals.adminToken, fetch);
+			return { success: true };
+		} catch (err) {
+			handleAdminAuthError(err, cookies);
+			console.error('Toggle status error:', err);
+			return fail(400, { success: false, error: err?.message || 'Gagal mengubah status form.' });
+		}
 	},
 
-	deleteForm: async ({ request, locals: { supabase } }) => {
+	deleteForm: async ({ request, locals, fetch, cookies }) => {
 		const formData = await request.formData();
 		const id = formData.get('id');
 
-		if (!id) return { success: false, error: 'ID form wajib diisi.' };
+		if (!id) return fail(400, { success: false, error: 'ID form wajib diisi.' });
 
-		const { error } = await supabase
-			.from('order_forms')
-			.delete()
-			.eq('id', id);
-
-		if (error) return { success: false, error: error.message };
-		return { success: true };
+		try {
+			await deleteAdminOrderForm(id, locals.adminToken, fetch);
+			return { success: true };
+		} catch (err) {
+			handleAdminAuthError(err, cookies);
+			console.error('Delete form error:', err);
+			return fail(400, { success: false, error: err?.message || 'Gagal menghapus form.' });
+		}
 	}
 };

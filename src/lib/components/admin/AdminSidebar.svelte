@@ -3,7 +3,7 @@
 	import LogOut from '@lucide/svelte/icons/log-out';
 	import ShoppingCart from '@lucide/svelte/icons/shopping-cart';
 
-	let { navItems, activePath = '/admin/dashboard' } = $props();
+	let { navItems, activePath = '/admin/dashboard', onLogout } = $props();
 	const sidebar = Sidebar.useSidebar();
 
 	function isActive(href) {
@@ -48,7 +48,7 @@
 	</Sidebar.Content>
 
 	<Sidebar.Footer class="border-t p-2">
-		<form action="/admin/logout" method="POST">
+		<form action="/admin/logout" method="POST" onsubmit={onLogout}>
 			<Sidebar.Menu>
 				<Sidebar.MenuItem>
 					<Sidebar.MenuButton tooltipContent="Logout" class="mx-auto h-10 gap-3 px-3 group-data-[collapsible=icon]:size-10!">

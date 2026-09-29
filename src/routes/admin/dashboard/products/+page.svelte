@@ -20,6 +20,8 @@
 	import AdminPageHeader from '$lib/components/admin/AdminPageHeader.svelte';
 	import AdminSearchField from '$lib/components/admin/AdminSearchField.svelte';
 	import ProductAddonEditor from '$lib/components/admin/ProductAddonEditor.svelte';
+	import { getAdminProduct } from '$lib/api/admin.js';
+	import { adaptProduct } from '$lib/api/adapters.js';
 
 	let { data, form } = $props();
 	let isFormOpen = $state(false);
@@ -53,6 +55,7 @@
 	// Detail drawer
 	let selectedProductDetail = $state(null);
 	let isDrawerOpen = $state(false);
+	let isProductDetailLoading = $state(false);
 
 	let customizeAddons = $state(false);
 
@@ -133,19 +136,38 @@
 		isFormOpen = true;
 	}
 
-	function openEditForm(product) {
+	async function loadProductDetail(product) {
+		if (!product?.id || isProductDetailLoading) return null;
+
+		isProductDetailLoading = true;
+		try {
+			const detail = await getAdminProduct(product.id);
+			return adaptProduct(detail);
+		} catch (error) {
+			console.error('Failed to load product detail', error);
+			toast.error('Detail produk gagal dimuat. Coba lagi.');
+			return null;
+		} finally {
+			isProductDetailLoading = false;
+		}
+	}
+
+	async function openEditForm(product) {
+		const detail = await loadProductDetail(product);
+		if (!detail) return;
+
 		resetProductErrors();
-		editingProduct = product;
+		editingProduct = detail;
 		newImages = [];
-		existingImages = product.product_images ? [...product.product_images] : [];
+		existingImages = detail.product_images ? [...detail.product_images] : [];
 		deletedImageIds = [];
-		primaryImageKey = product.product_images?.find((image) => image.is_primary)?.id
-			? `existing:${product.product_images.find((image) => image.is_primary).id}`
-			: product.product_images?.[0]?.id
-				? `existing:${product.product_images[0].id}`
+		primaryImageKey = detail.product_images?.find((image) => image.is_primary)?.id
+			? `existing:${detail.product_images.find((image) => image.is_primary).id}`
+			: detail.product_images?.[0]?.id
+				? `existing:${detail.product_images[0].id}`
 				: '';
-		productVariants = product.product_variants?.length
-			? [...product.product_variants]
+		productVariants = detail.product_variants?.length
+			? [...detail.product_variants]
 				.sort((a, b) => Number(a.display_order ?? 0) - Number(b.display_order ?? 0))
 				.map((variant, index) => ({
 					id: variant.id,
@@ -155,16 +177,17 @@
 					display_order: variant.display_order ?? index
 				}))
 			: [{ id: '', name: '', price: '', is_active: true, display_order: 0 }];
+		const rawAddons = detail.addons ?? detail.product_addons ?? [];
 		productAddonStates = Object.fromEntries(
-			(product.product_addons ?? []).map((item) => [
-				item.addon_id,
-				item.is_active === false ? 'inactive' : 'active'
+			rawAddons.map((item) => [
+				item.addonId || item.addon_id || item.id,
+				item.isActive === false || item.is_active === false ? 'inactive' : 'active'
 			])
 		);
 		customizeAddons = Object.keys(productAddonStates).length > 0;
 		newAddonRows = [];
-		selectedCategoryId = product.category_id ?? '';
-		categoryQuery = getCategoryName(product.category_id);
+		selectedCategoryId = detail.category_id ?? detail.category?.id ?? '';
+		categoryQuery = getCategoryName(selectedCategoryId);
 		isCategoryDropdownOpen = false;
 		categoryCreateError = '';
 		categoryCreateSuccess = '';
@@ -259,8 +282,11 @@
 			}));
 	}
 
-	function openDetail(product) {
-		selectedProductDetail = product;
+	async function openDetail(product) {
+		const detail = await loadProductDetail(product);
+		if (!detail) return;
+
+		selectedProductDetail = detail;
 		isDrawerOpen = true;
 	}
 
@@ -620,7 +646,7 @@
 						{#each existingImages as img, i}
 							{@const imageKey = `existing:${img.id}`}
 							<div class="relative aspect-square rounded-xl overflow-hidden border border-slate-200 group">
-								<img src={getImageUrl(img.image_url, { width: 320, height: 320, quality: 75, resize: 'cover' })} alt="Product" class="w-full h-full object-cover" loading="lazy" decoding="async" />
+								<img src={getImageUrl(img.image_url || img.imageUrl, { width: 320, height: 320, quality: 75, resize: 'cover' })} alt="Product" class="w-full h-full object-cover" loading="lazy" decoding="async" />
 								<button type="button" onclick={() => removeExistingImage(img)} aria-label={`Hapus gambar produk ${i + 1}`} class="absolute top-1 right-1 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-xs shadow-sm">
 									<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
 								</button>
@@ -781,10 +807,10 @@
 			{#each data.products as product (product.id)}
 				<Table.Row class="hover:bg-slate-50/50 transition-colors">
 					<Table.Cell>
-						{#if product.product_images && product.product_images.length > 0}
-							{@const primaryImg = product.product_images.find(img => img.is_primary) || product.product_images[0]}
+						{@const primaryImgUrl = product.product_images?.find(img => img.is_primary || img.isPrimary)?.image_url || product.product_images?.[0]?.image_url || product.image_url || product.imageUrl || product.primaryImageUrl || product.primary_image_url}
+						{#if primaryImgUrl}
 							<div class="w-12 h-12 rounded-lg overflow-hidden bg-slate-100 shadow-sm border border-slate-200">
-								<img src={getImageUrl(primaryImg.image_url, { width: 96, height: 96, quality: 75, resize: 'cover' })} alt={product.name} class="w-full h-full object-cover" loading="lazy" decoding="async" />
+								<img src={getImageUrl(primaryImgUrl, { width: 96, height: 96, quality: 75, resize: 'cover' })} alt={product.name} class="w-full h-full object-cover" loading="lazy" decoding="async" />
 							</div>
 						{:else}
 							<div class="w-12 h-12 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-[10px] font-medium text-slate-400">
@@ -804,7 +830,7 @@
 					<Table.Cell>
 						<form method="POST" action="?/toggleAvailability" use:enhance>
 							<input type="hidden" name="id" value={product.id} />
-							<input type="hidden" name="is_available" value={product.is_available.toString()} />
+							<input type="hidden" name="is_available" value={String(Boolean(product.is_available))} />
 							<button type="submit" class="hover:opacity-80 transition-opacity">
 								{#if product.is_available}
 									<Badge class="bg-emerald-500 hover:bg-emerald-600 shadow-sm border-0">Available</Badge>
@@ -912,7 +938,7 @@
 						<div class="flex gap-3 overflow-x-auto pb-2 snap-x">
 							{#each selectedProductDetail.product_images as img}
 								<div class="relative w-28 h-28 rounded-xl overflow-hidden shrink-0 snap-start border border-slate-200 shadow-sm">
-									<img src={getImageUrl(img.image_url, { width: 224, height: 224, quality: 75, resize: 'cover' })} alt="Product Galeri" class="w-full h-full object-cover" loading="lazy" decoding="async" />
+									<img src={getImageUrl(img.image_url || img.imageUrl, { width: 224, height: 224, quality: 75, resize: 'cover' })} alt="Product Galeri" class="w-full h-full object-cover" loading="lazy" decoding="async" />
 									{#if img.is_primary}
 										<span class="absolute bottom-1 right-1 bg-slate-900/70 backdrop-blur-sm text-white text-[9px] px-2 py-0.5 rounded-full font-medium">Primary</span>
 									{/if}
@@ -940,15 +966,15 @@
 				<div>
 					<h4 class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-4">Opsi Kustomisasi</h4>
 					<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-						{#each Object.entries(groupAddons(getProductAddons(selectedProductDetail, data.globalAddons))) as [category, addons]}
-							<div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
-								<span class="block text-xs font-semibold text-slate-500 mb-1 capitalize">{category}</span>
-								<p class="text-sm font-medium text-slate-800">{addons.map((addon) => addon.name).join(', ')}</p>
-							</div>
+							{#each Object.entries(groupAddons(getProductAddons(selectedProductDetail, data.globalAddons))) as [category, addons]}
+								<div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+									<span class="block text-xs font-semibold text-slate-500 mb-1 capitalize">{category}</span>
+									<p class="text-sm font-medium text-slate-800">{addons.map((addon) => addon.name).join(', ')}</p>
+								</div>
 						{/each}
 						{#if getProductAddons(selectedProductDetail, data.globalAddons).length === 0}
 							<div class="bg-slate-50 p-3 rounded-xl border border-slate-100 sm:col-span-2">
-								<p class="text-sm font-medium text-slate-600">Menggunakan global addons default.</p>
+								<p class="text-sm font-medium text-slate-600">Belum ada addon untuk produk ini.</p>
 							</div>
 						{/if}
 					</div>
@@ -956,8 +982,9 @@
 				
 				<div class="pt-4 flex gap-3">
 					<Button onclick={() => {
+						const product = selectedProductDetail;
 						closeDetail();
-						openEditForm(selectedProductDetail);
+						void openEditForm(product);
 					}} class="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-lg shadow-blue-600/20">Edit Produk Ini</Button>
 				</div>
 			</div>
