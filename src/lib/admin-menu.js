@@ -17,13 +17,21 @@ export const fallbackMenus = [
 	['Log Aktivitas', '/admin/dashboard/logs', 'History']
 ].map(([name, url, icon], index) => ({ name, url, icon, displayOrder: index + 1 }));
 
+export function adminMenuUrl(url) {
+	if (typeof url !== 'string' || !url.startsWith('/admin/')) return null;
+	if (url === '/admin/dashboard' || url.startsWith('/admin/dashboard/')) return url;
+	if (url === '/admin/login' || url === '/admin/logout') return null;
+	return `/admin/dashboard/${url.slice('/admin/'.length)}`;
+}
+
 export function visibleAdminMenus(admin) {
 	const menus = Array.isArray(admin?.menus) ? admin.menus : [];
 	const isSuperAdmin = admin?.role === 'super_admin' || admin?.permissions?.includes('*');
+	const normalized = menus.map((menu) => ({ ...menu, url: adminMenuUrl(menu?.url) })).filter((menu) => menu.url);
 	const source = isSuperAdmin
-		? [...fallbackMenus, ...menus.filter((menu) => !fallbackMenus.some((local) => local.url === menu.url))]
-		: menus.length ? menus : fallbackMenus;
-	const visible = source.filter((menu) => menu?.isActive !== false && menu?.url?.startsWith('/admin/'));
+		? [...fallbackMenus, ...normalized.filter((menu) => !fallbackMenus.some((local) => local.url === menu.url))]
+		: menus.length ? normalized : fallbackMenus;
+	const visible = source.filter((menu) => menu?.isActive !== false && menu?.url);
 	if ((isSuperAdmin || admin?.permissions?.includes('menu.manage')) && !visible.some((menu) => menu.url === '/admin/dashboard/menus')) {
 		visible.push(fallbackMenus.find((menu) => menu.url === '/admin/dashboard/menus'));
 	}
