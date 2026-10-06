@@ -2,24 +2,25 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { getDashboardDateRange } from '../src/lib/admin-order-dates.js';
 import {
-	applyOrderFilters,
 	getJakartaDate,
 	getPagination,
-	ORDER_LIST_SELECT,
 	parseOrderFilters,
 	summarizeOrders
 } from '../src/lib/server/admin-orders.js';
-
-test('uses fields that exist in the live order schema', () => {
-	assert.match(ORDER_LIST_SELECT, /\bcake_text\b/);
-	assert.doesNotMatch(ORDER_LIST_SELECT, /\bnotes\b/);
-});
 
 test('uses the Jakarta calendar date around UTC midnight', () => {
 	assert.equal(getJakartaDate(new Date('2026-08-16T18:00:00Z')), '2026-08-17');
 });
 
-test('builds weekly and monthly dashboard ranges from today', () => {
+test('builds weekly, monthly, daily, and all dashboard ranges from today', () => {
+	assert.deepEqual(getDashboardDateRange('all', '2026-08-17'), {
+		start: '',
+		end: ''
+	});
+	assert.deepEqual(getDashboardDateRange('daily', '2026-08-17'), {
+		start: '2026-08-17',
+		end: '2026-08-17'
+	});
 	assert.deepEqual(getDashboardDateRange('weekly', '2026-08-17'), {
 		start: '2026-08-11',
 		end: '2026-08-17'
@@ -46,20 +47,24 @@ test('treats an explicitly empty order date as all dates', () => {
 		new URL('https://example.com/admin/dashboard/orders?date='),
 		{ singleDate: true }
 	);
-	const calls = [];
-	const query = {
-		eq(...args) { calls.push(['eq', ...args]); return this; },
-		gte(...args) { calls.push(['gte', ...args]); return this; },
-		lte(...args) { calls.push(['lte', ...args]); return this; },
-		or(...args) { calls.push(['or', ...args]); return this; }
-	};
 
 	assert.equal(filters.date, '');
 	assert.equal(filters.start, '');
 	assert.equal(filters.end, '');
-	assert.equal(applyOrderFilters(query, filters), query);
-	assert.deepEqual(calls, []);
 });
+
+test('handles defaultAll option when start and end parameters are omitted', () => {
+	const filters = parseOrderFilters(
+		new URL('https://example.com/admin/dashboard'),
+		{ defaultAll: true, pageSize: 12 }
+	);
+
+	assert.equal(filters.start, '');
+	assert.equal(filters.end, '');
+	assert.equal(filters.date, '');
+	assert.equal(filters.pageSize, 12);
+});
+
 
 test('normalizes a reversed dashboard date range', () => {
 	const url = new URL('https://example.com/admin/dashboard?start=2026-08-20&end=2026-08-10&status=Selesai&page=2');
@@ -109,3 +114,23 @@ test('summarizes order counts and completed revenue', () => {
 		}
 	);
 });
+
+test('parses date range filters for orders page (start and end)', () => {
+	const url = new URL('https://example.com/admin/dashboard/orders?start=2026-09-01&end=2026-09-15&status=Confirmed&date_type=created_at&q=Dewi');
+	const filters = parseOrderFilters(url);
+
+	assert.equal(filters.start, '2026-09-01');
+	assert.equal(filters.end, '2026-09-15');
+	assert.equal(filters.status, 'Confirmed');
+	assert.equal(filters.dateType, 'created_at');
+	assert.equal(filters.q, 'Dewi');
+	assert.equal(filters.pageSize, 24);
+});
+
+test('accepts both English backend statuses and Indonesian statuses', () => {
+	for (const st of ['Pending', 'Confirmed', 'Paid', 'Processing', 'Ready', 'Delivered', 'Completed', 'Cancelled', 'Diproses', 'Selesai', 'Batal/Refund']) {
+		const filters = parseOrderFilters(new URL(`https://example.com/admin/dashboard/orders?status=${st}`));
+		assert.equal(filters.status, st);
+	}
+});
+

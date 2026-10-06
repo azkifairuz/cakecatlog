@@ -17,19 +17,40 @@ test('normalizes category labels for stable grouping', () => {
 	assert.equal(normalizeCategoryKey(' Artificial-Flower '), 'artificial_flower');
 });
 
-test('inherits global status when there is no product override', () => {
+test('uses global addons only when the product has no explicit addon relation field', () => {
 	assert.deepEqual(getProductAddons({ global_addons: globalAddons }).map((addon) => addon.id), ['a', 'b']);
 });
 
-test('product overrides win over global active and inactive states', () => {
+test('explicit product addon relations win over supplied global addons', () => {
 	const product = {
-		global_addons: globalAddons,
 		product_addons: [
-			{ addon_id: 'a', is_active: false },
-			{ addon_id: 'c', is_active: true }
+			{ addon_id: 'a', category: 'Artificial Flower', name: 'Lily Calla', additional_price: 10000, is_active: true }
 		]
 	};
-	assert.deepEqual(getProductAddons(product).map((addon) => addon.id), ['b', 'c']);
+	assert.deepEqual(getProductAddons(product, globalAddons).map((addon) => addon.id), ['a']);
+});
+
+test('empty explicit product addon relations do not inherit supplied global addons', () => {
+	assert.deepEqual(getProductAddons({ product_addons: [] }, globalAddons).map((addon) => addon.id), []);
+});
+
+test('nested legacy product addon relations are normalized', () => {
+	const product = {
+		product_addons: [
+			{
+				addon_id: 'b',
+				is_active: true,
+				global_addons: {
+					id: 'b',
+					category: 'Artificial Flower',
+					name: 'Lily Stargazer',
+					additional_price: 20000,
+					is_active: true
+				}
+			}
+		]
+	};
+	assert.deepEqual(getProductAddons(product).map((addon) => addon.id), ['b']);
 });
 
 test('dynamic groups preserve the display label and include custom categories', () => {
