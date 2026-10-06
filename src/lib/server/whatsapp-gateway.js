@@ -1,7 +1,8 @@
 import { PhoneNumberError, toWhatsAppDigits } from '../phone-number.js';
 
 const DEFAULT_TIMEOUT_MS = 25_000;
-const MAX_MESSAGE_LENGTH = 4_096;
+const MAX_MESSAGE_LENGTH = 60_000;
+const SEND_URL = 'https://api.fonnte.com/send';
 
 export class WhatsAppGatewayError extends Error {
 	constructor(message, { code = 'GATEWAY_ERROR', status = 502, retryAfterSeconds = null } = {}) {
@@ -25,64 +26,63 @@ export function normalizeWhatsAppNumber(value) {
 	}
 }
 
-export function createWhatsAppGateway({ baseUrl, apiKey, fetchFn = fetch, timeoutMs = DEFAULT_TIMEOUT_MS }) {
-	const normalizedBaseUrl = String(baseUrl ?? '').trim().replace(/\/$/, '');
-	const normalizedApiKey = String(apiKey ?? '').trim();
+export function createWhatsAppGateway({ token, fetchFn = fetch, timeoutMs = DEFAULT_TIMEOUT_MS }) {
+	const normalizedToken = String(token ?? '').trim();
 
-	if (!normalizedBaseUrl || !normalizedApiKey) {
+	if (!normalizedToken) {
 		throw new WhatsAppGatewayError(
-			'Konfigurasi WhatsApp gateway belum lengkap. Isi WA_GATEWAY_URL dan WA_GATEWAY_API_KEY.',
+			'Konfigurasi Fonnte belum lengkap. Isi FONNTE_TOKEN di environment server.',
 			{ code: 'CONFIGURATION_ERROR', status: 500 }
 		);
 	}
 
-	async function request(path, options = {}) {
+	async function request(body) {
 		const controller = new AbortController();
 		const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
 		try {
-			const response = await fetchFn(`${normalizedBaseUrl}${path}`, {
-				...options,
-				headers: {
-					Authorization: `Bearer ${normalizedApiKey}`,
-					...options.headers
-				},
+			const response = await fetchFn(SEND_URL, {
+				method: 'POST',
+				headers: { Authorization: normalizedToken },
+				body,
 				signal: controller.signal
 			});
 			const rawBody = await response.text();
-			let body = {};
-
-			if (rawBody) {
-				try {
-					body = JSON.parse(rawBody);
-				} catch {
-					throw new WhatsAppGatewayError('Gateway mengembalikan respons yang tidak valid.', {
-						code: 'INVALID_GATEWAY_RESPONSE',
-						status: 502
-					});
-				}
+			let result;
+			try {
+				result = JSON.parse(rawBody);
+			} catch {
+				// HTTP failures may contain a plain-text proxy response.
+				if (response.ok) throw invalidResponse();
 			}
 
 			if (!response.ok) {
 				const retryAfter = Number.parseInt(response.headers.get('Retry-After') ?? '', 10);
-				throw new WhatsAppGatewayError(body.message || 'Permintaan ke WhatsApp gateway gagal.', {
-					code: body.error || 'GATEWAY_ERROR',
-					status: response.status,
+				throw new WhatsAppGatewayError('Permintaan ke Fonnte gagal.', {
+					code: response.status === 429 ? 'RATE_LIMIT_EXCEEDED' : 'GATEWAY_ERROR',
+					status: response.status === 429 ? 429 : 502,
 					retryAfterSeconds: Number.isFinite(retryAfter) ? retryAfter : null
 				});
 			}
 
-			return body;
+			if (!result || typeof result !== 'object' || Array.isArray(result)) throw invalidResponse();
+			const success = result.status ?? result.Status;
+			if (success === false) {
+				throw sendError(result.reason || result.detail);
+			}
+			if (success !== true) throw invalidResponse();
+
+			return result;
 		} catch (error) {
 			if (error instanceof WhatsAppGatewayError) throw error;
 			if (error?.name === 'AbortError') {
-				throw new WhatsAppGatewayError('WhatsApp gateway tidak merespons tepat waktu.', {
+				throw new WhatsAppGatewayError('Fonnte tidak merespons tepat waktu. Periksa WhatsApp sebelum mengirim ulang.', {
 					code: 'GATEWAY_TIMEOUT',
 					status: 504
 				});
 			}
 
-			throw new WhatsAppGatewayError('Tidak dapat menghubungi WhatsApp gateway.', {
+			throw new WhatsAppGatewayError('Tidak dapat menghubungi Fonnte. Periksa WhatsApp sebelum mengirim ulang.', {
 				code: 'GATEWAY_UNAVAILABLE',
 				status: 502
 			});
@@ -92,9 +92,6 @@ export function createWhatsAppGateway({ baseUrl, apiKey, fetchFn = fetch, timeou
 	}
 
 	return {
-		getQrState: () => request('/api/whatsapp/qr'),
-		getStatus: () => request('/api/whatsapp/status'),
-		logout: () => request('/api/whatsapp/logout', { method: 'POST' }),
 		async sendTextMessage({ to, message }) {
 			const normalizedMessage = String(message ?? '');
 			if (!normalizedMessage.trim()) {
@@ -110,14 +107,35 @@ export function createWhatsAppGateway({ baseUrl, apiKey, fetchFn = fetch, timeou
 				});
 			}
 
-			return request('/api/whatsapp/messages', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					to: normalizeWhatsAppNumber(to),
-					message: normalizedMessage
-				})
-			});
+			const body = new FormData();
+			body.set('target', normalizeWhatsAppNumber(to));
+			body.set('message', normalizedMessage);
+			body.set('countryCode', '0');
+			body.set('connectOnly', 'true');
+			return request(body);
 		}
 	};
+}
+
+function invalidResponse() {
+	return new WhatsAppGatewayError('Fonnte mengembalikan respons yang tidak valid.', {
+		code: 'INVALID_GATEWAY_RESPONSE',
+		status: 502
+	});
+}
+
+function sendError(reason) {
+	const normalizedReason = String(reason ?? '').trim().toLowerCase();
+	const errors = {
+		'token invalid': ['CONFIGURATION_ERROR', 500, 'Token Fonnte tidak valid. Periksa FONNTE_TOKEN di environment server.'],
+		'device disconnected': ['NOT_CONNECTED', 503, 'WhatsApp belum terhubung. Hubungkan perangkat melalui dashboard Fonnte.'],
+		'device not connected': ['NOT_CONNECTED', 503, 'WhatsApp belum terhubung. Hubungkan perangkat melalui dashboard Fonnte.'],
+		'target invalid': ['INVALID_RECIPIENT', 400, 'Nomor WhatsApp penerima tidak valid.'],
+		'input invalid': ['VALIDATION_ERROR', 400, 'Fonnte menolak data pengiriman pesan.'],
+		'insufficient quota': ['QUOTA_EXCEEDED', 503, 'Kuota Fonnte tidak cukup. Tambahkan kuota melalui dashboard Fonnte.']
+	};
+	const [code, status, message] = (Object.hasOwn(errors, normalizedReason) ? errors[normalizedReason] : null) ?? [
+		'SEND_FAILED', 502, 'Fonnte gagal memproses pesan. Periksa dashboard Fonnte.'
+	];
+	return new WhatsAppGatewayError(message, { code, status });
 }

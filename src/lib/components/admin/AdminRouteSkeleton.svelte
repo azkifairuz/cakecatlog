@@ -6,7 +6,7 @@
 	let kind = $derived(
 		path === '/admin/dashboard'
 			? 'dashboard'
-			: path.startsWith('/admin/dashboard/site-info') || path.startsWith('/admin/dashboard/whatsapp')
+			: path.startsWith('/admin/dashboard/site-info')
 				? 'form'
 				: 'list'
 	);

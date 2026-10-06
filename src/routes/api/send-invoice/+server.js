@@ -42,30 +42,23 @@ export async function POST({ request, locals }) {
 			message: invoiceText
 		});
 
-		return json({ success: true, message: 'Invoice berhasil dikirim ke WhatsApp pelanggan.' });
+		return json({ success: true, message: 'Invoice diterima Fonnte untuk diproses.' });
 	} catch (err) {
 		if (err instanceof WhatsAppGatewayError) {
 			const status = err.status >= 400 && err.status < 600 ? err.status : 502;
 			const messages = {
-				NOT_CONNECTED: 'WhatsApp belum terhubung. Scan QR terlebih dahulu di pengaturan WhatsApp.',
+				NOT_CONNECTED: 'WhatsApp belum terhubung. Hubungkan perangkat melalui dashboard Fonnte.',
 				INVALID_RECIPIENT: err.message,
-				RECIPIENT_NOT_REGISTERED:
-					'Nomor pelanggan tidak terdaftar di WhatsApp. Periksa kembali nomor pelanggan.',
-				RECIPIENT_LOOKUP_FAILED:
-					'Gateway gagal memeriksa nomor WhatsApp pelanggan. Coba lagi.',
-				DELIVERY_FAILED:
-					'Pesan ditolak atau koneksi terputus sebelum pesan diterima pelanggan.',
-				DELIVERY_TIMEOUT:
-					'Status pengiriman belum dapat dipastikan. Periksa WhatsApp sebelum mengirim ulang.',
-				GATEWAY_TIMEOUT:
-					'Gateway terlalu lama merespons. Periksa WhatsApp sebelum mengirim ulang.',
-				SEND_FAILED: 'WhatsApp gagal memproses pesan.',
+				GATEWAY_TIMEOUT: err.message,
+				SEND_FAILED: err.message,
 				RATE_LIMIT_EXCEEDED: 'Terlalu banyak permintaan WhatsApp. Coba lagi beberapa saat.',
-				CONFIGURATION_ERROR: 'Konfigurasi WhatsApp gateway belum lengkap.',
+				CONFIGURATION_ERROR: err.message,
+				QUOTA_EXCEEDED: err.message,
+				GATEWAY_UNAVAILABLE: err.message,
 				VALIDATION_ERROR: err.message
 			};
 			return json(
-				{ success: false, message: messages[err.code] || 'WhatsApp gateway sedang bermasalah. Coba lagi nanti.' },
+				{ success: false, message: messages[err.code] || 'Fonnte sedang bermasalah. Periksa dashboard Fonnte sebelum mengirim ulang.' },
 				{ status }
 			);
 		}

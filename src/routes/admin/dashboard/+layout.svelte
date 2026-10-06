@@ -14,7 +14,6 @@
 	import ListPlus from '@lucide/svelte/icons/list-plus';
 	import LogOut from '@lucide/svelte/icons/log-out';
 	import Menu from '@lucide/svelte/icons/menu';
-	import MessageCircle from '@lucide/svelte/icons/message-circle';
 	import Package from '@lucide/svelte/icons/package';
 	import ShoppingCart from '@lucide/svelte/icons/shopping-cart';
 	import Tags from '@lucide/svelte/icons/tags';
@@ -30,8 +29,7 @@
 		{ href: '/admin/dashboard/categories', label: 'Categories', icon: Tags },
 		{ href: '/admin/dashboard/addons', label: 'Addons', icon: ListPlus },
 		{ href: '/admin/dashboard/banners', label: 'Banners', icon: Image },
-		{ href: '/admin/dashboard/site-info', label: 'Info Toko', icon: Info },
-		{ href: '/admin/dashboard/whatsapp', label: 'WhatsApp', icon: MessageCircle }
+		{ href: '/admin/dashboard/site-info', label: 'Info Toko', icon: Info }
 	];
 	const primaryMobileNav = navItems.slice(0, 3);
 	const secondaryMobileNav = navItems.slice(3);
