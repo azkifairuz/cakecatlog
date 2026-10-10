@@ -1,15 +1,28 @@
 import { parsePrice } from '$lib/pricing.js';
-import { buildProductVariantRows } from '$lib/product-variants.js';
-import {
-	getProductFieldErrors,
-	getProductPersistenceErrorMessage
-} from '$lib/product-validation.js';
+import { getProductFieldErrors } from '$lib/product-validation.js';
 import { fail } from '@sveltejs/kit';
-import { randomUUID } from 'node:crypto';
+import {
+	getAdminProducts,
+	getAdminCategories,
+	getAdminAddons,
+	createAdminCategory,
+	createAdminProduct,
+	updateAdminProduct,
+	deleteAdminProduct,
+	setAdminProductAvailability,
+	uploadAdminProductImages,
+	setAdminPrimaryProductImage,
+	deleteAdminProductImage,
+	syncAdminProductVariants,
+	syncAdminProductAddons
+} from '$lib/api/admin.js';
+import { uploadProductImage } from '$lib/api/upload.js';
+import { adaptProducts, adaptAddons } from '$lib/api/adapters.js';
+import { handleAdminAuthError } from '$lib/api/auth.js';
 
 const PRODUCTS_PER_PAGE = 10;
 
-export const load = async ({ locals: { supabase }, url }) => {
+export const load = async ({ locals, url, fetch, cookies }) => {
 	const pageParam = Number(url.searchParams.get('page') ?? '1');
 	const page = Number.isInteger(pageParam) && pageParam > 0 ? pageParam : 1;
 	const search = String(url.searchParams.get('q') ?? '').trim().slice(0, 100);
@@ -17,84 +30,56 @@ export const load = async ({ locals: { supabase }, url }) => {
 		.getAll('category')
 		.map((value) => String(value).trim())
 		.filter((value) => value && value !== 'all');
-	const from = (page - 1) * PRODUCTS_PER_PAGE;
-	const to = from + PRODUCTS_PER_PAGE - 1;
-	let productsQuery = supabase
-		.from('products')
-		.select(`
-			*,
-			category:categories (
-				name,
-				slug
-			),
-			product_images (
-				id,
-				image_url,
-				is_primary
-			),
-			product_variants (
-				id,
-				name,
-				price,
-				is_active,
-				display_order
-			),
-			product_addons (
-				addon_id,
-				is_active,
-				global_addons (
-					id,
-					category,
-					name,
-					additional_price,
-					is_dark_color,
-					dark_color_surcharge,
-					is_active
-				)
-			)
-		`, { count: 'exact' })
-		.eq('is_active', true);
 
-	if (search) {
-		productsQuery = productsQuery.ilike('name', `%${search}%`);
+	let productsRes, categoriesRes, globalAddonsRes;
+	try {
+		[productsRes, categoriesRes, globalAddonsRes] = await Promise.all([
+			getAdminProducts(
+				{
+					page,
+					pageSize: PRODUCTS_PER_PAGE,
+					q: search || undefined,
+					categoryIds: categoryIds.length > 0 ? categoryIds : undefined
+				},
+				locals.adminToken,
+				fetch
+			),
+			getAdminCategories(locals.adminToken, fetch),
+			getAdminAddons(locals.adminToken, fetch)
+		]);
+	} catch (err) {
+		handleAdminAuthError(err, cookies);
+		console.error('Failed to load admin products:', err);
+		productsRes = { items: [], pagination: { page: 1, pageSize: PRODUCTS_PER_PAGE, totalItems: 0, totalPages: 1 } };
+		categoriesRes = [];
+		globalAddonsRes = [];
 	}
 
-	if (categoryIds.length > 0) {
-		productsQuery = productsQuery.in('category_id', categoryIds);
-	}
-
-	productsQuery = productsQuery
-		.order('created_at', { ascending: false })
-		.range(from, to);
-
-	const [productsResult, categoriesResult, globalAddonsResult] = await Promise.all([
-		productsQuery,
-		supabase.from('categories').select('*').order('name'),
-		supabase.from('global_addons').select('*').order('category').order('name')
-	]);
-
-	const { data: products, count } = productsResult;
-	const { data: categories } = categoriesResult;
-	const { data: globalAddons } = globalAddonsResult;
-	const totalProducts = count ?? 0;
+	const rawProducts = productsRes?.items || productsRes?.products || [];
+	const rawPagination = productsRes?.pagination || {};
+	const totalProducts = Number(rawPagination.totalItems ?? rawPagination.totalCount ?? rawProducts.length);
 	const totalPages = Math.max(1, Math.ceil(totalProducts / PRODUCTS_PER_PAGE));
 
+	const categories = Array.isArray(categoriesRes) ? categoriesRes : categoriesRes?.categories || [];
+	const rawGlobalAddons = Array.isArray(globalAddonsRes) ? globalAddonsRes : globalAddonsRes?.addons || [];
+	const globalAddons = adaptAddons(rawGlobalAddons);
+
 	return {
-		products: products ?? [],
+		products: adaptProducts(rawProducts),
 		pagination: {
 			page,
 			pageSize: PRODUCTS_PER_PAGE,
 			totalProducts,
 			totalPages,
-			from: totalProducts === 0 ? 0 : from + 1,
-			to: Math.min(to + 1, totalProducts)
+			from: totalProducts === 0 ? 0 : (page - 1) * PRODUCTS_PER_PAGE + 1,
+			to: Math.min(page * PRODUCTS_PER_PAGE, totalProducts)
 		},
 		filters: {
 			search,
 			categories: categoryIds
 		},
-		categories: categories ?? [],
-		globalAddons: globalAddons ?? []
+		categories,
+		globalAddons
 	};
 };
 
@@ -105,23 +90,13 @@ function parseProductAddonStates(value) {
 
 		return parsed
 			.map((item) => ({
-				addon_id: String(item?.addon_id || '').trim(),
+				addon_id: String(item?.addon_id || item?.id || '').trim(),
 				is_active: item?.is_active !== false
 			}))
 			.filter((item) => item.addon_id);
 	} catch {
 		return [];
 	}
-}
-
-function generateSlug(text) {
-	return String(text ?? '')
-		.toLowerCase()
-		.trim()
-		.replace(/\s+/g, '-')
-		.replace(/[^\w-]+/g, '')
-		.replace(/--+/g, '-')
-		.replace(/^-+|-+$/g, '');
 }
 
 function parseNewAddons(value) {
@@ -135,10 +110,11 @@ function parseNewAddons(value) {
 				return {
 					category: String(item?.category || '').trim(),
 					name: String(item?.name || '').trim(),
-					additional_price: parsePrice(item?.additional_price),
-					is_dark_color,
-					dark_color_surcharge: is_dark_color ? parsePrice(item?.dark_color_surcharge) : 0,
-					is_active: item?.is_active !== false
+					additionalPrice: parsePrice(item?.additional_price ?? item?.additionalPrice),
+					isDarkColor: is_dark_color,
+					darkColorSurcharge: is_dark_color
+						? parsePrice(item?.dark_color_surcharge ?? item?.darkColorSurcharge)
+						: 0
 				};
 			})
 			.filter((item) => item.category && item.name);
@@ -152,14 +128,15 @@ function parseProductVariants(value) {
 		const parsed = JSON.parse(value || '[]');
 		if (!Array.isArray(parsed)) return [];
 
-		return parsed
-			.map((item, index) => ({
-				id: item?.id ? String(item.id) : null,
-				name: String(item?.name || '').trim(),
-				price: item?.price ?? '',
-				is_active: item?.is_active !== false,
-				display_order: Number.isFinite(Number(item?.display_order)) ? Number(item.display_order) : index
-			}));
+		return parsed.map((item, index) => ({
+			id: item?.id ? String(item.id) : null,
+			name: String(item?.name || '').trim(),
+			price: item?.price ?? '',
+			isActive: item?.is_active !== false && item?.isActive !== false,
+			displayOrder: Number.isFinite(Number(item?.display_order ?? item?.displayOrder))
+				? Number(item.display_order ?? item.displayOrder)
+				: index
+		}));
 	} catch {
 		return [];
 	}
@@ -174,345 +151,41 @@ function getPersistableProductVariants(variants) {
 		}));
 }
 
-async function syncProductVariants(supabase, productId, variants) {
-	const submittedIds = variants.map((variant) => variant.id).filter(Boolean);
-
-	const { data: existingRows, error: existingError } = await supabase
-		.from('product_variants')
-		.select('id')
-		.eq('product_id', productId);
-
-	if (existingError) return existingError;
-
-	const variantIdsToRemove = (existingRows ?? [])
-		.map((row) => row.id)
-		.filter((id) => !submittedIds.includes(id));
-
-	if (variantIdsToRemove.length > 0) {
-		const { error } = await supabase
-			.from('product_variants')
-			.delete()
-			.eq('product_id', productId)
-			.in('id', variantIdsToRemove);
-		if (error) return error;
-	}
-
-	if (variants.length === 0) return null;
-
-	const { existingVariantRows, newVariantRows } = buildProductVariantRows(
-		productId,
-		variants,
-		randomUUID
-	);
-
-	if (existingVariantRows.length > 0) {
-		const { error } = await supabase.from('product_variants').upsert(existingVariantRows, {
-			onConflict: 'id'
-		});
-		if (error) return error;
-	}
-
-	if (newVariantRows.length > 0) {
-		const { error } = await supabase.from('product_variants').insert(newVariantRows);
-		if (error) return error;
-	}
-
-	return null;
-}
-
-function productFailure(stage, error) {
-	console.error(`Product ${stage} error:`, {
-		code: error?.code,
-		message: error?.message,
-		details: error?.details,
-		hint: error?.hint
-	});
-
-	return fail(500, {
-		success: false,
-		error: getProductPersistenceErrorMessage(error, stage)
-	});
-}
-
-async function cleanupFailedProduct(supabase, productId) {
-	const { error } = await supabase.from('products').delete().eq('id', productId);
-	if (error) {
-		console.error('Failed to clean up product after create error:', {
-			productId,
-			code: error.code,
-			message: error.message
-		});
-	}
-}
-
-async function createNewGlobalAddons(supabase, productId, newAddons) {
-	if (newAddons.length === 0) return null;
-
-	const { data: createdAddons, error } = await supabase
-		.from('global_addons')
-		.insert(newAddons)
-		.select('id');
-
-	if (error) return error;
-
-	const rows = (createdAddons ?? []).map((addon) => ({
-		product_id: productId,
-		addon_id: addon.id,
-		is_active: true
-	}));
-
-	if (rows.length === 0) return null;
-
-	const { error: relationError } = await supabase.from('product_addons').upsert(rows, {
-		onConflict: 'product_id,addon_id'
-	});
-
-	return relationError;
-}
-
-async function syncProductAddons(supabase, productId, addonStates) {
-	const submittedAddonIds = addonStates.map((item) => item.addon_id);
-
-	const { data: existingRows, error: existingError } = await supabase
-		.from('product_addons')
-		.select('addon_id')
-		.eq('product_id', productId);
-
-	if (existingError) return existingError;
-
-	const addonIdsToRemove = (existingRows ?? [])
-		.map((row) => row.addon_id)
-		.filter((addonId) => !submittedAddonIds.includes(addonId));
-
-	if (addonIdsToRemove.length > 0) {
-		const { error } = await supabase
-			.from('product_addons')
-			.delete()
-			.eq('product_id', productId)
-			.in('addon_id', addonIdsToRemove);
-
-		if (error) return error;
-	}
-
-	if (addonStates.length === 0) return null;
-
-	const uniqueStates = Array.from(
-		new Map(addonStates.map((item) => [item.addon_id, item])).values()
-	);
-	const rows = uniqueStates.map((item) => ({
-		product_id: productId,
-		addon_id: item.addon_id,
-		is_active: item.is_active
-	}));
-
-	const { error } = await supabase.from('product_addons').upsert(rows, {
-		onConflict: 'product_id,addon_id'
-	});
-	return error;
-}
-
-function getProductPayload({
-	name,
-	description,
-	base_price,
-	is_available,
-	category_id,
-	handling_warning
-}) {
-	const payload = {
-		name,
-		description,
-		base_price: parsePrice(base_price),
-		is_available,
-		category_id: category_id || null
-	};
-
-	if (handling_warning) {
-		payload.handling_warning = handling_warning;
-	}
-
-	return payload;
-}
-
-function isMissingHandlingWarningColumn(error) {
-	return error?.code === 'PGRST204' && String(error?.message || '').includes('handling_warning');
-}
-
-async function insertProduct(supabase, payload) {
-	let { data, error } = await supabase.from('products').insert(payload).select().single();
-
-	if (isMissingHandlingWarningColumn(error)) {
-		const { handling_warning: _handlingWarning, ...fallbackPayload } = payload;
-		({ data, error } = await supabase.from('products').insert(fallbackPayload).select().single());
-	}
-
-	return { data, error };
-}
-
-async function updateProductRow(supabase, id, payload) {
-	let { error } = await supabase.from('products').update(payload).eq('id', id);
-
-	if (isMissingHandlingWarningColumn(error)) {
-		const { handling_warning: _handlingWarning, ...fallbackPayload } = payload;
-		({ error } = await supabase.from('products').update(fallbackPayload).eq('id', id));
-	}
-
-	return error;
-}
-
 function parsePrimaryImageKey(value) {
 	const [type, rawIndexOrId] = String(value || '').split(':');
 	if ((type !== 'existing' && type !== 'new') || !rawIndexOrId) return null;
 	return { type, value: rawIndexOrId };
 }
 
-async function uploadProductImages(supabase, productId, images, primaryImageKey) {
-	const selectedPrimary = parsePrimaryImageKey(primaryImageKey);
-	const validImages = (images ?? []).filter((file) => file?.size > 0);
-	if (validImages.length === 0) return { error: null };
-
-	const uploadPromises = validImages.map(async (file, i) => {
-		const fileExt = file.name.split('.').pop();
-		const fileName = `${productId}-${Math.random()}.${fileExt}`;
-		const filePath = `product/${fileName}`;
-
-		const { error: uploadError } = await supabase.storage.from('products').upload(filePath, file);
-		if (uploadError) return { filePath, error: uploadError, row: null };
-
-		const { data: publicUrlData } = supabase.storage.from('products').getPublicUrl(filePath);
-		return {
-			filePath,
-			error: null,
-			row: {
-				product_id: productId,
-				image_url: publicUrlData.publicUrl,
-				is_primary: selectedPrimary?.type === 'new'
-					? Number(selectedPrimary.value) === i
-					: i === 0 && !selectedPrimary
-			}
-		};
-	});
-
-	const results = await Promise.all(uploadPromises);
-	const uploadedPaths = results.filter((result) => result.row).map((result) => result.filePath);
-	const uploadError = results.find((result) => result.error)?.error;
-	if (uploadError) {
-		if (uploadedPaths.length > 0) {
-			await supabase.storage.from('products').remove(uploadedPaths);
-		}
-		return { error: uploadError };
-	}
-
-	const imageInserts = results.map((result) => result.row).filter(Boolean);
-	if (imageInserts.length === 0) return { error: null };
-
-	const { data: insertedImages, error } = await supabase
-		.from('product_images')
-		.insert(imageInserts)
-		.select('id, is_primary');
-
-	if (error && uploadedPaths.length > 0) {
-		await supabase.storage.from('products').remove(uploadedPaths);
-	}
-
-	return { insertedImages: insertedImages ?? [], error };
-}
-
-async function applyPrimaryImage(supabase, productId, primaryImageKey) {
-	const selectedPrimary = parsePrimaryImageKey(primaryImageKey);
-
-	if (selectedPrimary?.type === 'existing') {
-		const { error: clearError } = await supabase
-			.from('product_images')
-			.update({ is_primary: false })
-			.eq('product_id', productId);
-		if (clearError) return clearError;
-
-		const { error: setError } = await supabase
-			.from('product_images')
-			.update({ is_primary: true })
-			.eq('product_id', productId)
-			.eq('id', selectedPrimary.value);
-		if (setError) return setError;
-	}
-
-	const { data: currentImages, error: currentImagesError } = await supabase
-		.from('product_images')
-		.select('id, is_primary')
-		.eq('product_id', productId)
-		.order('created_at', { ascending: true });
-
-	if (currentImagesError) return currentImagesError;
-
-	if (currentImages?.length && !currentImages.some((img) => img.is_primary)) {
-		const { error } = await supabase
-			.from('product_images')
-			.update({ is_primary: true })
-			.eq('id', currentImages[0].id);
-		return error;
-	}
-
-	return null;
-}
-
 export const actions = {
-	createCategory: async ({ request, locals: { supabase } }) => {
+	createCategory: async ({ request, locals, fetch, cookies }) => {
 		const formData = await request.formData();
 		const name = String(formData.get('name') || '').trim();
 
 		if (!name) return { success: false, error: 'Nama kategori wajib diisi' };
 
-		const slug = generateSlug(name);
-		if (!slug) return { success: false, error: 'Slug kategori tidak valid' };
-
-		const { data: existingByName } = await supabase
-			.from('categories')
-			.select('id')
-			.ilike('name', name)
-			.limit(1);
-
-		if (existingByName && existingByName.length > 0) {
-			return { success: false, error: 'Kategori dengan nama ini sudah ada.' };
+		try {
+			const category = await createAdminCategory({ name }, locals.adminToken, fetch);
+			return { success: true, category };
+		} catch (err) {
+			handleAdminAuthError(err, cookies);
+			return { success: false, error: err?.message || 'Gagal menambahkan kategori.' };
 		}
-
-		const { data: existingBySlug } = await supabase
-			.from('categories')
-			.select('id')
-			.eq('slug', slug)
-			.limit(1);
-
-		if (existingBySlug && existingBySlug.length > 0) {
-			return { success: false, error: 'Slug kategori sudah digunakan.' };
-		}
-
-		const { data: category, error } = await supabase
-			.from('categories')
-			.insert({ name, slug })
-			.select('*')
-			.single();
-
-		if (error) {
-			if (error.code === '23505') {
-				return { success: false, error: 'Kategori dengan nama atau slug ini sudah ada.' };
-			}
-			return { success: false, error: error.message };
-		}
-
-		return { success: true, category };
 	},
-	createProduct: async ({ request, locals: { supabase } }) => {
+
+	createProduct: async ({ request, locals, fetch, cookies }) => {
 		const formData = await request.formData();
-		const name = formData.get('name');
-		const description = formData.get('description');
+		const name = String(formData.get('name') || '').trim();
+		const description = String(formData.get('description') || '').trim() || null;
 		const base_price = formData.get('base_price');
 		const is_available = formData.get('is_available') === 'on';
-		const category_id = formData.get('category_id');
+		const category_id = formData.get('category_id') || null;
 		const images = formData.getAll('images');
 		const primaryImageKey = formData.get('primary_image_key');
 		const parsedProductVariants = parseProductVariants(formData.get('product_variants'));
 		const addonStates = parseProductAddonStates(formData.get('product_addons'));
 		const newAddons = parseNewAddons(formData.get('new_addons'));
-		const handling_warning = formData.get('handling_warning');
+		const handling_warning = String(formData.get('handling_warning') || '').trim() || null;
 
 		const fieldErrors = getProductFieldErrors({
 			name,
@@ -526,59 +199,79 @@ export const actions = {
 				fieldErrors
 			});
 		}
+
 		const productVariants = getPersistableProductVariants(parsedProductVariants);
+		const selectedPrimary = parsePrimaryImageKey(primaryImageKey);
 
-		const { data: product, error: productError } = await insertProduct(supabase, {
-			...getProductPayload({
-				name,
-				description,
-				base_price,
-				is_available,
-				category_id,
-				handling_warning
-			}),
-			is_active: true
-		});
+		// Upload images to backend first
+		const uploadedImages = [];
+		const validImages = (images ?? []).filter((file) => file instanceof File && file.size > 0);
 
-		if (productError) {
-			return productFailure('product', productError);
+		for (let i = 0; i < validImages.length; i++) {
+			const file = validImages[i];
+			try {
+				const uploadRes = await uploadProductImage(file, locals.adminToken, fetch);
+				const imageUrl = uploadRes?.publicUrl || uploadRes?.imageUrl;
+				if (imageUrl) {
+					uploadedImages.push({
+						imageUrl,
+						isPrimary:
+							selectedPrimary?.type === 'new'
+								? Number(selectedPrimary.value) === i
+								: i === 0 && !selectedPrimary
+					});
+				}
+			} catch (uploadErr) {
+				handleAdminAuthError(uploadErr, cookies);
+				console.error('Image upload failed:', uploadErr);
+			}
 		}
 
-		const variantError = await syncProductVariants(supabase, product.id, productVariants);
-		if (variantError) {
-			await cleanupFailedProduct(supabase, product.id);
-			return productFailure('variants', variantError);
+		const activeAddonIds = addonStates
+			.filter((state) => state.is_active !== false)
+			.map((state) => state.addon_id);
+
+		const productPayload = {
+			name,
+			description,
+			basePrice: parsePrice(base_price),
+			categoryId: category_id || null,
+			isAvailable: is_available,
+			handlingWarning: handling_warning,
+			variants: productVariants,
+			addonIds: activeAddonIds,
+			newAddons,
+			images: uploadedImages
+		};
+
+		try {
+			await createAdminProduct(productPayload, locals.adminToken, fetch);
+			return { success: true };
+		} catch (err) {
+			handleAdminAuthError(err, cookies);
+			console.error('Create product error:', err);
+			return fail(500, {
+				success: false,
+				error: err?.message || 'Gagal membuat produk baru.'
+			});
 		}
-
-		const addonError = await syncProductAddons(supabase, product.id, addonStates);
-		if (addonError) return productFailure('addons', addonError);
-
-		const newAddonError = await createNewGlobalAddons(supabase, product.id, newAddons);
-		if (newAddonError) return productFailure('addons', newAddonError);
-
-		const { error: uploadImagesError } = await uploadProductImages(supabase, product.id, images, primaryImageKey);
-		if (uploadImagesError) return productFailure('images', uploadImagesError);
-
-		const primaryError = await applyPrimaryImage(supabase, product.id, primaryImageKey);
-		if (primaryError) return productFailure('images', primaryError);
-
-		return { success: true };
 	},
-	updateProduct: async ({ request, locals: { supabase } }) => {
+
+	updateProduct: async ({ request, locals, fetch, cookies }) => {
 		const formData = await request.formData();
 		const id = formData.get('id');
-		const name = formData.get('name');
-		const description = formData.get('description');
+		const name = String(formData.get('name') || '').trim();
+		const description = String(formData.get('description') || '').trim() || null;
 		const base_price = formData.get('base_price');
 		const is_available = formData.get('is_available') === 'on';
-		const category_id = formData.get('category_id');
+		const category_id = formData.get('category_id') || null;
 		const images = formData.getAll('images');
 		const primaryImageKey = formData.get('primary_image_key');
 		const deletedImageIdsStr = formData.get('deleted_image_ids');
 		const parsedProductVariants = parseProductVariants(formData.get('product_variants'));
 		const addonStates = parseProductAddonStates(formData.get('product_addons'));
 		const newAddons = parseNewAddons(formData.get('new_addons'));
-		const handling_warning = formData.get('handling_warning');
+		const handling_warning = String(formData.get('handling_warning') || '').trim() || null;
 
 		if (!id) {
 			return fail(400, { success: false, error: 'ID produk tidak ditemukan.' });
@@ -596,95 +289,117 @@ export const actions = {
 				fieldErrors
 			});
 		}
+
 		const productVariants = getPersistableProductVariants(parsedProductVariants);
+		const activeAddonIds = addonStates
+			.filter((state) => state.is_active !== false)
+			.map((state) => state.addon_id);
 
-		const productError = await updateProductRow(
-			supabase,
-			id,
-			getProductPayload({
-				name,
-				description,
-				base_price,
-				is_available,
-				category_id,
-				handling_warning
-			})
-		);
+		const productPayload = {
+			name,
+			description,
+			basePrice: parsePrice(base_price),
+			categoryId: category_id || null,
+			isAvailable: is_available,
+			handlingWarning: handling_warning,
+			variants: productVariants,
+			addonIds: activeAddonIds,
+			newAddons
+		};
 
-		if (productError) {
-			return productFailure('product', productError);
-		}
+		try {
+			// 1. Update product base info
+			await updateAdminProduct(id, productPayload, locals.adminToken, fetch);
 
-		const variantError = await syncProductVariants(supabase, id, productVariants);
-		if (variantError) return productFailure('variants', variantError);
+			// 2. Sync variants & addons
+			await syncAdminProductVariants(id, productVariants, locals.adminToken, fetch);
+			await syncAdminProductAddons(id, activeAddonIds, newAddons, locals.adminToken, fetch);
 
-		const addonError = await syncProductAddons(supabase, id, addonStates);
-		if (addonError) return productFailure('addons', addonError);
-
-		const newAddonError = await createNewGlobalAddons(supabase, id, newAddons);
-		if (newAddonError) return productFailure('addons', newAddonError);
-
-		// Delete images
-		if (deletedImageIdsStr) {
-			const deletedIds = deletedImageIdsStr.split(',').filter(Boolean);
-			if (deletedIds.length > 0) {
-				// Fetch URLs to delete from storage
-				const { data: imagesToDelete } = await supabase
-					.from('product_images')
-					.select('image_url')
-					.in('id', deletedIds);
-
-				if (imagesToDelete && imagesToDelete.length > 0) {
-					const paths = imagesToDelete.map(img => {
-						const url = new URL(img.image_url);
-						const parts = url.pathname.split('/');
-						const pathIndex = parts.indexOf('products');
-						return parts.slice(pathIndex + 1).join('/');
-					});
-					
-					if (paths.length > 0) {
-						await supabase.storage.from('products').remove(paths);
+			// 3. Delete requested images
+			if (deletedImageIdsStr) {
+				const deletedIds = deletedImageIdsStr.split(',').map((s) => s.trim()).filter(Boolean);
+				for (const imgId of deletedIds) {
+					try {
+						await deleteAdminProductImage(id, imgId, locals.adminToken, fetch);
+					} catch (delErr) {
+						handleAdminAuthError(delErr, cookies);
+						console.error('Delete image error:', delErr);
 					}
 				}
-
-				await supabase.from('product_images').delete().in('id', deletedIds);
 			}
+
+			// 4. Upload new images
+			const selectedPrimary = parsePrimaryImageKey(primaryImageKey);
+			const validImages = (images ?? []).filter((file) => file instanceof File && file.size > 0);
+			const newlyUploaded = [];
+
+			for (let i = 0; i < validImages.length; i++) {
+				const file = validImages[i];
+				try {
+					const uploadRes = await uploadProductImage(file, locals.adminToken, fetch);
+					const imageUrl = uploadRes?.publicUrl || uploadRes?.imageUrl;
+					if (imageUrl) {
+						newlyUploaded.push({
+							imageUrl,
+							isPrimary: selectedPrimary?.type === 'new' && Number(selectedPrimary.value) === i
+						});
+					}
+				} catch (upErr) {
+					handleAdminAuthError(upErr, cookies);
+					console.error('Upload image error:', upErr);
+				}
+			}
+
+			if (newlyUploaded.length > 0) {
+				await uploadAdminProductImages(id, newlyUploaded, locals.adminToken, fetch);
+			}
+
+			// 5. Update primary image if existing image selected
+			if (selectedPrimary?.type === 'existing') {
+				await setAdminPrimaryProductImage(id, selectedPrimary.value, locals.adminToken, fetch);
+			}
+
+			return { success: true };
+		} catch (err) {
+			handleAdminAuthError(err, cookies);
+			console.error('Update product error:', err);
+			return fail(500, {
+				success: false,
+				error: err?.message || 'Gagal memperbarui produk.'
+			});
 		}
-
-		const { error: uploadImagesError } = await uploadProductImages(supabase, id, images, primaryImageKey);
-		if (uploadImagesError) return productFailure('images', uploadImagesError);
-
-		const primaryError = await applyPrimaryImage(supabase, id, primaryImageKey);
-		if (primaryError) return productFailure('images', primaryError);
-
-		return { success: true };
 	},
-	deleteProduct: async ({ request, locals: { supabase } }) => {
+
+	deleteProduct: async ({ request, locals, fetch, cookies }) => {
 		const formData = await request.formData();
 		const id = formData.get('id');
 
-		if (!id) return { success: false, error: 'Missing ID' };
+		if (!id) return fail(400, { success: false, error: 'Missing ID' });
 
-		const { error } = await supabase
-			.from('products')
-			.update({ is_active: false })
-			.eq('id', id);
-		if (error) return { success: false, error: error.message };
-		return { success: true, archived: true };
+		try {
+			await deleteAdminProduct(id, locals.adminToken, fetch);
+			return { success: true, archived: true };
+		} catch (err) {
+			handleAdminAuthError(err, cookies);
+			console.error('Delete product error:', err);
+			return fail(400, { success: false, error: err?.message || 'Gagal menghapus produk.' });
+		}
 	},
-	toggleAvailability: async ({ request, locals: { supabase } }) => {
+
+	toggleAvailability: async ({ request, locals, fetch, cookies }) => {
 		const formData = await request.formData();
 		const id = formData.get('id');
 		const is_available = formData.get('is_available') === 'true';
 
-		if (!id) return { success: false, error: 'Missing ID' };
+		if (!id) return fail(400, { success: false, error: 'Missing ID' });
 
-		const { error } = await supabase
-			.from('products')
-			.update({ is_available: !is_available })
-			.eq('id', id);
-			
-		if (error) return { success: false, error: error.message };
-		return { success: true };
+		try {
+			await setAdminProductAvailability(id, !is_available, locals.adminToken, fetch);
+			return { success: true };
+		} catch (err) {
+			handleAdminAuthError(err, cookies);
+			console.error('Toggle availability error:', err);
+			return fail(400, { success: false, error: err?.message || 'Gagal mengubah ketersediaan.' });
+		}
 	}
 };

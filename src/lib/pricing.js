@@ -95,9 +95,11 @@ export function getSizePriceOptions(product = {}) {
 export function normalizeAddon(addon = {}) {
 	const price = parsePrice(addon.additional_price ?? addon.price);
 	const darkColorSurcharge = parsePrice(addon.dark_color_surcharge);
+	const id = addon.id ?? addon.addon_id ?? addon.addonId;
 
 	return {
-		id: addon.id,
+		id,
+		addon_id: id,
 		category: String(addon.category ?? '').trim(),
 		category_key: normalizeCategoryKey(addon.category),
 		name: String(addon.name ?? addon.label ?? '').trim(),
@@ -110,6 +112,38 @@ export function normalizeAddon(addon = {}) {
 	};
 }
 
+function hasOwnArray(object, key) {
+	return Object.prototype.hasOwnProperty.call(object ?? {}, key) && Array.isArray(object?.[key]);
+}
+
+function normalizeProductAddonSource(item = {}) {
+	const addon = item.global_addons ?? item.addon ?? item;
+	const productAddonActive = item.is_active ?? item.isActive ?? true;
+
+	return {
+		...addon,
+		id: addon.id ?? item.addon_id ?? item.addonId,
+		addon_id: addon.id ?? item.addon_id ?? item.addonId,
+		category: addon.category ?? item.category,
+		name: addon.name ?? item.name,
+		additional_price:
+			addon.additional_price ??
+			addon.additionalPrice ??
+			addon.price ??
+			item.additional_price ??
+			item.additionalPrice ??
+			item.price,
+		is_active: (addon.is_active ?? addon.isActive ?? true) !== false,
+		product_addon_is_active: productAddonActive !== false,
+		is_dark_color: addon.is_dark_color ?? addon.isDarkColor ?? item.is_dark_color ?? item.isDarkColor,
+		dark_color_surcharge:
+			addon.dark_color_surcharge ??
+			addon.darkColorSurcharge ??
+			item.dark_color_surcharge ??
+			item.darkColorSurcharge
+	};
+}
+
 export function normalizeCategoryKey(category = '') {
 	return String(category)
 		.trim()
@@ -119,32 +153,22 @@ export function normalizeCategoryKey(category = '') {
 }
 
 export function getProductAddons(product = {}, suppliedGlobalAddons) {
+	if (hasOwnArray(product, 'addons') || hasOwnArray(product, 'product_addons')) {
+		const productAddons = hasOwnArray(product, 'addons') ? product.addons : product.product_addons;
+
+		return productAddons
+			.map(normalizeProductAddonSource)
+			.map(normalizeAddon)
+			.filter((addon) => addon.id && addon.category_key && addon.name && addon.is_active && addon.product_addon_is_active);
+	}
+
 	const globalAddons = Array.isArray(suppliedGlobalAddons)
 		? suppliedGlobalAddons
 		: Array.isArray(product?.global_addons)
 			? product.global_addons
 			: [];
-	const overrides = new Map(
-		(Array.isArray(product?.product_addons) ? product.product_addons : [])
-			.filter((item) => item?.addon_id || item?.global_addons?.id || item?.id)
-			.map((item) => [item.addon_id ?? item.global_addons?.id ?? item.id, item])
-	);
-	const addonsById = new Map(globalAddons.filter((addon) => addon?.id).map((addon) => [addon.id, addon]));
 
-	for (const item of overrides.values()) {
-		const addon = item.global_addons ?? (item.category ? item : null);
-		if (addon?.id && !addonsById.has(addon.id)) addonsById.set(addon.id, addon);
-	}
-
-	return [...addonsById.values()]
-		.map((addon) => {
-			const override = overrides.get(addon.id);
-			return {
-				...addon,
-				product_addon_is_active: override ? override.is_active !== false : true,
-				is_active: override ? override.is_active !== false : addon.is_active !== false
-			};
-		})
+	return globalAddons
 		.map(normalizeAddon)
 		.filter((addon) => addon.category_key && addon.name && addon.is_active && addon.product_addon_is_active);
 }

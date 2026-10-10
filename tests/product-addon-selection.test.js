@@ -12,9 +12,10 @@ const addons = [
 	{ id: 'c', is_active: false }
 ];
 
-test('initial selection preserves the effective global and override result', () => {
-	assert.deepEqual(getEffectiveSelectedAddonIds(addons, { a: 'inactive', c: 'active' }), ['b', 'c']);
-	assert.equal(getEffectiveSelectedAddonCount(addons, { a: 'inactive', c: 'active' }), 2);
+test('initial selection only includes explicit active product addons', () => {
+	assert.deepEqual(getEffectiveSelectedAddonIds(addons, { a: 'inactive', c: 'active' }), ['c']);
+	assert.equal(getEffectiveSelectedAddonCount(addons, { a: 'inactive', c: 'active' }), 1);
+	assert.deepEqual(getEffectiveSelectedAddonIds(addons, {}), []);
 });
 
 test('fixed selection pins every global addon to active or inactive', () => {

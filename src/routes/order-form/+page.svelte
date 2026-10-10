@@ -25,6 +25,7 @@
 	import Info from '@lucide/svelte/icons/info';
 	import Upload from '@lucide/svelte/icons/upload';
 	import Search from '@lucide/svelte/icons/search';
+	import { createDebouncedValue } from '$lib/debounced-value.svelte.js';
 
 	let { data } = $props();
 	const i18n = getI18n();
@@ -43,15 +44,16 @@
 	});
 
 	let searchQuery = $state('');
+	const getSettledSearch = createDebouncedValue(() => searchQuery);
 	let isChangingProduct = $state(false);
 
 	let filteredProducts = $derived(
-		searchQuery.trim() === ''
+		getSettledSearch().trim() === ''
 			? products
 			: products.filter(
 					(p) =>
-						p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-						p.categories?.name?.toLowerCase().includes(searchQuery.toLowerCase())
+						p.name?.toLowerCase().includes(getSettledSearch().toLowerCase()) ||
+						p.categories?.name?.toLowerCase().includes(getSettledSearch().toLowerCase())
 				)
 	);
 

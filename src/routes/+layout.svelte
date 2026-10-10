@@ -1,7 +1,7 @@
 <script>
 	import './layout.css';
 	import { page } from '$app/stores';
-	import { onMount, untrack } from 'svelte';
+	import { onMount, setContext, untrack } from 'svelte';
 	import Clock from '@lucide/svelte/icons/clock';
 	import MapPin from '@lucide/svelte/icons/map-pin';
 	import MessageCircle from '@lucide/svelte/icons/message-circle';
@@ -12,6 +12,8 @@
 
 	let { children, data } = $props();
 	const i18n = setI18n(createI18n(untrack(() => data?.locale)));
+	const pwaInstall = $state({ ready: false, installed: false, platform: 'other', promptEvent: null });
+	setContext('pwa-install', pwaInstall);
 
 	// Check if we are on an admin route
 	let isAdminRoute = $derived($page.url.pathname.startsWith('/admin'));
@@ -41,6 +43,34 @@
 
 	onMount(() => {
 		i18n.init(data?.locale);
+
+		pwaInstall.installed =
+			window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+		pwaInstall.platform = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+			(navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+			? 'ios'
+			: /Android/.test(navigator.userAgent)
+				? 'android'
+				: 'other';
+		pwaInstall.ready = true;
+
+		function onBeforeInstallPrompt(event) {
+			event.preventDefault();
+			pwaInstall.promptEvent = event;
+		}
+
+		function onAppInstalled() {
+			pwaInstall.installed = true;
+			pwaInstall.promptEvent = null;
+		}
+
+		window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt);
+		window.addEventListener('appinstalled', onAppInstalled);
+
+		return () => {
+			window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt);
+			window.removeEventListener('appinstalled', onAppInstalled);
+		};
 	});
 
 	$effect(() => {

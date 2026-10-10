@@ -1,112 +1,223 @@
-import { error as httpError } from '@sveltejs/kit';
+import { uploadDeliveryProofAction } from '$lib/server/delivery-proof-action.js';
+import { error as httpError, fail } from '@sveltejs/kit';
 import {
-	applyOrderFilters,
 	DASHBOARD_PAGE_SIZE,
-	getOrderPageRange,
 	getPagination,
-	ORDER_LIST_SELECT,
-	parseOrderFilters,
-	summarizeOrders
+	parseOrderFilters
 } from '$lib/server/admin-orders.js';
+import { adaptOrder, adaptOrders } from '$lib/api/adapters.js';
+import { normalizeTopProducts, normalizeStatusBreakdown, normalizeRepeatCustomers } from '$lib/analytics.js';
+import {
+	getAdminDashboard,
+	getAdminRevenueSeries,
+	getAdminRepeatOrders,
+	updateAdminOrder,
+	updateAdminOrderStatus,
+	updateAdminOrderAmount,
+	uploadAdminOrderReceipt
+} from '$lib/api/admin.js';
+import { handleAdminAuthError } from '$lib/api/auth.js';
 
-export const load = async ({ locals: { supabase }, url }) => {
-	const filters = parseOrderFilters(url, { pageSize: DASHBOARD_PAGE_SIZE });
-	const { from, to } = getOrderPageRange(filters);
-	const summaryQuery = applyOrderFilters(
-		supabase.from('orders').select('status, amount'),
-		filters
-	);
-	const pendingQuery =
-		filters.status === 'All' || filters.status === 'Pending'
-			? applyOrderFilters(
-					supabase.from('orders').select(ORDER_LIST_SELECT, { count: 'exact' }),
-					filters,
-					{ forceStatus: 'Pending' }
-				)
-					.order('created_at', { ascending: false })
-					.range(from, to)
-			: Promise.resolve({ data: [], count: 0, error: null });
+export const load = async ({ locals, url, fetch, cookies }) => {
+	const filters = parseOrderFilters(url, { pageSize: DASHBOARD_PAGE_SIZE, defaultAll: true });
+	const groupBy = url.searchParams.get('groupBy') || 'day';
 
-	const [summaryResult, pendingResult] = await Promise.all([summaryQuery, pendingQuery]);
-	if (summaryResult.error || pendingResult.error) {
-		console.error('Unable to load admin dashboard:', summaryResult.error ?? pendingResult.error);
+	const startDate = filters.start || undefined;
+	const endDate = filters.end || undefined;
+	const dateFilterType = startDate && endDate ? filters.dateType : undefined;
+
+	try {
+		const [dashboardData, revenueResult, repeatOrdersResult] = await Promise.all([
+			getAdminDashboard(
+				{
+					startDate,
+					endDate,
+					dateFilterType
+				},
+				locals.adminToken,
+				fetch
+			),
+			getAdminRevenueSeries(
+				{
+					startDate,
+					endDate,
+					dateFilterType,
+					groupBy,
+					status: filters.status === 'All' ? undefined : filters.status
+				},
+				locals.adminToken,
+				fetch
+			).catch((err) => {
+				console.warn('Failed to load revenue series:', err);
+				return [];
+			}),
+			getAdminRepeatOrders(
+				{
+					startDate,
+					endDate,
+					dateFilterType,
+					limit: 5
+				},
+				locals.adminToken,
+				fetch
+			).catch((err) => {
+				console.warn('Failed to load repeat orders:', err);
+				return null;
+			})
+		]);
+
+		const summary = dashboardData?.summary || {};
+		const rawPendingOrders = dashboardData?.pendingOrders || [];
+		const rawRecentOrders = dashboardData?.recentOrders || [];
+		const pendingOrders = adaptOrders(rawPendingOrders);
+		const recentOrders = adaptOrders(rawRecentOrders);
+		const topProducts = normalizeTopProducts(dashboardData?.topProducts || []);
+		const statusBreakdown = normalizeStatusBreakdown(dashboardData?.statusBreakdown || []);
+		const repeatCustomersData = normalizeRepeatCustomers(repeatOrdersResult || summary);
+		const revenueSeries = Array.isArray(revenueResult)
+			? revenueResult
+			: revenueResult?.items || revenueResult?.data || [];
+
+		return {
+			summary: {
+				totalSales: summary?.totalOrders ?? 0,
+				pending: summary?.pendingOrders ?? 0,
+				processing: summary?.processingOrders ?? 0,
+				completed: summary?.completedOrders ?? 0,
+				cancelled: summary?.cancelledOrders ?? 0,
+				totalRevenue: Number(summary?.completedRevenue ?? 0),
+				grossRevenue: Number(summary?.grossRevenue ?? 0),
+				averageOrderValue: Number(summary?.averageOrderValue ?? 0),
+				deliveryExpenses: Number(summary?.deliveryExpenses ?? 0),
+				operationalExpenses: Number(summary?.operationalExpenses ?? 0),
+				totalExpenses: Number(summary?.totalExpenses ?? 0),
+				profit: Number(summary?.profit ?? 0),
+				repeatCustomers: Number(summary?.repeatCustomers ?? repeatCustomersData.repeatCustomers ?? 0),
+				repeatOrders: Number(summary?.repeatOrders ?? repeatCustomersData.repeatOrders ?? 0),
+				repeatOrderRate: Number(summary?.repeatOrderRate ?? repeatCustomersData.repeatOrderRate ?? 0)
+			},
+			pendingOrders,
+			recentOrders,
+			orders: pendingOrders,
+			topProducts,
+			statusBreakdown,
+			repeatCustomersData,
+			revenueSeries,
+			groupBy,
+			filters,
+			pagination: getPagination(pendingOrders.length, filters)
+		};
+	} catch (err) {
+		handleAdminAuthError(err, cookies);
+		console.error('Unable to load admin dashboard:', err);
 		throw httpError(500, 'Ringkasan penjualan belum dapat dimuat.');
 	}
-
-	return {
-		summary: summarizeOrders(summaryResult.data),
-		orders: pendingResult.data ?? [],
-		filters,
-		pagination: getPagination(pendingResult.count, filters)
-	};
 };
 
 export const actions = {
-	updateStatus: async ({ request, locals: { supabase } }) => {
+	deliveryProofSession: async ({ locals }) => ({ success: true, token: locals.adminToken }),
+	uploadDeliveryProof: uploadDeliveryProofAction,
+	updateStatus: async ({ request, locals, fetch, cookies }) => {
 		const formData = await request.formData();
 		const id = formData.get('id');
 		const status = formData.get('status');
 
-		if (!id || !status) return { success: false, error: 'Missing data' };
+		if (!id || !status) return fail(400, { success: false, error: 'Missing data' });
 
-		const { error } = await supabase
-			.from('orders')
-			.update({ status })
-			.eq('id', id);
-
-		if (error) return { success: false, error: error.message };
-		return { success: true };
+		try {
+			const updated = await updateAdminOrderStatus(id, status, locals.adminToken, fetch);
+			return { success: true, order: adaptOrder(updated) };
+		} catch (err) {
+			handleAdminAuthError(err, cookies);
+			console.error('Update status error:', err);
+			return fail(400, { success: false, error: err?.message || 'Gagal mengubah status.' });
+		}
 	},
-	updateAmount: async ({ request, locals: { supabase } }) => {
+
+	updateAmount: async ({ request, locals, fetch, cookies }) => {
 		const formData = await request.formData();
 		const id = formData.get('id');
 		const amount = formData.get('amount');
+		const cake_price = formData.get('cake_price');
+		const delivery_fee = formData.get('delivery_fee');
+		const delivery_vehicle = formData.get('delivery_vehicle');
 
-		if (!id || !amount) return { success: false, error: 'Missing data' };
+		if (!id || !amount) return fail(400, { success: false, error: 'Missing data' });
 
-		const { error } = await supabase
-			.from('orders')
-			.update({ amount: parseFloat(amount) })
-			.eq('id', id);
+		const payload = {
+			amount: parseFloat(amount),
+			cakePrice: cake_price ? parseFloat(cake_price) : undefined,
+			deliveryFee: delivery_fee ? parseFloat(delivery_fee) : undefined,
+			deliveryVehicle: delivery_vehicle ? String(delivery_vehicle) : undefined
+		};
 
-		if (error) return { success: false, error: error.message };
-		return { success: true };
+		try {
+			await updateAdminOrderAmount(id, payload, locals.adminToken, fetch);
+			return { success: true };
+		} catch (err) {
+			handleAdminAuthError(err, cookies);
+			console.error('Update amount error:', err);
+			return fail(400, { success: false, error: err?.message || 'Gagal mengubah total harga.' });
+		}
 	},
-	uploadReceipt: async ({ request, locals: { supabase } }) => {
+
+	updateSchedule: async ({ request, locals, fetch, cookies }) => {
+		const formData = await request.formData();
+		const id = formData.get('id');
+		const deliveryOption = String(formData.get('delivery_option') || 'delivery').trim().toLowerCase();
+		const date = String(formData.get('date') || '').trim();
+		const time = String(formData.get('time') || '').trim();
+
+		if (!id) return fail(400, { success: false, error: 'ID pesanan tidak valid.' });
+		if (!date) return fail(400, { success: false, error: 'Tanggal wajib dipilih.' });
+		if (time && !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) {
+			return fail(400, { success: false, error: 'Format jam tidak valid (contoh: 14:00).' });
+		}
+
+		const payload = {
+			deliveryOption: deliveryOption === 'pickup' ? 'pickup' : 'delivery',
+			delivery_option: deliveryOption === 'pickup' ? 'pickup' : 'delivery',
+			...(deliveryOption === 'pickup'
+				? {
+						pickupDate: date,
+						pickup_date: date,
+						pickupTime: time || undefined,
+						pickup_time: time || undefined
+				  }
+				: {
+						deliveryDate: date,
+						delivery_date: date,
+						deliveryTime: time || undefined,
+						delivery_time: time || undefined
+				  })
+		};
+
+		try {
+			await updateAdminOrder(id, payload, locals.adminToken, fetch);
+			return { success: true, message: 'Jadwal pesanan berhasil diperbarui.' };
+		} catch (err) {
+			handleAdminAuthError(err, cookies);
+			console.error('Update schedule error:', err);
+			return fail(400, { success: false, error: err?.message || 'Gagal mengubah jadwal pesanan.' });
+		}
+	},
+
+	uploadReceipt: async ({ request, locals, fetch, cookies }) => {
 		const formData = await request.formData();
 		const id = formData.get('id');
 		const file = formData.get('receipt');
 
 		if (!id || !file || file.size === 0) {
-			return { success: false, error: 'Missing file or ID' };
+			return fail(400, { success: false, error: 'Missing file or ID' });
 		}
 
-		// Upload to Supabase Storage
-		const fileExt = file.name.split('.').pop();
-		const fileName = `${id}-${Math.random()}.${fileExt}`;
-		const filePath = `receipts/${fileName}`;
-
-		const { error: uploadError } = await supabase.storage
-			.from('products')
-			.upload(filePath, file);
-
-		if (uploadError) {
-			return { success: false, error: uploadError.message };
+		try {
+			await uploadAdminOrderReceipt(id, file, locals.adminToken, fetch);
+			return { success: true };
+		} catch (err) {
+			handleAdminAuthError(err, cookies);
+			console.error('Upload receipt error:', err);
+			return fail(400, { success: false, error: err?.message || 'Gagal mengunggah bukti transfer.' });
 		}
-
-		const { data: publicUrlData } = supabase.storage
-			.from('products')
-			.getPublicUrl(filePath);
-
-		const { error: updateError } = await supabase
-			.from('orders')
-			.update({ proof_of_transfer: publicUrlData.publicUrl })
-			.eq('id', id);
-
-		if (updateError) {
-			return { success: false, error: updateError.message };
-		}
-
-		return { success: true };
 	}
 };

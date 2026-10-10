@@ -8,6 +8,8 @@
 	import { getStartFromPrice } from '$lib/pricing.js';
 	import { getI18n } from '$lib/i18n.svelte.js';
 	import { onMount } from 'svelte';
+	import { getHomeProducts, getProductDetail } from '$lib/api/public.js';
+	import { adaptProduct, adaptProducts } from '$lib/api/adapters.js';
 	
 	let { data } = $props();
 	const i18n = getI18n();
@@ -23,10 +25,16 @@
 		QuickAddModalComponent = (await quickAddModalPromise).default;
 	}
 
-	function openQuickAdd(product) {
-		selectedProduct = product;
+	async function openQuickAdd(product) {
+		try {
+			const [detail] = await Promise.all([getProductDetail(product.id), loadQuickAddModal()]);
+			selectedProduct = adaptProduct(detail);
+		} catch (error) {
+			console.error('Failed to load product detail for quick add', error);
+			selectedProduct = adaptProduct(product);
+			void loadQuickAddModal();
+		}
 		isQuickAddOpen = true;
-		void loadQuickAddModal();
 	}
 
 	onMount(() => {
@@ -35,32 +43,31 @@
 		);
 	});
 
-	let selectedCategory = $state('All');
+	let selectedCategoryId = $state('All');
 	let categoryProducts = $state({});
 	let loadingCategory = $state(null);
 	let categoryError = $state('');
 	let categoryRequestId = 0;
 
 	function getVisibleProducts(products) {
-		return selectedCategory === 'All' ? products : (categoryProducts[selectedCategory] ?? []);
+		return selectedCategoryId === 'All' ? products : (categoryProducts[selectedCategoryId] ?? []);
 	}
 
-	async function selectCategory(category) {
+	async function selectCategory(categoryId) {
 		const requestId = ++categoryRequestId;
-		selectedCategory = category;
+		selectedCategoryId = categoryId;
 		categoryError = '';
-		if (category === 'All' || categoryProducts[category]) {
+		if (categoryId === 'All' || categoryProducts[categoryId]) {
 			loadingCategory = null;
 			return;
 		}
 
-		loadingCategory = category;
+		loadingCategory = categoryId;
 
 		try {
-			const response = await fetch(`/api/home-products?category=${encodeURIComponent(category)}`);
-			if (!response.ok) throw new Error('Unable to load category');
-			const result = await response.json();
-			categoryProducts = { ...categoryProducts, [category]: result.products ?? [] };
+			const result = await getHomeProducts(categoryId);
+			const products = adaptProducts(result.products ?? []);
+			categoryProducts = { ...categoryProducts, [categoryId]: products };
 		} catch (error) {
 			if (requestId === categoryRequestId) categoryError = error.message;
 		} finally {
@@ -188,15 +195,15 @@
 
 			<div class="flex overflow-x-auto gap-3 pb-2 px-6 sm:px-0 sm:flex-wrap sm:justify-center [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] snap-x">
 			<button 
-				class="shrink-0 snap-start sm:snap-align-none whitespace-nowrap px-6 py-2 rounded-full border text-[13px] font-semibold tracking-wide transition-all {selectedCategory === 'All' ? 'border-primary bg-primary text-white' : 'border-slate-200 text-[#4A3B32] hover:border-primary'}"
+				class="shrink-0 snap-start sm:snap-align-none whitespace-nowrap px-6 py-2 rounded-full border text-[13px] font-semibold tracking-wide transition-all {selectedCategoryId === 'All' ? 'border-primary bg-primary text-white' : 'border-slate-200 text-[#4A3B32] hover:border-primary'}"
 				onclick={() => selectCategory('All')}
 			>
 				{i18n.t('home.allCategory')}
 			</button>
-			{#each catalog.categories as category}
+			{#each catalog.categories as category (category.id)}
 				<button 
-					class="shrink-0 snap-start sm:snap-align-none whitespace-nowrap px-6 py-2 rounded-full border text-[13px] font-semibold tracking-wide transition-all {selectedCategory === category.slug ? 'border-primary bg-primary text-white' : 'border-slate-200 text-[#4A3B32] hover:border-primary'}"
-					onclick={() => selectCategory(category.slug)}
+					class="shrink-0 snap-start sm:snap-align-none whitespace-nowrap px-6 py-2 rounded-full border text-[13px] font-semibold tracking-wide transition-all {selectedCategoryId === category.id ? 'border-primary bg-primary text-white' : 'border-slate-200 text-[#4A3B32] hover:border-primary'}"
+					onclick={() => selectCategory(category.id)}
 				>
 					{category.name}
 				</button>
@@ -207,7 +214,7 @@
 
 
 	<div class="container mx-auto px-4 sm:px-6 max-w-7xl">
-		{#if loadingCategory === selectedCategory}
+		{#if loadingCategory === selectedCategoryId}
 			<div class="py-16 text-center text-sm text-[#4A3B32]/50">Loading products...</div>
 		{:else if categoryError}
 			<div class="py-16 text-center text-sm text-red-500">Unable to load products. Please choose the category again.</div>
@@ -251,7 +258,7 @@
 				</div>
 			{:else}
 				<div class="col-span-full text-center py-16 text-[#4A3B32]/50">
-					{#if selectedCategory === 'All'}
+					{#if selectedCategoryId === 'All'}
 						{i18n.t('home.emptyCatalog')}
 					{:else}
 						{i18n.t('home.emptyCategory')}
@@ -262,7 +269,7 @@
 		{/if}
 		{#if catalog.products.length > 0}
 			<div class="mt-12 flex justify-center">
-				<a href={selectedCategory === 'All' ? '/catalog' : `/catalog?category=${encodeURIComponent(selectedCategory)}`} class="inline-flex items-center justify-center rounded-full bg-primary px-8 py-3 text-sm font-bold tracking-wide text-white shadow-lg shadow-primary/15 transition-all hover:bg-[#724828] hover:shadow-xl">
+				<a href={selectedCategoryId === 'All' ? '/catalog' : `/catalog?categoryId=${encodeURIComponent(selectedCategoryId)}`} class="inline-flex items-center justify-center rounded-full bg-primary px-8 py-3 text-sm font-bold tracking-wide text-white shadow-lg shadow-primary/15 transition-all hover:bg-[#724828] hover:shadow-xl">
 					{i18n.t('home.loadMore')}
 				</a>
 			</div>

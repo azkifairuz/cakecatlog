@@ -1,5 +1,7 @@
 <script>
 	import { enhance } from '$app/forms';
+	import { goto } from '$app/navigation';
+	import { setAdminToken } from '$lib/api/auth.js';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
@@ -30,7 +32,12 @@
 				method="POST"
 				use:enhance={() => {
 					loading = true;
-					return async ({ update }) => {
+					return async ({ result, update }) => {
+						if (result.type === 'success' && result.data?.accessToken) {
+							setAdminToken(result.data.accessToken);
+							await goto('/admin/dashboard');
+							return;
+						}
 						await update();
 						loading = false;
 					};
@@ -38,11 +45,11 @@
 				class="grid gap-4"
 			>
 				<div class="grid gap-2">
-					<Label for="email">Email</Label>
+					<Label for="email">Email Atau Username</Label>
 					<Input
 						id="email"
 						name="email"
-						type="email"
+						type="text"
 						placeholder="admin@example.com"
 						value={form?.email ?? ''}
 						required

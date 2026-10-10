@@ -1,17 +1,23 @@
 import { fail } from '@sveltejs/kit';
 import { normalizeSiteInfo } from '$lib/site-info.js';
+import { getAdminSiteInfo, updateAdminSiteInfo } from '$lib/api/admin.js';
+import { handleAdminAuthError } from '$lib/api/auth.js';
 
-export const load = async ({ locals: { supabase } }) => {
-	const { data: siteInfo, error } = await supabase
-		.from('site_contact_info')
-		.select('*')
-		.eq('id', 'main')
-		.maybeSingle();
-
-	return {
-		siteInfo: normalizeSiteInfo(siteInfo),
-		setupError: error?.message ?? null
-	};
+export const load = async ({ locals, fetch, cookies }) => {
+	try {
+		const siteInfo = await getAdminSiteInfo(locals.adminToken, fetch);
+		return {
+			siteInfo: normalizeSiteInfo(siteInfo),
+			setupError: null
+		};
+	} catch (err) {
+		handleAdminAuthError(err, cookies);
+		console.error('Failed to load site info:', err);
+		return {
+			siteInfo: normalizeSiteInfo(),
+			setupError: err?.message ?? 'Gagal memuat info toko'
+		};
+	}
 };
 
 function clean(value) {
@@ -19,38 +25,44 @@ function clean(value) {
 }
 
 export const actions = {
-	saveSiteInfo: async ({ request, locals: { supabase } }) => {
+	saveSiteInfo: async ({ request, locals, fetch, cookies }) => {
 		const formData = await request.formData();
 		const payload = {
-			id: 'main',
-			pickup_days: clean(formData.get('pickup_days')),
-			pickup_store_hours: clean(formData.get('pickup_store_hours')),
-			pickup_manager_hours: clean(formData.get('pickup_manager_hours')),
+			pickupDays: clean(formData.get('pickup_days')),
+			pickupStoreHours: clean(formData.get('pickup_store_hours')),
+			pickupManagerHours: clean(formData.get('pickup_manager_hours')),
 			address: clean(formData.get('address')),
-			whatsapp_number: clean(formData.get('whatsapp_number')),
-			updated_at: new Date().toISOString()
+			whatsappNumber: clean(formData.get('whatsapp_number'))
 		};
 
-		if (!payload.pickup_days || !payload.address || !payload.whatsapp_number) {
+		const legacyPayload = {
+			id: 'main',
+			pickup_days: payload.pickupDays,
+			pickup_store_hours: payload.pickupStoreHours,
+			pickup_manager_hours: payload.pickupManagerHours,
+			address: payload.address,
+			whatsapp_number: payload.whatsappNumber
+		};
+
+		if (!payload.pickupDays || !payload.address || !payload.whatsappNumber) {
 			return fail(400, {
 				error: 'Pickup days, alamat, dan nomor WhatsApp wajib diisi.',
-				values: payload
+				values: legacyPayload
 			});
 		}
 
-		const { error } = await supabase
-			.from('site_contact_info')
-			.upsert(payload, { onConflict: 'id' });
-
-		if (error) {
+		try {
+			await updateAdminSiteInfo(payload, locals.adminToken, fetch);
+			return {
+				success: true
+			};
+		} catch (err) {
+			handleAdminAuthError(err, cookies);
+			console.error('Save site info error:', err);
 			return fail(500, {
-				error: `Gagal menyimpan info toko: ${error.message}`,
-				values: payload
+				error: `Gagal menyimpan info toko: ${err.message}`,
+				values: legacyPayload
 			});
 		}
-
-		return {
-			success: true
-		};
 	}
 };

@@ -2,7 +2,14 @@ const SUPABASE_PUBLIC_STORAGE_SEGMENT = '/storage/v1/object/public/';
 const SUPABASE_RENDER_STORAGE_SEGMENT = '/storage/v1/render/image/public/';
 
 export function getImageUrl(url, options = {}) {
-	if (!url) return url;
+	if (!url) return '';
+
+	if (typeof url === 'object') {
+		url = url.image_url || url.imageUrl || url.url || '';
+		if (!url) return '';
+	}
+
+	if (typeof url !== 'string' || !url.trim()) return '';
 
 	const params = buildImageParams(options);
 	if (Object.keys(params).length === 0) return url;

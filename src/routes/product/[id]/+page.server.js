@@ -1,64 +1,28 @@
 import { error } from '@sveltejs/kit';
+import { getProductDetail } from '$lib/api/public.js';
+import { adaptProduct } from '$lib/api/adapters.js';
 
-export const load = async ({ params, locals: { supabase } }) => {
+export const load = async ({ params, fetch }) => {
 	const { id } = params;
 
-	const { data: product, error: dbError } = await supabase
-		.from('products')
-		.select(`
-			*,
-			category:categories (
-				name
-			),
-			product_images (
-				image_url,
-				is_primary
-			),
-			product_variants (
-				id,
-				name,
-				price,
-				is_active,
-				display_order
-			),
-			product_addons (
-				addon_id,
-				is_active,
-				global_addons (
-					id,
-					category,
-					name,
-					additional_price,
-					is_dark_color,
-					dark_color_surcharge,
-					is_active
-				)
-			)
-		`)
-		.eq('id', id)
-		.eq('is_active', true)
-		.single();
+	try {
+		const productRes = await getProductDetail(id, fetch);
+		const rawProduct = productRes?.product || productRes?.data?.product || productRes?.data || productRes;
 
-	if (dbError || !product) {
-		throw error(404, 'Product not found');
+		if (!rawProduct || !rawProduct.id) {
+			throw error(404, 'Product not found');
+		}
+
+		const product = adaptProduct(rawProduct);
+
+		return {
+			product
+		};
+	} catch (err) {
+		if (err?.status === 404 || err?.message?.includes('not found')) {
+			throw error(404, 'Product not found');
+		}
+		throw error(err?.status || 500, err?.message || 'Failed to load product');
 	}
-
-	const { data: globalAddons, error: addonsError } = await supabase
-		.from('global_addons')
-		.select('*')
-		.order('category')
-		.order('name');
-
-	if (addonsError) {
-		console.error('Unable to load global addons for product detail:', addonsError);
-	}
-
-	// Global addons are an enhancement, not a reason to take the whole product
-	// page down. Linked product addons from the main query remain usable when
-	// this secondary query is temporarily unavailable.
-	product.global_addons = globalAddons ?? [];
-
-	return {
-		product,
-	};
 };
+

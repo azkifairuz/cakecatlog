@@ -24,8 +24,8 @@
 
 	{#if data.setupError}
 		<div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-			<p class="font-bold">Tabel belum siap atau belum bisa dibaca.</p>
-			<p class="mt-1">Jalankan SQL di <span class="font-semibold">supabase/site_contact_info.sql</span>, lalu refresh halaman ini.</p>
+			<p class="font-bold">Info toko belum dapat dimuat dari server backend.</p>
+			<p class="mt-1">Pastikan server backend telah aktif dan terkonfigurasi dengan benar.</p>
 		</div>
 	{/if}
 

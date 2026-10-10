@@ -6,7 +6,7 @@
 	import { getImageUrl } from '$lib/image-url.js';
 	import Loading from '$lib/components/Loading.svelte';
 	import { cart } from '$lib/stores/cart.svelte.js';
-	import { supabase } from '$lib/supabase';
+	import { uploadReferenceImage } from '$lib/api/upload.js';
 	import {
 		getAddonSelectionPrice,
 		getDynamicAddonGroups,
@@ -79,21 +79,8 @@
 			const file = formData.get('reference_image');
 
 			if (file && file.size > 0) {
-				const fileExt = file.name.split('.').pop();
-				const uniqueName = `${Date.now()}-${Math.random()}.${fileExt}`;
-				const filePath = `cust_reference/${uniqueName}`;
-
-				const { error: uploadError } = await supabase.storage
-					.from('products')
-					.upload(filePath, file);
-
-				if (uploadError) throw uploadError;
-
-				const { data: publicUrlData } = supabase.storage
-					.from('products')
-					.getPublicUrl(filePath);
-				
-				reference_image_url = publicUrlData.publicUrl;
+				const uploadResult = await uploadReferenceImage(file);
+				reference_image_url = uploadResult?.publicUrl || null;
 			}
 
 			const addonOptions = selectedAddons.map((addon) => ({ addon_id: addon.id, category: addon.category, category_key: addon.category_key, name: addon.name, price: getAddonSelectionPrice(addon) }));

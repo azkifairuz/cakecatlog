@@ -1,19 +1,29 @@
 import { parsePrice } from '$lib/pricing.js';
+import { fail } from '@sveltejs/kit';
+import {
+	getAdminAddons,
+	createAdminAddon,
+	updateAdminAddon,
+	toggleAdminAddon,
+	deleteAdminAddon
+} from '$lib/api/admin.js';
+import { adaptAddons } from '$lib/api/adapters.js';
+import { handleAdminAuthError } from '$lib/api/auth.js';
 
-export const load = async ({ locals: { supabase } }) => {
-	const { data: addons, error } = await supabase
-		.from('global_addons')
-		.select('*')
-		.order('category')
-		.order('created_at', { ascending: false });
-
-	if (error) {
-		return { addons: [], error: error.message };
+export const load = async ({ locals, fetch, cookies }) => {
+	try {
+		const addons = await getAdminAddons(locals.adminToken, fetch);
+		return {
+			addons: adaptAddons(addons)
+		};
+	} catch (err) {
+		handleAdminAuthError(err, cookies);
+		console.error('Failed to load admin addons:', err);
+		return {
+			addons: [],
+			error: err?.message || 'Gagal memuat addons'
+		};
 	}
-
-	return {
-		addons: addons ?? []
-	};
 };
 
 function getPayload(formData) {
@@ -24,65 +34,78 @@ function getPayload(formData) {
 	return {
 		category,
 		name,
-		additional_price: parsePrice(formData.get('additional_price')),
-		is_dark_color,
-		dark_color_surcharge: is_dark_color ? parsePrice(formData.get('dark_color_surcharge')) : 0,
-		is_active: formData.get('is_active') === 'on'
+		additionalPrice: parsePrice(formData.get('additional_price')),
+		isDarkColor: is_dark_color,
+		darkColorSurcharge: is_dark_color ? parsePrice(formData.get('dark_color_surcharge')) : 0,
+		isActive: formData.get('is_active') === 'on'
 	};
 }
 
 export const actions = {
-	createAddon: async ({ request, locals: { supabase } }) => {
+	createAddon: async ({ request, locals, fetch, cookies }) => {
 		const formData = await request.formData();
 		const payload = getPayload(formData);
 
 		if (!payload.category || !payload.name) {
-			return { success: false, error: 'Category dan nama wajib diisi' };
+			return fail(400, { success: false, error: 'Category dan nama wajib diisi' });
 		}
 
-		const { error } = await supabase.from('global_addons').insert(payload);
-		if (error) return { success: false, error: error.message };
-
-		return { success: true };
+		try {
+			await createAdminAddon(payload, locals.adminToken, fetch);
+			return { success: true };
+		} catch (err) {
+			handleAdminAuthError(err, cookies);
+			console.error('Create addon error:', err);
+			return fail(400, { success: false, error: err?.message || 'Gagal membuat addon' });
+		}
 	},
-	updateAddon: async ({ request, locals: { supabase } }) => {
+	updateAddon: async ({ request, locals, fetch, cookies }) => {
 		const formData = await request.formData();
 		const id = formData.get('id');
 		const payload = getPayload(formData);
 
 		if (!id || !payload.category || !payload.name) {
-			return { success: false, error: 'ID, category, dan nama wajib diisi' };
+			return fail(400, { success: false, error: 'ID, category, dan nama wajib diisi' });
 		}
 
-		const { error } = await supabase.from('global_addons').update(payload).eq('id', id);
-		if (error) return { success: false, error: error.message };
-
-		return { success: true };
+		try {
+			await updateAdminAddon(id, payload, locals.adminToken, fetch);
+			return { success: true };
+		} catch (err) {
+			handleAdminAuthError(err, cookies);
+			console.error('Update addon error:', err);
+			return fail(400, { success: false, error: err?.message || 'Gagal memperbarui addon' });
+		}
 	},
-	toggleAddon: async ({ request, locals: { supabase } }) => {
+	toggleAddon: async ({ request, locals, fetch, cookies }) => {
 		const formData = await request.formData();
 		const id = formData.get('id');
 		const is_active = formData.get('is_active') === 'true';
 
-		if (!id) return { success: false, error: 'Missing ID' };
+		if (!id) return fail(400, { success: false, error: 'Missing ID' });
 
-		const { error } = await supabase
-			.from('global_addons')
-			.update({ is_active: !is_active })
-			.eq('id', id);
-
-		if (error) return { success: false, error: error.message };
-		return { success: true };
+		try {
+			await toggleAdminAddon(id, !is_active, locals.adminToken, fetch);
+			return { success: true };
+		} catch (err) {
+			handleAdminAuthError(err, cookies);
+			console.error('Toggle addon error:', err);
+			return fail(400, { success: false, error: err?.message || 'Gagal mengubah status addon' });
+		}
 	},
-	deleteAddon: async ({ request, locals: { supabase } }) => {
+	deleteAddon: async ({ request, locals, fetch, cookies }) => {
 		const formData = await request.formData();
 		const id = formData.get('id');
 
-		if (!id) return { success: false, error: 'Missing ID' };
+		if (!id) return fail(400, { success: false, error: 'Missing ID' });
 
-		const { error } = await supabase.from('global_addons').delete().eq('id', id);
-		if (error) return { success: false, error: error.message };
-
-		return { success: true };
+		try {
+			await deleteAdminAddon(id, locals.adminToken, fetch);
+			return { success: true };
+		} catch (err) {
+			handleAdminAuthError(err, cookies);
+			console.error('Delete addon error:', err);
+			return fail(400, { success: false, error: err?.message || 'Gagal menghapus addon' });
+		}
 	}
 };

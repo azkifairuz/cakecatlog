@@ -4,7 +4,7 @@ export function getEffectiveSelectedAddonIds(globalAddons = [], productAddonStat
 			const override = productAddonStates[addon.id];
 			if (override === 'active') return true;
 			if (override === 'inactive') return false;
-			return addon.is_active !== false;
+			return false;
 		})
 		.map((addon) => addon.id);
 }

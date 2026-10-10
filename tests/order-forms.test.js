@@ -3,10 +3,8 @@ import assert from 'node:assert/strict';
 import {
 	slugify,
 	buildFormUrl,
-	buildWhatsAppShareMessage,
-	getOrderForms,
-	getOrderFormBySlug
-} from '../src/lib/server/order-forms.js';
+	buildWhatsAppShareMessage
+} from '../src/lib/order-forms.js';
 
 test('slugify converts titles to valid clean URL slugs', () => {
 	assert.equal(slugify('Kue Ulang Tahun & Anniversary #1'), 'kue-ulang-tahun-anniversary-1');
@@ -40,43 +38,4 @@ test('buildWhatsAppShareMessage produces a clear and actionable message', () => 
 	assert.ok(msg.includes('Lily Bow Cake'));
 	assert.ok(msg.includes('https://dessertbyfir.com/order-form?product=abc'));
 	assert.ok(msg.includes('dessertbyfir'));
-});
-
-test('getOrderForms gracefully handles missing table or db error', async () => {
-	const mockSupabase = {
-		from: () => ({
-			select: () => ({
-				order: async () => ({
-					data: null,
-					error: { code: '42P01', message: 'relation "order_forms" does not exist' }
-				})
-			})
-		})
-	};
-
-	const result = await getOrderForms(mockSupabase);
-	assert.deepEqual(result, []);
-});
-
-test('getOrderFormBySlug returns null for empty slug or error', async () => {
-	const mockSupabase = {
-		from: () => ({
-			select: () => ({
-				eq: () => ({
-					eq: () => ({
-						maybeSingle: async () => ({
-							data: null,
-							error: { code: '42P01', message: 'relation does not exist' }
-						})
-					})
-				})
-			})
-		})
-	};
-
-	const emptyRes = await getOrderFormBySlug(mockSupabase, '');
-	assert.equal(emptyRes, null);
-
-	const missingRes = await getOrderFormBySlug(mockSupabase, 'non-existent');
-	assert.equal(missingRes, null);
 });

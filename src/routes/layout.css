@@ -129,3 +129,10 @@
 		@apply font-sans;
 	}
 }
+
+@media (prefers-reduced-motion: reduce) {
+	[data-sonner-toast] {
+		animation-duration: 0.01ms !important;
+		transition-duration: 0.01ms !important;
+	}
+}

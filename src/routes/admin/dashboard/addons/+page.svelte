@@ -13,6 +13,7 @@
 	import AdminPage from '$lib/components/admin/AdminPage.svelte';
 	import AdminPageHeader from '$lib/components/admin/AdminPageHeader.svelte';
 	import AdminSearchField from '$lib/components/admin/AdminSearchField.svelte';
+	import { createDebouncedValue } from '$lib/debounced-value.svelte.js';
 	import AdminViewToggle from '$lib/components/admin/AdminViewToggle.svelte';
 
 	let { data, form } = $props();
@@ -27,6 +28,7 @@
 	let isCategoryDropdownOpen = $state(false);
 
 	let searchQuery = $state('');
+	const getSettledSearch = createDebouncedValue(() => searchQuery);
 	let selectedCategoryFilter = $state([]);
 	let viewMode = $state('card');
 
@@ -51,7 +53,7 @@
 
 	let filteredAddons = $derived(
 		data.addons.filter(addon => {
-			const matchesSearch = addon.name.toLowerCase().includes(searchQuery.toLowerCase());
+			const matchesSearch = addon.name.toLowerCase().includes(getSettledSearch().toLowerCase());
 			const matchesCategory = selectedCategoryFilter.length === 0 || selectedCategoryFilter.includes(addon.category);
 			return matchesSearch && matchesCategory;
 		})
@@ -159,7 +161,7 @@
 							<div class="flex items-center gap-2">
 								<form method="POST" action="?/toggleAddon" use:enhance onchange={(e) => e.currentTarget.requestSubmit()} class="flex items-center">
 									<input type="hidden" name="id" value={addon.id} />
-									<input type="hidden" name="is_active" value={addon.is_active.toString()} />
+									<input type="hidden" name="is_active" value={String(Boolean(addon.is_active))} />
 									<label class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full bg-slate-300 transition-colors has-[:checked]:bg-primary has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary">
 										<input type="checkbox" class="peer sr-only" checked={addon.is_active} />
 										<span class="absolute left-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform peer-checked:translate-x-5"></span>
@@ -208,7 +210,7 @@
 							<td class="px-4 py-3 text-center">
 								<form method="POST" action="?/toggleAddon" use:enhance onchange={(e) => e.currentTarget.requestSubmit()} class="inline-flex items-center">
 									<input type="hidden" name="id" value={addon.id} />
-									<input type="hidden" name="is_active" value={addon.is_active.toString()} />
+									<input type="hidden" name="is_active" value={String(Boolean(addon.is_active))} />
 									<label class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full bg-slate-300 transition-colors has-[:checked]:bg-primary">
 										<input type="checkbox" class="peer sr-only" checked={addon.is_active} />
 										<span class="absolute left-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform peer-checked:translate-x-5"></span>
