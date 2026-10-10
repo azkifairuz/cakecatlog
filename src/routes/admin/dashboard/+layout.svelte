@@ -109,7 +109,7 @@
 </Sidebar.Provider>
 
 <Sheet.Root bind:open={mobileMoreOpen}>
-	<Sheet.Content side="bottom" class="rounded-t-xl p-4 pb-8">
+	<Sheet.Content side="bottom" class="max-h-[85dvh] overflow-y-auto rounded-t-xl p-4 pb-8">
 		<Sheet.Header><Sheet.Title>Menu lainnya</Sheet.Title><Sheet.Description>Akses pengaturan dan fitur admin lainnya.</Sheet.Description></Sheet.Header>
 		<nav class="grid grid-cols-2 gap-2">
 			{#each secondaryMobileNav as item}

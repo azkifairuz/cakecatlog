@@ -1,7 +1,7 @@
 import { uploadDeliveryProofAction } from '$lib/server/delivery-proof-action.js';
 import { error as httpError, fail } from '@sveltejs/kit';
 import { parseOrderFilters } from '$lib/server/admin-orders.js';
-import { adaptOrders, adaptProducts, adaptAddons } from '$lib/api/adapters.js';
+import { adaptOrder, adaptOrders, adaptProducts, adaptAddons } from '$lib/api/adapters.js';
 import {
 	getAdminOrders,
 	getAdminOrder,
