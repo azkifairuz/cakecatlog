@@ -10,6 +10,7 @@
 	import { cn } from '$lib/utils.js';
 	import PriceInput from '$lib/components/PriceInput.svelte';
 	import AdminSearchField from '$lib/components/admin/AdminSearchField.svelte';
+	import { createDebouncedValue } from '$lib/debounced-value.svelte.js';
 	import {
 		buildFixedProductAddonStates,
 		getEffectiveSelectedAddonCount,
@@ -34,6 +35,7 @@
 	let isDiscardOpen = $state(false);
 	let editorView = $state('selection');
 	let searchQuery = $state('');
+	const getSettledSearch = createDebouncedValue(() => searchQuery);
 	let selectedCategory = $state('');
 	let draftSelectedIds = $state([]);
 	let draftNewAddonRows = $state([]);
@@ -50,7 +52,7 @@
 			)
 		].sort((a, b) => a.localeCompare(b, 'id'))
 	);
-	let normalizedQuery = $derived(searchQuery.trim().toLowerCase());
+	let normalizedQuery = $derived(getSettledSearch().trim().toLowerCase());
 	let matchingCategories = $derived(
 		categories.filter((category) =>
 			category.toLowerCase().includes(normalizedQuery) ||

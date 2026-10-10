@@ -33,6 +33,7 @@
 	import AdminPage from '$lib/components/admin/AdminPage.svelte';
 	import AdminPageHeader from '$lib/components/admin/AdminPageHeader.svelte';
 	import AdminStatusBadge from '$lib/components/admin/AdminStatusBadge.svelte';
+	import { createDebouncedValue } from '$lib/debounced-value.svelte.js';
 	import { cn } from '$lib/utils';
 	import {
 		DEFAULT_INVOICE_TEMPLATE,
@@ -139,6 +140,7 @@
 	let savingTemplate = $state(false);
 	let selectedCategory = $state('all');
 	let variableSearch = $state('');
+	const getSettledVariableSearch = createDebouncedValue(() => variableSearch);
 	let sampleType = $state('single'); // 'single' or 'multi'
 	let activeTargetField = $state('messageTemplate'); // 'messageTemplate' | 'itemTemplate' | 'emailSubjectTemplate'
 	let insertedKey = $state(null);
@@ -153,12 +155,13 @@
 
 	let filteredVariables = $derived(
 		variablesList.filter((v) => {
+			const query = getSettledVariableSearch().toLowerCase().trim();
 			const matchesCategory = selectedCategory === 'all' || v.category === selectedCategory;
 			const matchesSearch =
-				!variableSearch.trim() ||
-				v.key.toLowerCase().includes(variableSearch.toLowerCase()) ||
-				v.label.toLowerCase().includes(variableSearch.toLowerCase()) ||
-				v.description.toLowerCase().includes(variableSearch.toLowerCase());
+				!query ||
+				v.key.toLowerCase().includes(query) ||
+				v.label.toLowerCase().includes(query) ||
+				v.description.toLowerCase().includes(query);
 			return matchesCategory && matchesSearch;
 		})
 	);

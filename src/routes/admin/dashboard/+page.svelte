@@ -103,6 +103,7 @@
 	let endDate = $state(untrack(() => data.filters.end));
 	let dateTypeFilter = $state(untrack(() => data.filters.dateType));
 	let searchTimer;
+	const SEARCH_DEBOUNCE_MS = 700;
 
 	let pendingOrders = $derived(data.pendingOrders || data.orders || []);
 	let recentOrders = $derived(data.recentOrders || []);
@@ -157,7 +158,7 @@
 	}
 
 	$effect(() => {
-		searchQuery = data.filters.q;
+		if (!searchTimer) searchQuery = data.filters.q;
 		statusFilter = data.filters.status;
 		groupBy = data.groupBy || 'day';
 		customStart = data.filters.start;
@@ -188,7 +189,7 @@
 		if (values.groupBy && values.groupBy !== 'day') params.set('groupBy', values.groupBy);
 		if (Number(values.page) > 1) params.set('page', String(values.page));
 		const query = params.toString();
-		return `${page.url.pathname}${query ? `?${query}` : ''}`;
+		return `/admin/dashboard${query ? `?${query}` : ''}`;
 	}
 
 	function navigateFilters(overrides = {}) {
@@ -198,7 +199,10 @@
 	function queueSearch(value) {
 		searchQuery = value;
 		clearTimeout(searchTimer);
-		searchTimer = setTimeout(() => navigateFilters({ q: value }), 300);
+		searchTimer = setTimeout(() => {
+			searchTimer = undefined;
+			if (value.trim() !== data.filters.q) void navigateFilters({ q: value.trim() });
+		}, SEARCH_DEBOUNCE_MS);
 	}
 
 	function changeDateMode(mode) {
@@ -221,6 +225,8 @@
 	}
 
 	function resetFilters() {
+		clearTimeout(searchTimer);
+		searchTimer = undefined;
 		searchQuery = '';
 		statusFilter = 'All';
 		groupBy = 'day';

@@ -26,6 +26,7 @@
 	import AdminPage from '$lib/components/admin/AdminPage.svelte';
 	import AdminPageHeader from '$lib/components/admin/AdminPageHeader.svelte';
 	import AdminSearchField from '$lib/components/admin/AdminSearchField.svelte';
+	import { createDebouncedValue } from '$lib/debounced-value.svelte.js';
 	import AdminViewToggle from '$lib/components/admin/AdminViewToggle.svelte';
 	import AdminEmptyState from '$lib/components/admin/AdminEmptyState.svelte';
 	import { getRoleBadgeMeta } from '$lib/employee-role-utils.js';
@@ -35,6 +36,7 @@
 
 	// State
 	let searchQuery = $state('');
+	const getSettledSearch = createDebouncedValue(() => searchQuery);
 	let selectedRoleFilter = $state('All');
 	let viewMode = $state('list'); // 'list' (table) | 'card'
 
@@ -75,11 +77,12 @@
 
 	let filteredEmployees = $derived(
 		employees.filter((emp) => {
+			const query = getSettledSearch().toLowerCase().trim();
 			const matchesSearch =
-				!searchQuery.trim() ||
-				(emp.username || '').toLowerCase().includes(searchQuery.toLowerCase().trim()) ||
-				(emp.email || '').toLowerCase().includes(searchQuery.toLowerCase().trim()) ||
-				(emp.role || '').toLowerCase().includes(searchQuery.toLowerCase().trim());
+				!query ||
+				(emp.username || '').toLowerCase().includes(query) ||
+				(emp.email || '').toLowerCase().includes(query) ||
+				(emp.role || '').toLowerCase().includes(query);
 
 			const matchesRole =
 				selectedRoleFilter === 'All' ||

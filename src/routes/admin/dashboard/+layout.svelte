@@ -41,7 +41,7 @@
 	let secondaryMobileNav = $derived(navItems.slice(3));
 	let pageTitles = $derived(Object.fromEntries(navItems.map((item) => [item.href, item.label])));
 	let displayPath = $derived(navigating.to?.url.pathname ?? page.url.pathname);
-	let isNavigating = $derived(Boolean(navigating.to && navigating.to.url.href !== page.url.href));
+	let isNavigating = $derived(Boolean(navigating.to && navigating.to.url.pathname !== page.url.pathname));
 	let pageTitle = $derived(pageTitles[displayPath] ?? 'Dashboard');
 	let isSecondaryMobileActive = $derived(secondaryMobileNav.some((item) => displayPath.startsWith(item.href)));
 

@@ -50,6 +50,7 @@
 	let startDate = $state(untrack(() => data.filters.start));
 	let endDate = $state(untrack(() => data.filters.end));
 	let searchTimer;
+	const SEARCH_DEBOUNCE_MS = 700;
 
 	let logs = $derived(data.logs || []);
 	let pagination = $derived(data.pagination || {});
@@ -70,7 +71,7 @@
 	}
 
 	$effect(() => {
-		searchQuery = data.filters.q;
+		if (!searchTimer) searchQuery = data.filters.q;
 		menuFilter = data.filters.menu;
 		customStart = data.filters.start;
 		customEnd = data.filters.end;
@@ -97,7 +98,7 @@
 		if (Number(values.page) > 1) params.set('page', String(values.page));
 
 		const query = params.toString();
-		return `${page.url.pathname}${query ? `?${query}` : ''}`;
+		return `/admin/dashboard/logs${query ? `?${query}` : ''}`;
 	}
 
 	function navigateFilters(overrides = {}) {
@@ -107,7 +108,10 @@
 	function queueSearch(value) {
 		searchQuery = value;
 		clearTimeout(searchTimer);
-		searchTimer = setTimeout(() => navigateFilters({ q: value, page: 1 }), 300);
+		searchTimer = setTimeout(() => {
+			searchTimer = undefined;
+			if (value.trim() !== data.filters.q) void navigateFilters({ q: value.trim(), page: 1 });
+		}, SEARCH_DEBOUNCE_MS);
 	}
 
 	function changeDateMode(mode) {
@@ -132,6 +136,8 @@
 	}
 
 	function resetFilters() {
+		clearTimeout(searchTimer);
+		searchTimer = undefined;
 		searchQuery = '';
 		menuFilter = 'All';
 		dateMode = 'all';

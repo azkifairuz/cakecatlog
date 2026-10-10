@@ -17,6 +17,7 @@
 	import AdminPage from '$lib/components/admin/AdminPage.svelte';
 	import AdminPageHeader from '$lib/components/admin/AdminPageHeader.svelte';
 	import AdminSearchField from '$lib/components/admin/AdminSearchField.svelte';
+	import { createDebouncedValue } from '$lib/debounced-value.svelte.js';
 	import AdminViewToggle from '$lib/components/admin/AdminViewToggle.svelte';
 	import OrderScheduleDrawer from '$lib/components/admin/OrderScheduleDrawer.svelte';
 	import Loading from '$lib/components/Loading.svelte';
@@ -58,6 +59,7 @@
 	let newDeliveryFee = $state(0);
 	let newSendConfirmationEmail = $state(true);
 	let newOrderAddonSearch = $state('');
+	const getSettledAddonSearch = createDebouncedValue(() => newOrderAddonSearch);
 	let newOrderAddonCategory = $state('all');
 	let newOrderAddonScope = $state('product'); // 'product' | 'all'
 
@@ -95,7 +97,7 @@
 
 	// Filtered addons matching search query and selected category tab
 	let visibleOrderAddons = $derived.by(() => {
-		const query = newOrderAddonSearch.trim().toLowerCase();
+		const query = getSettledAddonSearch().trim().toLowerCase();
 		return effectiveAddonPool.filter((addon) => {
 			const matchCategory =
 				newOrderAddonCategory === 'all' ||
@@ -284,6 +286,7 @@
 	let dateTypeFilter = $state(untrack(() => data.filters.dateType));
 	let viewMode = $state('list');
 	let searchTimer;
+	const SEARCH_DEBOUNCE_MS = 700;
 
 	let filteredOrders = $derived(data.orders);
 	let pagination = $derived(data.pagination);
@@ -301,7 +304,7 @@
 	}
 
 	$effect(() => {
-		searchQuery = data.filters.q;
+		if (!searchTimer) searchQuery = data.filters.q;
 		statusFilter = data.filters.status;
 		customStart = data.filters.start || '';
 		customEnd = data.filters.end || '';
@@ -329,7 +332,7 @@
 		if (values.end) params.set('end', values.end);
 		if (Number(values.page) > 1) params.set('page', String(values.page));
 		const query = params.toString();
-		return `${page.url.pathname}${query ? `?${query}` : ''}`;
+		return `/admin/dashboard/orders${query ? `?${query}` : ''}`;
 	}
 
 	function navigateFilters(overrides = {}) {
@@ -339,7 +342,10 @@
 	function queueSearch(value) {
 		searchQuery = value;
 		clearTimeout(searchTimer);
-		searchTimer = setTimeout(() => navigateFilters({ q: value, page: 1 }), 300);
+		searchTimer = setTimeout(() => {
+			searchTimer = undefined;
+			if (value.trim() !== data.filters.q) void navigateFilters({ q: value.trim(), page: 1 });
+		}, SEARCH_DEBOUNCE_MS);
 	}
 
 	function changeDateMode(mode) {
@@ -357,6 +363,8 @@
 	}
 
 	function resetFilters() {
+		clearTimeout(searchTimer);
+		searchTimer = undefined;
 		searchQuery = '';
 		statusFilter = 'All';
 		dateMode = 'all';

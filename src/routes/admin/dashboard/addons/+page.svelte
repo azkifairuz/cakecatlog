@@ -13,6 +13,7 @@
 	import AdminPage from '$lib/components/admin/AdminPage.svelte';
 	import AdminPageHeader from '$lib/components/admin/AdminPageHeader.svelte';
 	import AdminSearchField from '$lib/components/admin/AdminSearchField.svelte';
+	import { createDebouncedValue } from '$lib/debounced-value.svelte.js';
 	import AdminViewToggle from '$lib/components/admin/AdminViewToggle.svelte';
 
 	let { data, form } = $props();
@@ -27,6 +28,7 @@
 	let isCategoryDropdownOpen = $state(false);
 
 	let searchQuery = $state('');
+	const getSettledSearch = createDebouncedValue(() => searchQuery);
 	let selectedCategoryFilter = $state([]);
 	let viewMode = $state('card');
 
@@ -51,7 +53,7 @@
 
 	let filteredAddons = $derived(
 		data.addons.filter(addon => {
-			const matchesSearch = addon.name.toLowerCase().includes(searchQuery.toLowerCase());
+			const matchesSearch = addon.name.toLowerCase().includes(getSettledSearch().toLowerCase());
 			const matchesCategory = selectedCategoryFilter.length === 0 || selectedCategoryFilter.includes(addon.category);
 			return matchesSearch && matchesCategory;
 		})

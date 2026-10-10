@@ -26,6 +26,7 @@
 	import AdminPage from '$lib/components/admin/AdminPage.svelte';
 	import AdminPageHeader from '$lib/components/admin/AdminPageHeader.svelte';
 	import AdminSearchField from '$lib/components/admin/AdminSearchField.svelte';
+	import { createDebouncedValue } from '$lib/debounced-value.svelte.js';
 	import AdminViewToggle from '$lib/components/admin/AdminViewToggle.svelte';
 	import AdminEmptyState from '$lib/components/admin/AdminEmptyState.svelte';
 	import DateRangePicker from '$lib/components/DateRangePicker.svelte';
@@ -44,6 +45,7 @@
 
 	// Filter state
 	let searchQuery = $state('');
+	const getSettledSearch = createDebouncedValue(() => searchQuery);
 	let selectedCategoryFilter = $state('all');
 	let periodFilter = $state('all'); // 'all' | 'daily' | 'weekly' | 'monthly' | 'range'
 	let customStart = $state('');
@@ -119,7 +121,7 @@
 
 	// Filtered Expenses
 	let filteredExpenses = $derived.by(() => {
-		const query = searchQuery.trim().toLowerCase();
+		const query = getSettledSearch().trim().toLowerCase();
 		return expenses.filter((item) => {
 			const matchSearch =
 				!query ||

@@ -25,6 +25,7 @@
 	import AdminPage from '$lib/components/admin/AdminPage.svelte';
 	import AdminPageHeader from '$lib/components/admin/AdminPageHeader.svelte';
 	import AdminSearchField from '$lib/components/admin/AdminSearchField.svelte';
+	import { createDebouncedValue } from '$lib/debounced-value.svelte.js';
 	import AdminViewToggle from '$lib/components/admin/AdminViewToggle.svelte';
 	import AdminEmptyState from '$lib/components/admin/AdminEmptyState.svelte';
 	import { groupPermissionsByCategory, getRoleBadgeMeta } from '$lib/employee-role-utils.js';
@@ -34,6 +35,7 @@
 
 	// State
 	let searchQuery = $state('');
+	const getSettledSearch = createDebouncedValue(() => searchQuery);
 	let viewMode = $state('card'); // 'card' | 'list'
 	let isDrawerOpen = $state(false);
 	let editingRole = $state(null);
@@ -48,8 +50,8 @@
 
 	let filteredRoles = $derived(
 		roles.filter((role) => {
-			if (!searchQuery.trim()) return true;
-			const q = searchQuery.toLowerCase().trim();
+			const q = getSettledSearch().toLowerCase().trim();
+			if (!q) return true;
 			return (
 				(role.name || '').toLowerCase().includes(q) ||
 				(role.permissions || []).some((p) => (p.key || p.name || '').toLowerCase().includes(q))
