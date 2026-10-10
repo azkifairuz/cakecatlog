@@ -1,3 +1,4 @@
+import { canonicalOrderStatus } from '../order-delivery-proof.js';
 export const ORDER_PAGE_SIZE = 24;
 export const DASHBOARD_PAGE_SIZE = 12;
 
@@ -40,7 +41,7 @@ function normalizePage(value) {
 export function parseOrderFilters(url, { singleDate = false, pageSize = ORDER_PAGE_SIZE, defaultAll = false } = {}) {
 	const today = getJakartaDate();
 	const q = String(url.searchParams.get('q') ?? '').trim().slice(0, 100);
-	const requestedStatus = String(url.searchParams.get('status') ?? 'All');
+	const requestedStatus = canonicalOrderStatus(String(url.searchParams.get('status') ?? 'All'));
 	const status = VALID_STATUSES.has(requestedStatus) ? requestedStatus : 'All';
 	const dateType = url.searchParams.get('date_type') === 'created_at' ? 'created_at' : 'delivery_date';
 	const page = normalizePage(url.searchParams.get('page'));
@@ -110,8 +111,8 @@ export function summarizeOrders(rows = []) {
 		(summary, order) => {
 			summary.totalSales += 1;
 			if (order.status === 'Pending') summary.pending += 1;
-			if (order.status === 'Diproses') summary.processing += 1;
-			if (order.status === 'Selesai') {
+			if (canonicalOrderStatus(order.status) === 'Processing') summary.processing += 1;
+			if (canonicalOrderStatus(order.status) === 'Completed') {
 				summary.completed += 1;
 				summary.totalRevenue += Number(order.amount || 0);
 			}

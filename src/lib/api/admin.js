@@ -1,3 +1,4 @@
+import { canonicalOrderStatus } from '../order-delivery-proof.js';
 import { apiFetch, unwrapData } from './client.js';
 
 // ==========================================
@@ -483,7 +484,7 @@ export async function updateAdminOrderStatus(id, status, token = null, customFet
 		{
 			method: 'PATCH',
 			token,
-			body: { status }
+			body: { status: canonicalOrderStatus(status) }
 		},
 		customFetch
 	);
@@ -1014,3 +1015,13 @@ export async function deleteAdminExpense(id, token = null, customFetch = null) {
 
 
 
+
+export async function uploadAdminOrderDeliveryProof(id, files, token = null, customFetch = null) {
+	const formData = new FormData();
+	for (const name of ['cakeInCarPhoto', 'driverPhoto', 'licensePlatePhoto']) {
+		formData.append(name, files[name]);
+	}
+	return unwrapData(await apiFetch(`/admin/orders/${id}/delivery-proof`, {
+		method: 'POST', token, body: formData
+	}, customFetch));
+}

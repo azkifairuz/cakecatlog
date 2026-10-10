@@ -1,10 +1,11 @@
+import { uploadDeliveryProofAction } from '$lib/server/delivery-proof-action.js';
 import { error as httpError, fail } from '@sveltejs/kit';
 import {
 	DASHBOARD_PAGE_SIZE,
 	getPagination,
 	parseOrderFilters
 } from '$lib/server/admin-orders.js';
-import { adaptOrders } from '$lib/api/adapters.js';
+import { adaptOrder, adaptOrders } from '$lib/api/adapters.js';
 import { normalizeTopProducts, normalizeStatusBreakdown, normalizeRepeatCustomers } from '$lib/analytics.js';
 import {
 	getAdminDashboard,
@@ -114,6 +115,8 @@ export const load = async ({ locals, url, fetch, cookies }) => {
 };
 
 export const actions = {
+	deliveryProofSession: async ({ locals }) => ({ success: true, token: locals.adminToken }),
+	uploadDeliveryProof: uploadDeliveryProofAction,
 	updateStatus: async ({ request, locals, fetch, cookies }) => {
 		const formData = await request.formData();
 		const id = formData.get('id');
@@ -122,8 +125,8 @@ export const actions = {
 		if (!id || !status) return fail(400, { success: false, error: 'Missing data' });
 
 		try {
-			await updateAdminOrderStatus(id, status, locals.adminToken, fetch);
-			return { success: true };
+			const updated = await updateAdminOrderStatus(id, status, locals.adminToken, fetch);
+			return { success: true, order: adaptOrder(updated) };
 		} catch (err) {
 			handleAdminAuthError(err, cookies);
 			console.error('Update status error:', err);

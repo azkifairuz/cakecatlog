@@ -1,3 +1,4 @@
+import { canonicalOrderStatus } from '../order-delivery-proof.js';
 export function adaptProduct(product) {
 	if (!product) return product;
 
@@ -373,7 +374,7 @@ export function adaptOrder(order) {
 	const deliveryFee = Number(order.deliveryFee ?? order.delivery_fee ?? 0);
 	const cakePrice = Number(order.cakePrice ?? order.cake_price ?? 0);
 	const amount = Number(order.amount ?? order.estimatedSubtotal ?? order.estimated_subtotal ?? 0);
-	const status = order.status || 'Pending';
+	const status = canonicalOrderStatus(order.status || 'Pending');
 	const createdAt = order.createdAt || order.created_at || '';
 	const proofOfTransfer = order.proofOfTransfer || order.proof_of_transfer || null;
 
@@ -449,6 +450,12 @@ export function adaptOrder(order) {
 		createdAt,
 		proof_of_transfer: proofOfTransfer,
 		proofOfTransfer,
+		cakeInCarPhotoUrl: order.cakeInCarPhotoUrl ?? order.cake_in_car_photo_url ?? null,
+		cake_in_car_photo_url: order.cakeInCarPhotoUrl ?? order.cake_in_car_photo_url ?? null,
+		driverPhotoUrl: order.driverPhotoUrl ?? order.driver_photo_url ?? null,
+		driver_photo_url: order.driverPhotoUrl ?? order.driver_photo_url ?? null,
+		licensePlatePhotoUrl: order.licensePlatePhotoUrl ?? order.license_plate_photo_url ?? null,
+		license_plate_photo_url: order.licensePlatePhotoUrl ?? order.license_plate_photo_url ?? null,
 		items,
 		order_items: items,
 		orderItems: items,

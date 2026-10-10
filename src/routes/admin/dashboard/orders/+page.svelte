@@ -1,4 +1,8 @@
 <script>
+	import OrderStatusSelect from '$lib/components/admin/OrderStatusSelect.svelte';
+	import DeliveryProofDialog from '$lib/components/admin/DeliveryProofDialog.svelte';
+	import DeliveryProofGallery from '$lib/components/admin/DeliveryProofGallery.svelte';
+	import { ORDER_STATUS_OPTIONS, orderStatusLabel, DELIVERY_PROOF_FIELDS } from '$lib/order-delivery-proof.js';
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
@@ -43,6 +47,7 @@
 	let newDeliveryTime = $state('10:00');
 	let newDeliveryVehicle = $state('Motor');
 	let newStatus = $state('Pending');
+	$effect(() => { if (newDeliveryOption === 'delivery' && newStatus === 'Completed') newStatus = 'Pending'; });
 	let newProductId = $state('');
 	let newProductVariantId = $state('');
 	let newQuantity = $state(1);
@@ -235,6 +240,25 @@
 	}
 
 	let selectedOrder = $state(null);
+	let proofOrder = $state(null);
+	let proofTargetStatus = $state(null);
+	let proofDialogOpen = $state(false);
+	function openDeliveryProof(order, status = null) {
+		proofOrder = order;
+		proofTargetStatus = status;
+		proofDialogOpen = true;
+	}
+	function onProofOrderUpdated(order) {
+		if (!order) return;
+		const updates = { status: order.status };
+		for (const field of DELIVERY_PROOF_FIELDS) {
+			updates[field.url] = order[field.url] || order[field.alias] || null;
+			updates[field.alias] = updates[field.url];
+		}
+		if (selectedOrder?.id === order.id) selectedOrder = { ...selectedOrder, ...updates };
+		if (proofOrder?.id === order.id) proofOrder = { ...proofOrder, ...updates };
+	}
+
 	let isDrawerOpen = $state(false);
 	let loadingDetail = $state(false);
 	let uploadingReceipt = $state(false);
@@ -468,10 +492,9 @@
 				
 				<select bind:value={statusFilter} onchange={(event) => navigateFilters({ status: event.currentTarget.value })} class="col-span-2 h-10 w-full rounded-lg border border-input bg-background px-3 text-sm font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/50 sm:col-span-1">
 					<option value="All">Semua Status</option>
-					<option value="Pending">Pending</option>
-					<option value="Diproses">Diproses</option>
-					<option value="Selesai">Selesai</option>
-					<option value="Batal/Refund">Batal/Refund</option>
+					{#each ORDER_STATUS_OPTIONS as option}
+					<option value={option.value}>{option.label}</option>
+				{/each}
 				</select>
 				
 				{#if dateMode === 'range'}
@@ -538,20 +561,7 @@
 							</div>
 
 							<!-- Status Dropdown Form -->
-							<form method="POST" action="?/updateStatus" use:enhance class="shrink-0">
-								<input type="hidden" name="id" value={order.id} />
-								<select name="status" class="text-xs sm:text-sm font-bold rounded-full border px-3 sm:px-3.5 py-1.5 sm:py-2 focus:outline-none focus:ring-2 focus:ring-slate-800 transition-colors cursor-pointer
-									{order.status === 'Selesai' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' : 
-									 order.status === 'Diproses' ? 'bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-100' : 
-									 order.status === 'Batal/Refund' ? 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100' : 
-									 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'}" 
-									onchange={(e) => e.target.form.requestSubmit()}>
-									<option value="Pending" selected={order.status === 'Pending'}>Pending</option>
-									<option value="Diproses" selected={order.status === 'Diproses'}>Diproses</option>
-									<option value="Selesai" selected={order.status === 'Selesai'}>Selesai</option>
-									<option value="Batal/Refund" selected={order.status === 'Batal/Refund'}>Batal / Refund</option>
-								</select>
-							</form>
+							<OrderStatusSelect order={order} onProofRequired={openDeliveryProof} onUpdated={onProofOrderUpdated} disabled={proofDialogOpen} />
 						</div>
 						
 						<!-- Product & Fulfillment Detail Card -->
@@ -671,20 +681,7 @@
 								</Table.Cell>
 								<Table.Cell class="whitespace-nowrap font-bold text-slate-900">{formatCurrency(order.amount)}</Table.Cell>
 								<Table.Cell>
-									<form method="POST" action="?/updateStatus" use:enhance>
-										<input type="hidden" name="id" value={order.id} />
-										<select name="status" class="h-9 rounded-xl border px-3 text-xs font-bold outline-none cursor-pointer transition-colors
-											{order.status === 'Selesai' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 
-											 order.status === 'Diproses' ? 'bg-sky-50 text-sky-700 border-sky-200' : 
-											 order.status === 'Batal/Refund' ? 'bg-rose-50 text-rose-700 border-rose-200' : 
-											 'bg-amber-50 text-amber-700 border-amber-200'}" 
-											onchange={(event) => event.currentTarget.form.requestSubmit()}>
-											<option value="Pending" selected={order.status === 'Pending'}>Pending</option>
-											<option value="Diproses" selected={order.status === 'Diproses'}>Diproses</option>
-											<option value="Selesai" selected={order.status === 'Selesai'}>Selesai</option>
-											<option value="Batal/Refund" selected={order.status === 'Batal/Refund'}>Batal / Refund</option>
-										</select>
-									</form>
+									<OrderStatusSelect order={order} onProofRequired={openDeliveryProof} onUpdated={onProofOrderUpdated} disabled={proofDialogOpen} />
 								</Table.Cell>
 								<Table.Cell class="text-right">
 									<Button variant="outline" size="sm" class="rounded-xl font-bold active:scale-95 transition-transform" onclick={() => openDrawer(order)}>Kelola</Button>
@@ -736,8 +733,8 @@
 				<div>
 					<div class="flex items-center gap-2 mb-1">
 						<span class="text-xs font-black px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">#{selectedOrder.order_number}</span>
-						<span class="text-xs font-bold px-2.5 py-0.5 rounded-full {selectedOrder.status === 'Selesai' ? 'bg-emerald-100 text-emerald-800' : selectedOrder.status === 'Diproses' ? 'bg-sky-100 text-sky-800' : selectedOrder.status === 'Batal/Refund' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800'}">
-							{selectedOrder.status}
+						<span class="text-xs font-bold px-2.5 py-0.5 rounded-full {selectedOrder.status === 'Completed' ? 'bg-emerald-100 text-emerald-800' : selectedOrder.status === 'Processing' ? 'bg-sky-100 text-sky-800' : selectedOrder.status === 'Cancelled' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800'}">
+							{orderStatusLabel(selectedOrder.status)}
 						</span>
 						{#if loadingDetail}
 							<span class="inline-flex items-center gap-1 text-[11px] text-slate-400 animate-pulse">
@@ -926,22 +923,12 @@
 				<!-- Section 3: Status Changer -->
 				<div class="space-y-3">
 					<Label class="text-slate-900 font-bold text-sm">Status Pesanan</Label>
-					<form method="POST" action="?/updateStatus" use:enhance={() => {
-						return async ({ update }) => {
-							await update();
-						};
-					}}>
-						<input type="hidden" name="id" value={selectedOrder.id} />
-						<select name="status" class="w-full px-4 h-12 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-slate-900 transition-colors cursor-pointer" onchange={(e) => e.currentTarget.form.requestSubmit()}>
-							<option value="Pending" selected={selectedOrder.status === 'Pending'}>Pending (Menunggu Pembayaran / Verifikasi)</option>
-							<option value="Diproses" selected={selectedOrder.status === 'Diproses'}>Diproses (Sedang Dibuat oleh Dapur)</option>
-							<option value="Selesai" selected={selectedOrder.status === 'Selesai'}>Selesai (Sudah Dikirim / Diterima Pelanggan)</option>
-							<option value="Batal/Refund" selected={selectedOrder.status === 'Batal/Refund'}>Batal / Refund (Pesanan Dibatalkan)</option>
-						</select>
-					</form>
+					<OrderStatusSelect order={selectedOrder} onProofRequired={openDeliveryProof} onUpdated={onProofOrderUpdated} disabled={proofDialogOpen} />
 				</div>
 
 				<hr class="border-slate-100" />
+
+				<DeliveryProofGallery order={selectedOrder} onReplace={openDeliveryProof} disabled={proofDialogOpen} />
 
 				<!-- Section 4: Billing & Delivery Fee Form -->
 				<div class="space-y-4">
@@ -1611,8 +1598,8 @@
 									class="h-10 w-full rounded-xl border border-input bg-background px-3 text-sm font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
 								>
 									<option value="Pending">Pending (Menunggu Pembayaran)</option>
-									<option value="Diproses">Diproses (Sedang Dikerjakan)</option>
-									<option value="Selesai">Selesai (Lunas & Terkirim)</option>
+									<option value="Processing">Diproses (Sedang Dikerjakan)</option>
+									{#if newDeliveryOption === 'pickup'}<option value="Completed">Selesai</option>{/if}
 								</select>
 							</div>
 
@@ -1690,3 +1677,7 @@
 {/if}
 
 
+
+{#if proofOrder}
+	<DeliveryProofDialog bind:open={proofDialogOpen} order={proofOrder} targetStatus={proofTargetStatus} onUpdated={onProofOrderUpdated} />
+{/if}

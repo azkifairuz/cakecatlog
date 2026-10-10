@@ -1,4 +1,8 @@
 <script>
+	import OrderStatusSelect from '$lib/components/admin/OrderStatusSelect.svelte';
+	import DeliveryProofDialog from '$lib/components/admin/DeliveryProofDialog.svelte';
+	import DeliveryProofGallery from '$lib/components/admin/DeliveryProofGallery.svelte';
+	import { ORDER_STATUS_OPTIONS, orderStatusLabel, DELIVERY_PROOF_FIELDS } from '$lib/order-delivery-proof.js';
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
@@ -53,19 +57,39 @@
 
 	function getStatusBadge(status) {
 		const s = String(status || '').toLowerCase();
-		if (s === 'selesai' || s === 'completed') {
+		if (s === 'completed') {
 			return { label: 'Selesai', class: 'bg-emerald-50 text-emerald-700 border border-emerald-200/80 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800' };
 		}
-		if (s === 'diproses' || s === 'processing') {
+		if (s === 'processing') {
 			return { label: 'Diproses', class: 'bg-sky-50 text-sky-700 border border-sky-200/80 dark:bg-sky-950/50 dark:text-sky-300 dark:border-sky-800' };
 		}
 		if (s === 'pending') {
 			return { label: 'Pending', class: 'bg-amber-50 text-amber-700 border border-amber-200/80 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800' };
 		}
+		if (s === 'delivered' || s === 'ready' || s === 'paid' || s === 'confirmed') return { label: orderStatusLabel(status), class: 'bg-sky-50 text-sky-700 border border-sky-200/80' };
 		return { label: 'Batal/Refund', class: 'bg-rose-50 text-rose-700 border border-rose-200/80 dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-800' };
 	}
 
 	let selectedOrder = $state(null);
+	let proofOrder = $state(null);
+	let proofTargetStatus = $state(null);
+	let proofDialogOpen = $state(false);
+	function openDeliveryProof(order, status = null) {
+		proofOrder = order;
+		proofTargetStatus = status;
+		proofDialogOpen = true;
+	}
+	function onProofOrderUpdated(order) {
+		if (!order) return;
+		const updates = { status: order.status };
+		for (const field of DELIVERY_PROOF_FIELDS) {
+			updates[field.url] = order[field.url] || order[field.alias] || null;
+			updates[field.alias] = updates[field.url];
+		}
+		if (selectedOrder?.id === order.id) selectedOrder = { ...selectedOrder, ...updates };
+		if (proofOrder?.id === order.id) proofOrder = { ...proofOrder, ...updates };
+	}
+
 	let isDrawerOpen = $state(false);
 	let uploadingReceipt = $state(false);
 
@@ -265,10 +289,9 @@
 				
 				<select bind:value={statusFilter} onchange={(event) => navigateFilters({ status: event.currentTarget.value })} class="col-span-2 h-10 w-full rounded-lg border border-input bg-background px-3 text-sm font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/50 sm:col-span-1">
 					<option value="All">Semua Status</option>
-					<option value="Pending">Pending</option>
-					<option value="Diproses">Diproses</option>
-					<option value="Selesai">Selesai</option>
-					<option value="Batal/Refund">Batal/Refund</option>
+					{#each ORDER_STATUS_OPTIONS as option}
+					<option value={option.value}>{option.label}</option>
+				{/each}
 				</select>
 				
 				{#if dateMode === 'range'}
@@ -756,19 +779,7 @@
 			<div class="min-h-0 flex-1 space-y-5 overflow-y-auto pb-6 px-1 sm:space-y-6 sm:pb-8">
 				<div class="space-y-3">
 					<Label class="text-[#4A3B32] font-bold text-[15px]">Status Pesanan</Label>
-					<form method="POST" action="?/updateStatus" use:enhance={() => {
-						return async ({ update }) => {
-							await update();
-						};
-					}}>
-						<input type="hidden" name="id" value={selectedOrder.id} />
-						<select name="status" class="w-full text-[15px] font-bold rounded-xl border-2 px-4 py-4 focus:outline-none focus:ring-2 focus:ring-primary transition-colors cursor-pointer shadow-sm {selectedOrder.status === 'Selesai' ? 'bg-green-50 text-green-700 border-green-200' : selectedOrder.status === 'Diproses' ? 'bg-blue-50 text-blue-700 border-blue-200' : selectedOrder.status === 'Batal/Refund' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-slate-50 text-[#4A3B32] border-primary/20'}" onchange={(e) => e.target.form.requestSubmit()}>
-							<option value="Pending" selected={selectedOrder.status === 'Pending'}>Pending (Belum Diproses)</option>
-							<option value="Diproses" selected={selectedOrder.status === 'Diproses'}>Diproses (Sedang Dibuat)</option>
-							<option value="Selesai" selected={selectedOrder.status === 'Selesai'}>Selesai (Sudah Dikirim)</option>
-							<option value="Batal/Refund" selected={selectedOrder.status === 'Batal/Refund'}>Batal / Refund</option>
-						</select>
-					</form>
+					<OrderStatusSelect order={selectedOrder} onProofRequired={openDeliveryProof} onUpdated={onProofOrderUpdated} disabled={proofDialogOpen} />
 				</div>
 				<hr class="border-primary/10" />
 				<div class="space-y-3">
@@ -792,6 +803,7 @@
 					</div>
 				</div>
 				<hr class="border-primary/10" />
+				<DeliveryProofGallery order={selectedOrder} onReplace={openDeliveryProof} disabled={proofDialogOpen} />
 				<div class="space-y-3">
 					<Label class="text-[#4A3B32] font-bold text-[15px]">Input Total Harga</Label>
 					<form method="POST" action="?/updateAmount" use:enhance={() => {
@@ -852,3 +864,7 @@
 	}}
 />
 
+
+{#if proofOrder}
+	<DeliveryProofDialog bind:open={proofDialogOpen} order={proofOrder} targetStatus={proofTargetStatus} onUpdated={onProofOrderUpdated} />
+{/if}
