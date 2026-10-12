@@ -1,3 +1,4 @@
+import { cartVariantId, hasCartVariantSelection } from '$lib/cart-variants.js';
 import { normalizeLocale, translate } from '$lib/i18n.svelte.js';
 import { normalizePhoneNumber, PhoneNumberError } from '$lib/phone-number.js';
 import { submitCheckoutOrder } from '$lib/api/public.js';
@@ -63,6 +64,10 @@ export const actions = {
 			return { success: false, error: translate(locale, 'server.emptyCart') };
 		}
 
+		if (cartItems.some((item) => !hasCartVariantSelection(item))) {
+			return fail(422, { success: false, error: 'Pilih ukuran produk kembali. Keranjang lama belum menyimpan pilihan ukuran yang valid.' });
+		}
+
 		const items = cartItems.map((item) => {
 			const addonIds = Array.isArray(item.customized_options?.addons)
 				? item.customized_options.addons
@@ -72,11 +77,7 @@ export const actions = {
 
 			return {
 				productId: item.product_id || item.productId,
-				productVariantId:
-					item.product_variant_id ||
-					item.productVariantId ||
-					item.customized_options?.size?.variant_id ||
-					null,
+				productVariantId: cartVariantId(item),
 				quantity: Number(item.quantity) || 1,
 				cakeSize: item.cake_size || item.customized_options?.size?.name || 'Standard',
 				cakeFlavor: item.cake_flavor || item.customized_options?.flavor?.name || 'Standard',

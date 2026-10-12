@@ -1,5 +1,4 @@
 const DARK_COLOR_KEYWORDS = ['merah', 'hitam', 'navy', 'chocolate', 'forest green'];
-const FALLBACK_SIZES = ['8cm', '10cm', '12cm', 'Custom'];
 
 export function parseCommaOptions(value) {
 	if (!value) return [];
@@ -10,86 +9,36 @@ export function parseCommaOptions(value) {
 }
 
 export function parsePrice(value) {
-	const numeric = String(value ?? '').replace(/\D/g, '');
-	return numeric ? Number(numeric) : 0;
+	const amount = Number(typeof value === 'string' ? value.trim().replace(/,/g, '') : value);
+	return Number.isFinite(amount) ? Math.max(0, amount) : 0;
 }
 
+export const BASE_SIZE_ID = '__base__';
+
 export function normalizeSizePrices(product = {}) {
-	const variants = Array.isArray(product?.product_variants) ? product.product_variants : [];
-	const normalizedVariants = variants
-		.filter((variant) => variant?.is_active !== false)
-		.sort((a, b) => Number(a?.display_order ?? 0) - Number(b?.display_order ?? 0))
-		.map((variant) => ({
-			id: variant.id,
-			label: String(variant?.name ?? '').trim(),
-			price: parsePrice(variant?.price),
-			variant
-		}))
-		.filter((item) => item.label && item.price > 0);
-
-	if (normalizedVariants.length > 0) {
-		return normalizedVariants;
-	}
-
-	const rawSizePrices = product?.size_prices;
-	const sizePrices = Array.isArray(rawSizePrices)
-		? rawSizePrices
-		: typeof rawSizePrices === 'string'
-			? safeParseJson(rawSizePrices)
-			: [];
-
-	const normalized = sizePrices
-		.map((item) => ({
-			label: String(item?.label ?? item?.size ?? '').trim(),
-			price: parsePrice(item?.price)
-		}))
-		.filter((item) => item.label && item.price > 0);
-
-	if (normalized.length > 0) {
-		return normalized;
-	}
-
-	const legacySizes = parseCommaOptions(product?.sizes);
-	const basePrice = parsePrice(product?.base_price);
-	const fallbackLabels = legacySizes.length > 0 ? legacySizes : FALLBACK_SIZES;
-
-	return fallbackLabels.map((label) => ({
-		label,
-		price: basePrice
-	}));
+	const variants = product?.product_variants ?? product?.variants ?? [];
+	return (Array.isArray(variants) ? variants : [])
+		.filter((variant) => variant?.id && (variant.is_active ?? variant.isActive) !== false)
+		.slice()
+		.sort((a, b) => Number(a.display_order ?? a.displayOrder ?? 0) - Number(b.display_order ?? b.displayOrder ?? 0))
+		.map((variant) => ({ id: variant.id, label: String(variant.name ?? ''), price: parsePrice(variant.price), variant }));
 }
 
 export function getStartFromPrice(product = {}) {
-	const sizePrices = normalizeSizePrices(product);
-	if (sizePrices.length > 0) {
-		return Math.min(...sizePrices.map((item) => item.price));
-	}
-
-	return parsePrice(product?.base_price);
-}
-
-export function getSizePrice(product = {}, selectedSize = '') {
-	const sizePrices = normalizeSizePrices(product);
-	const match = sizePrices.find((item) => item.label === selectedSize);
-	return match?.price || getStartFromPrice(product);
+	const variants = normalizeSizePrices(product);
+	return variants.length ? Math.min(...variants.map((item) => item.price)) : parsePrice(product?.base_price ?? product?.basePrice);
 }
 
 export function getSizePriceOptions(product = {}) {
-	const variantSizes = normalizeSizePrices(product).filter((item) => item.variant);
-	if (variantSizes.length > 0) return variantSizes;
+	const variants = product?.product_variants ?? product?.variants ?? [];
+	if (Array.isArray(variants) && variants.length) return normalizeSizePrices(product);
+	return [{ id: BASE_SIZE_ID, label: 'Standard', price: parsePrice(product?.base_price ?? product?.basePrice), variant: null }];
+}
 
-	const addonSizes = getProductAddons(product).filter((addon) => addon.category === 'size');
-	if (addonSizes.length > 0) {
-		const basePrice = parsePrice(product?.base_price);
-		return addonSizes.map((addon) => ({
-			label: addon.name,
-			price: basePrice + addon.price,
-			additional_price: addon.price,
-			addon
-		}));
-	}
-
-	return normalizeSizePrices(product);
+export function getSizePrice(product = {}, variantId = '') {
+	const option = getSizePriceOptions(product).find((item) => item.id === variantId);
+	if (!option) throw new Error('Pilih ukuran produk kembali sebelum memesan.');
+	return option.price;
 }
 
 export function normalizeAddon(addon = {}) {
