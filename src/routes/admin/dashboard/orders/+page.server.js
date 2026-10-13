@@ -1,7 +1,7 @@
 import { uploadDeliveryProofAction } from '$lib/server/delivery-proof-action.js';
 import { error as httpError, fail } from '@sveltejs/kit';
 import { parseOrderFilters } from '$lib/server/admin-orders.js';
-import { adaptOrder, adaptOrders, adaptProducts, adaptAddons } from '$lib/api/adapters.js';
+import { adaptOrder, adaptOrders, adaptProduct, adaptProducts, adaptAddons } from '$lib/api/adapters.js';
 import {
 	getAdminOrders,
 	getAdminOrder,
@@ -10,6 +10,7 @@ import {
 	updateAdminOrderStatus,
 	updateAdminOrderAmount,
 	uploadAdminOrderReceipt,
+	getAdminProduct,
 	getAdminProducts,
 	getAdminAddons
 } from '$lib/api/admin.js';
@@ -79,6 +80,23 @@ export const load = async ({ locals, url, fetch, cookies }) => {
 };
 
 export const actions = {
+	productDetails: async ({ request, locals, fetch, cookies }) => {
+		const formData = await request.formData();
+		const productId = String(formData.get('productId') || '').trim();
+		if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(productId)) {
+			return fail(400, { success: false, error: 'Produk yang dipilih tidak valid.' });
+		}
+		try {
+			const product = await getAdminProduct(productId, locals.adminToken, fetch);
+			if (product?.id !== productId) throw new Error('Detail produk tidak sesuai dengan pilihan.');
+			return { success: true, product: adaptProduct(product) };
+		} catch (err) {
+			handleAdminAuthError(err, cookies);
+			return fail(err?.status >= 400 && err?.status < 600 ? err.status : 502, {
+				success: false, error: err?.message || 'Gagal memuat ukuran produk. Silakan coba lagi.'
+			});
+		}
+	},
 	deliveryProofSession: async ({ locals }) => ({ success: true, token: locals.adminToken }),
 	uploadDeliveryProof: uploadDeliveryProofAction,
 	createOrder: async ({ request, locals, fetch, cookies }) => {

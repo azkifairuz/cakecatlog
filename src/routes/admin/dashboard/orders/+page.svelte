@@ -3,7 +3,7 @@
 	import DeliveryProofDialog from '$lib/components/admin/DeliveryProofDialog.svelte';
 	import DeliveryProofGallery from '$lib/components/admin/DeliveryProofGallery.svelte';
 	import { ORDER_STATUS_OPTIONS, orderStatusLabel, DELIVERY_PROOF_FIELDS } from '$lib/order-delivery-proof.js';
-	import { enhance } from '$app/forms';
+	import { enhance, deserialize } from '$app/forms';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import * as Card from '$lib/components/ui/card';
@@ -51,6 +51,11 @@
 	$effect(() => { if (newDeliveryOption === 'delivery' && newStatus === 'Completed') newStatus = 'Pending'; });
 	let newProductId = $state('');
 	let newProductVariantId = $state('');
+	let newProductDetails = $state(null);
+	let loadingProductDetails = $state(false);
+	let productDetailsError = $state('');
+	let productDetailsRequest = 0;
+	let productDetailsAbort = null;
 	let newQuantity = $state(1);
 	let newCakeText = $state('');
 	let newGiftCardText = $state('');
@@ -66,13 +71,68 @@
 	let products = $derived(data.products || []);
 	let globalAddons = $derived(data.addons || []);
 
-	let selectedProduct = $derived(products.find((p) => p.id === newProductId));
-	let productVariants = $derived(selectedProduct?.variants || []);
+	let selectedProduct = $derived(newProductDetails?.id === newProductId ? newProductDetails : null);
+	let hasProductVariants = $derived(Boolean(selectedProduct?.variants?.length));
+	let productVariants = $derived((selectedProduct?.variants || [])
+		.filter((variant) => variant.is_active !== false && variant.isActive !== false)
+		.slice().sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0)));
 	let selectedVariant = $derived(productVariants.find((v) => v.id === newProductVariantId));
+	let productDetailsReady = $derived(Boolean(selectedProduct) && !loadingProductDetails && !productDetailsError);
+	let canCreateWithProduct = $derived(productDetailsReady && selectedProduct?.is_available !== false && (!hasProductVariants || Boolean(selectedVariant)));
+
+	async function loadCreateOrderProduct(productId) {
+		const requestId = ++productDetailsRequest;
+		productDetailsAbort?.abort();
+		const controller = new AbortController();
+		productDetailsAbort = controller;
+		newProductDetails = null;
+		newProductVariantId = '';
+		loadingProductDetails = true;
+		productDetailsError = '';
+		try {
+			const body = new FormData();
+			body.set('productId', productId);
+			const response = await fetch('?/productDetails', {
+				method: 'POST', headers: { 'x-sveltekit-action': 'true' }, body, signal: controller.signal
+			});
+			const result = deserialize(await response.text());
+			if (requestId !== productDetailsRequest || !isCreateOrderDrawerOpen || productId !== newProductId) return;
+			if (result.type === 'redirect') { await goto(result.location); return; }
+			if (result.type !== 'success' || !result.data?.success) {
+				throw new Error(result.data?.error || 'Gagal memuat ukuran produk. Silakan coba lagi.');
+			}
+			if (result.data.product?.id !== productId) throw new Error('Detail produk tidak sesuai dengan pilihan.');
+			newProductDetails = result.data.product;
+		} catch (err) {
+			if (requestId === productDetailsRequest && err?.name !== 'AbortError') {
+				productDetailsError = err?.message || 'Gagal memuat ukuran produk. Silakan coba lagi.';
+			}
+		} finally {
+			if (requestId === productDetailsRequest) loadingProductDetails = false;
+		}
+	}
+
+	$effect(() => {
+		const productId = newProductId;
+		const open = isCreateOrderDrawerOpen;
+		untrack(() => {
+			if (open && productId) {
+				loadCreateOrderProduct(productId);
+			} else {
+				++productDetailsRequest;
+				productDetailsAbort?.abort();
+				newProductDetails = null;
+				newProductVariantId = '';
+				loadingProductDetails = false;
+				productDetailsError = '';
+			}
+		});
+	});
+	onDestroy(() => productDetailsAbort?.abort());
 
 	// Effective base unit price
 	let baseUnitPrice = $derived(
-		selectedVariant?.price ?? selectedProduct?.base_price ?? selectedProduct?.price ?? 0
+		selectedVariant?.price ?? (hasProductVariants ? 0 : selectedProduct?.base_price ?? selectedProduct?.price ?? 0)
 	);
 
 	let hasProductSpecificAddons = $derived(
@@ -1152,7 +1212,8 @@
 				<form
 					method="POST"
 					action="?/createOrder"
-					use:enhance={() => {
+					use:enhance={({ cancel }) => {
+						if (!canCreateWithProduct) { cancel(); return; }
 						isCreatingOrder = true;
 						return async ({ update, result }) => {
 							try {
@@ -1227,6 +1288,7 @@
 									bind:value={newProductId}
 									onchange={() => {
 										newProductVariantId = '';
+										newSelectedAddonIds = [];
 										newOrderAddonCategory = 'all';
 									}}
 									required
@@ -1239,26 +1301,35 @@
 								</select>
 							</div>
 
-							<!-- SELECT VARIANT (IF ANY) -->
-							{#if productVariants.length > 0}
-								<div class="space-y-1.5">
-									<Label for="order_variant" class="font-bold text-foreground">Ukuran / Varian</Label>
-									<select
-										id="order_variant"
-										name="productVariantId"
-										bind:value={newProductVariantId}
-										class="h-10 w-full rounded-xl border border-input bg-background px-3 text-sm font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-									>
-										<option value="">Default ({formatCurrency(selectedProduct?.base_price || selectedProduct?.price)})</option>
-										{#each productVariants as v}
-											<option value={v.id}>{v.name} - {formatCurrency(v.price)}</option>
-										{/each}
-									</select>
+							{#if loadingProductDetails}
+								<p role="status" class="sm:col-span-2 text-sm text-muted-foreground">Memuat ukuran produk...</p>
+							{:else if productDetailsError}
+								<div role="alert" class="sm:col-span-2 space-y-2 text-sm text-destructive">
+									<p>{productDetailsError}</p>
+									<Button type="button" variant="outline" size="sm" onclick={() => loadCreateOrderProduct(newProductId)}>Coba lagi</Button>
 								</div>
+							{:else if productDetailsReady}
+								<div class="space-y-1.5">
+									<Label for="order_variant" class="font-bold text-foreground">Ukuran Kue{hasProductVariants ? ' *' : ''}</Label>
+									{#if hasProductVariants}
+										<select id="order_variant" name="productVariantId" bind:value={newProductVariantId} required
+											disabled={productVariants.length === 0}
+											class="h-10 w-full rounded-xl border border-input bg-background px-3 text-sm font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
+											<option value="" disabled>-- Pilih Ukuran Kue --</option>
+											{#each productVariants as v}
+												<option value={v.id}>{v.name} - {formatCurrency(v.price)}</option>
+											{/each}
+										</select>
+										{#if productVariants.length === 0}<p role="alert" class="text-sm text-destructive">Tidak ada ukuran aktif untuk produk ini.</p>{/if}
+									{:else}
+										<Input id="order_variant" value="Standard" readonly class="h-10 rounded-xl" />
+									{/if}
+								</div>
+								{#if selectedProduct?.is_available === false}<p role="alert" class="sm:col-span-2 text-sm text-destructive">Produk sedang tidak tersedia untuk dipesan.</p>{/if}
 							{/if}
 
 							<!-- QUANTITY -->
-							<div class="space-y-1.5 {productVariants.length === 0 ? 'sm:col-span-2' : ''}">
+							<div class="space-y-1.5">
 								<Label for="order_quantity" class="font-bold text-foreground">Jumlah (Qty)</Label>
 								<Input
 									id="order_quantity"
@@ -1619,7 +1690,7 @@
 								<PriceInput
 									id="order_cake_price"
 									name="cakePrice"
-									bind:value={effectiveCakePrice}
+									bind:value={() => effectiveCakePrice, (value) => (newCustomCakePrice = value)}
 									placeholder="0"
 								/>
 								<p class="text-[10px] text-muted-foreground">Auto-kalkulasi dari katalog & addon. Dapat diubah manual jika diskon/custom.</p>
@@ -1668,7 +1739,7 @@
 					<div class="sticky bottom-0 bg-card pt-3 border-t border-border">
 						<Button
 							type="submit"
-							disabled={isCreatingOrder || !newCustomerName.trim() || !newPhoneNumber.trim() || !newProductId}
+							disabled={isCreatingOrder || !newCustomerName.trim() || !newPhoneNumber.trim() || !newProductId || !canCreateWithProduct}
 							class="w-full h-11 font-bold text-sm"
 						>
 							{#if isCreatingOrder}
