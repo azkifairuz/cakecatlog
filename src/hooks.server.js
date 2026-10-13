@@ -14,8 +14,9 @@ export const handle = async ({ event, resolve }) => {
 	const isAdminRoute = event.url.pathname.startsWith('/admin');
 	const isAdminLoginRoute = event.url.pathname === '/admin/login';
 	const isAdminLogoutRoute = event.url.pathname === '/admin/logout';
+	const isAdminSessionRoute = event.url.pathname === '/admin/session';
 
-	if (isAdminRoute && !isAdminLogoutRoute) {
+	if (isAdminRoute && !isAdminLogoutRoute && !(isAdminSessionRoute && event.request.method === 'DELETE')) {
 		if (adminToken) {
 			try {
 				const user = await getAdminMe(adminToken, event.fetch);
@@ -32,7 +33,7 @@ export const handle = async ({ event, resolve }) => {
 		}
 
 		// Protect admin dashboard routes
-		if (!isAdminLoginRoute && !event.locals.adminToken) {
+		if (!isAdminLoginRoute && !isAdminSessionRoute && !event.locals.adminToken) {
 			throw redirect(303, '/admin/login');
 		}
 

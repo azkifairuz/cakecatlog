@@ -1,6 +1,7 @@
 import { goto } from '$app/navigation';
 import { toast } from 'svelte-sonner';
 import { getAdminToken } from '$lib/api/auth.js';
+import { ensureAdminSession, onAdminSessionInvalidated } from '$lib/admin-session.js';
 import { getAdminUnreadCount, openAdminNotificationStream } from '$lib/api/notifications.js';
 import {
 	TOAST_BURST_MS,
@@ -22,14 +23,26 @@ export function createAdminNotificationCenter() {
 	let audioContext;
 	let lastToastAt = 0;
 	let burstCount = 0;
+	let unsubscribeSession;
+	let lifecycle = 0;
 
 	async function refreshCount() {
+		if (stopped) return;
+		const currentLifecycle = lifecycle;
 		try {
 			const result = await getAdminUnreadCount();
+			if (stopped || currentLifecycle !== lifecycle) return;
 			state.unreadCount = Math.max(0, Number(result?.count) || 0);
 			state.available = true;
 		} catch (error) {
-			if (error?.status === 403 || error?.status === 401) state.available = false;
+			if (error?.code === 'SESSION_INVALIDATION_FAILED') {
+				toast.error(error.message, { id: 'admin-session-error' });
+			}
+			if (stopped || currentLifecycle !== lifecycle) return;
+			if (error?.status === 403 || error?.status === 401) {
+				state.available = false;
+				controller?.abort();
+			}
 		}
 	}
 
@@ -115,8 +128,9 @@ export function createAdminNotificationCenter() {
 	}
 
 	async function connect() {
+		const currentLifecycle = lifecycle;
 		let retry = 5000;
-		while (!stopped) {
+		while (!stopped && currentLifecycle === lifecycle) {
 			if (!navigator.onLine) {
 				await sleepRetry(retry);
 				continue;
@@ -124,6 +138,8 @@ export function createAdminNotificationCenter() {
 			controller = new AbortController();
 			streamStartedAt = 0;
 			try {
+				await ensureAdminSession();
+				if (stopped || currentLifecycle !== lifecycle || !state.available) break;
 				const response = await openAdminNotificationStream(getAdminToken(), controller.signal);
 				if (!response.body) throw new Error('Stream notifikasi tidak tersedia');
 				streamStartedAt = Date.now();
@@ -136,13 +152,16 @@ export function createAdminNotificationCenter() {
 					}
 				});
 			} catch (error) {
-				if (stopped || error?.name === 'AbortError') break;
+				if (error?.code === 'SESSION_INVALIDATION_FAILED') {
+					toast.error(error.message, { id: 'admin-session-error' });
+				}
+				if (stopped || currentLifecycle !== lifecycle || !state.available || error?.name === 'AbortError') break;
 				if (error?.status === 401 || error?.status === 403) {
 					state.available = false;
 					break;
 				}
 			}
-			if (!stopped) {
+			if (!stopped && currentLifecycle === lifecycle) {
 				if (streamStartedAt && Date.now() - streamStartedAt > 30_000) retry = 5000;
 				await sleepRetry(retry);
 				retry = Math.min(retry * 2, 60_000);
@@ -153,9 +172,13 @@ export function createAdminNotificationCenter() {
 	function start() {
 		if (!stopped) return;
 		stopped = false;
+		lifecycle += 1;
+		unsubscribeSession = onAdminSessionInvalidated(() => {
+			state.available = false;
+			stop();
+		});
 		void refreshCount();
-		if (getAdminToken()) void connect();
-		else state.available = false;
+		void connect();
 		document.addEventListener('pointerdown', unlockAudio, { once: true });
 		document.addEventListener('visibilitychange', onVisibilityChange);
 		navigator.serviceWorker?.addEventListener('message', onServiceWorkerMessage);
@@ -163,6 +186,8 @@ export function createAdminNotificationCenter() {
 
 	function stop() {
 		stopped = true;
+		lifecycle += 1;
+		unsubscribeSession?.();
 		controller?.abort();
 		clearTimeout(retryTimer);
 		retryResolve?.();

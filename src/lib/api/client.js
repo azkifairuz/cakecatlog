@@ -1,5 +1,7 @@
 import { PUBLIC_API_BASE_URL } from '$env/static/public';
 
+import { ensureAdminSession, invalidateAdminSession } from '../admin-session.js';
+
 const DEFAULT_API_BASE_URL = 'http://localhost:3000';
 
 export class ApiError extends Error {
@@ -50,15 +52,11 @@ export async function apiFetch(path, options = {}, customFetch = null) {
 	const { token, headers: customHeaders, body, ...restOptions } = options;
 	const headers = new Headers(customHeaders || {});
 
-	// Auto attach Bearer token if supplied in options or available from browser localStorage
+	// Browser admin calls use the cookie-validated session, even when iOS storage is empty.
 	let authToken = token;
-	if (!authToken && typeof window !== 'undefined' && window.localStorage) {
-		try {
-			authToken = window.localStorage.getItem('admin_access_token');
-		} catch {
-			// Ignore localStorage access restrictions
-		}
-	}
+	const isBrowserAdminRequest = typeof window !== 'undefined' &&
+		(path.startsWith('/admin/') || cleanPath.startsWith(`${baseUrl}/admin/`));
+	if (isBrowserAdminRequest) authToken = await ensureAdminSession();
 
 	if (authToken && !headers.has('Authorization')) {
 		headers.set('Authorization', `Bearer ${authToken}`);
@@ -92,22 +90,16 @@ export async function apiFetch(path, options = {}, customFetch = null) {
 		);
 	}
 
+	if (response.status === 401 && isBrowserAdminRequest) {
+		await invalidateAdminSession();
+	}
+
 	const contentType = response.headers.get('content-type') || '';
 	const isJson = contentType.includes('application/json');
 
 	if (!isJson) {
 		if (!response.ok) {
 			const text = await response.text().catch(() => '');
-			if (response.status === 401 && typeof window !== 'undefined') {
-				try {
-					window.localStorage.removeItem('admin_access_token');
-				} catch {
-					// Ignore
-				}
-				if (window.location.pathname.startsWith('/admin') && window.location.pathname !== '/admin/login') {
-					window.location.href = '/admin/login';
-				}
-			}
 			throw new ApiError(`API request failed with status ${response.status}: ${text}`, {
 				status: response.status,
 				code: `HTTP_${response.status}`
@@ -124,17 +116,6 @@ export async function apiFetch(path, options = {}, customFetch = null) {
 			json.error?.message ||
 			json.error ||
 			`Permintaan gagal dengan status ${response.status}`;
-
-		if (response.status === 401 && typeof window !== 'undefined') {
-			try {
-				window.localStorage.removeItem('admin_access_token');
-			} catch {
-				// Ignore
-			}
-			if (window.location.pathname.startsWith('/admin') && window.location.pathname !== '/admin/login') {
-				window.location.href = '/admin/login';
-			}
-		}
 
 		throw new ApiError(errorMessage, {
 			status: response.status,
