@@ -11,7 +11,6 @@
 		getAddonSelectionPrice,
 		getDynamicAddonGroups,
 		getSizePriceOptions,
-		getSizePrice,
 		getStartFromPrice,
 		parsePrice
 	} from '$lib/pricing.js';
@@ -31,9 +30,9 @@
 	let selectedAddons = $derived(addonGroups.map((group) => group.addons.find((addon) => addon.id === selectedAddonIds[group.key])).filter(Boolean));
 	let sizePriceOptions = $derived(getSizePriceOptions(product));
 	let startFromPrice = $derived(getStartFromPrice(product));
-	let selectedSizeOption = $derived(sizePriceOptions.find((option) => option.label === selectedSize) ?? null);
+	let selectedSizeOption = $derived(sizePriceOptions.find((option) => option.id === selectedSize) ?? null);
 	let selectedSizeAddon = $derived(selectedSizeOption?.addon ?? null);
-	let selectedSizePrice = $derived(selectedSizeOption ? selectedSizeOption.price : selectedSize ? getSizePrice(product, selectedSize) : startFromPrice);
+	let selectedSizePrice = $derived(selectedSizeOption?.price ?? startFromPrice);
 	let darkColorSurcharge = $derived(selectedAddons.reduce((sum, addon) => sum + (addon.is_dark_color ? parsePrice(addon.dark_color_surcharge) : 0), 0));
 	let addonUnitPrice = $derived(selectedAddons.reduce((sum, addon) => sum + getAddonSelectionPrice(addon), 0));
 	let cakeTopperAddon = $derived(selectedAddons.find((addon) => addon.category_key === 'cake_topper') ?? null);
@@ -73,6 +72,11 @@
 
 		const form = event.target;
 		const formData = new FormData(form);
+		if (!selectedSizeOption) {
+			errorMsg = 'Pilih ukuran produk kembali sebelum memesan.';
+			loading = false;
+			return;
+		}
 
 		try {
 			let reference_image_url = null;
@@ -86,7 +90,7 @@
 			const addonOptions = selectedAddons.map((addon) => ({ addon_id: addon.id, category: addon.category, category_key: addon.category_key, name: addon.name, price: getAddonSelectionPrice(addon) }));
 			const optionFor = (key) => addonOptions.find((option) => option.category_key === key) ?? null;
 			const customizedOptions = {
-				size: selectedSize ? { name: selectedSize, price: selectedSizePrice, variant_id: selectedSizeOption?.variant?.id ?? null, addon_id: selectedSizeAddon?.id ?? null } : null,
+				size: selectedSize ? { name: selectedSizeOption?.label, price: selectedSizePrice, variant_id: selectedSizeOption?.variant?.id ?? null, addon_id: selectedSizeAddon?.id ?? null } : null,
 				addons: addonOptions,
 				flavor: optionFor('flavor'), color: optionFor('color'), crown: optionFor('crown'), glitter: optionFor('glitter'),
 				cake_topper: cakeTopperAddon ? { ...optionFor('cake_topper'), selected: true } : { selected: false, price: 0 }
@@ -94,6 +98,8 @@
 
 			const cartItem = {
 				product_id: product.id,
+				variant_selection_version: 1,
+				requires_variant: Boolean(selectedSizeOption?.variant),
 				product_variant_id: selectedSizeOption?.variant?.id ?? null,
 				product_name: product.name,
 				primary_image: primaryImage,
@@ -105,7 +111,7 @@
 				estimated_unit_price: estimatedUnitPrice,
 				estimated_subtotal: estimatedSubtotal,
 				has_cake_topper: Boolean(cakeTopperAddon),
-				cake_size: formData.get('cake_size'),
+				cake_size: selectedSizeOption?.label || 'Standard',
 				quantity: Math.max(parseInt(formData.get('quantity')) || 1, 1),
 				cake_flavor: optionFor('flavor')?.name || 'Standard',
 				cake_color: optionFor('color')?.name || null,
@@ -181,13 +187,13 @@
 					<div class="grid grid-cols-2 gap-4">
 						<div>
 							<label for="cake_size" class="block text-[12px] font-semibold text-[#4A3B32] mb-1.5 uppercase tracking-wide">{i18n.t('form.size')} <span class="text-red-400">{i18n.t('form.required')}</span></label>
-							<Select.Root type="single" name="cake_size" required bind:value={selectedSize}>
+							<Select.Root type="single" name="size_selection" required bind:value={selectedSize}>
 								<Select.Trigger id="cake_size" class="h-10 w-full rounded-xl border-primary/20 bg-slate-50 px-3 text-sm text-[#4A3B32] hover:bg-white focus-visible:ring-primary/15">
-									<SelectValue placeholder={i18n.t('form.choose')} />
+									{#if selectedSizeOption}<SelectValue>{selectedSizeOption.label}</SelectValue>{:else}<SelectValue placeholder={i18n.t('form.choose')} />{/if}
 								</Select.Trigger>
 								<Select.Content class="rounded-xl border-primary/10 bg-white text-[#4A3B32] shadow-xl shadow-primary/10">
 								{#each sizePriceOptions as sizeOption}
-									<Select.Item value={sizeOption.label} label={`${sizeOption.label} - ${formatCurrency(sizeOption.price)}`}>
+									<Select.Item value={sizeOption.id} label={`${sizeOption.label} - ${formatCurrency(sizeOption.price)}`}>
 										{sizeOption.label} - {formatCurrency(sizeOption.price)}
 									</Select.Item>
 								{/each}

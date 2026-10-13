@@ -9,7 +9,6 @@
 		getAddonSelectionPrice,
 		getDynamicAddonGroups,
 		getSizePriceOptions,
-		getSizePrice,
 		getStartFromPrice,
 		parsePrice
 	} from '$lib/pricing.js';
@@ -61,10 +60,10 @@
 	let selectedSize = $state(undefined);
 	let quantity = $state(1);
 	let startFromPrice = $derived(getStartFromPrice(product));
-	let selectedSizeOption = $derived(sizePriceOptions.find((option) => option.label === selectedSize) ?? null);
+	let selectedSizeOption = $derived(sizePriceOptions.find((option) => option.id === selectedSize) ?? null);
 	let selectedSizeAddon = $derived(selectedSizeOption?.addon ?? null);
 	let selectedSizePrice = $derived(
-		selectedSizeOption ? selectedSizeOption.price : selectedSize ? getSizePrice(product, selectedSize) : startFromPrice
+		selectedSizeOption?.price ?? startFromPrice
 	);
 	let darkColorSurcharge = $derived(
 		selectedAddons.reduce((sum, addon) => sum + (addon.is_dark_color ? parsePrice(addon.dark_color_surcharge) : 0), 0)
@@ -116,6 +115,11 @@
 
 		const form = event.target;
 		const formData = new FormData(form);
+		if (!selectedSizeOption) {
+			errorMsg = 'Pilih ukuran produk kembali sebelum memesan.';
+			loading = false;
+			return;
+		}
 
 		try {
 			let reference_image_url = null;
@@ -138,7 +142,7 @@
 			const customizedOptions = {
 				size: selectedSize
 					? {
-							name: selectedSize,
+							name: selectedSizeOption?.label,
 							price: selectedSizePrice,
 							variant_id: selectedSizeOption?.variant?.id ?? null,
 							addon_id: selectedSizeAddon?.id ?? null
@@ -153,6 +157,8 @@
 			};
 			const cartItem = {
 				product_id: product.id,
+				variant_selection_version: 1,
+				requires_variant: Boolean(selectedSizeOption?.variant),
 				product_variant_id: selectedSizeOption?.variant?.id ?? null,
 				product_name: product.name,
 				primary_image: sortedImages[0]?.image_url || null,
@@ -164,7 +170,7 @@
 				estimated_unit_price: estimatedUnitPrice,
 				estimated_subtotal: estimatedSubtotal,
 				has_cake_topper: Boolean(cakeTopperAddon),
-				cake_size: formData.get('cake_size'),
+				cake_size: selectedSizeOption?.label || 'Standard',
 				quantity: Math.max(parseInt(String(quantity), 10) || 1, 1),
 				cake_flavor: optionFor('flavor')?.name || 'Standard',
 				cake_color: optionFor('color')?.name || null,
@@ -322,7 +328,7 @@
 						</span>
 						{#if selectedSize}
 							<span class="rounded-lg bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary">
-								{selectedSize}
+								{selectedSizeOption?.label}
 							</span>
 						{/if}
 					</div>
@@ -356,17 +362,17 @@
 								<label for="cake_size" class="mb-2 block text-xs font-bold uppercase tracking-wider text-[#4A3B32]/80">
 									{i18n.t('form.size')} <span class="text-red-500">*</span>
 								</label>
-								<Select.Root type="single" name="cake_size" required bind:value={selectedSize}>
+								<Select.Root type="single" name="size_selection" required bind:value={selectedSize}>
 									<Select.Trigger
 										id="cake_size"
 										class="h-12 w-full rounded-2xl border-primary/20 bg-[#FFFBF7] px-4 text-sm font-medium text-[#4A3B32] transition-[border-color,background-color,box-shadow] duration-150 hover:border-primary/40 hover:bg-white focus-visible:ring-primary/20"
 									>
-										<SelectValue placeholder={i18n.t('form.choose')} />
+										{#if selectedSizeOption}<SelectValue>{selectedSizeOption.label}</SelectValue>{:else}<SelectValue placeholder={i18n.t('form.choose')} />{/if}
 									</Select.Trigger>
 									<Select.Content class="rounded-2xl border-primary/15 bg-white p-1.5 text-[#4A3B32] shadow-xl shadow-primary/10">
 										{#each sizePriceOptions as sizeOption}
 											<Select.Item
-												value={sizeOption.label}
+												value={sizeOption.id}
 												label={`${sizeOption.label} — ${formatCurrency(sizeOption.price)}`}
 												class="rounded-xl py-2.5 text-sm font-medium cursor-pointer"
 											>
@@ -589,7 +595,7 @@
 
 						<div class="space-y-2 text-xs text-[#4A3B32]/70">
 							<div class="flex justify-between gap-4">
-								<span>{i18n.t('pricing.sizePrice')} ({selectedSize || 'Standard'})</span>
+								<span>{i18n.t('pricing.sizePrice')} ({selectedSizeOption?.label || 'Standard'})</span>
 								<span class="font-semibold text-[#4A3B32]">{formatCurrency(selectedSizePrice)}</span>
 							</div>
 

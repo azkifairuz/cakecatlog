@@ -1,5 +1,6 @@
 <script>
 	import { getImageUrl } from '$lib/image-url.js';
+	import { hasCartVariantSelection } from '$lib/cart-variants.js';
 	import { cart } from '$lib/stores/cart.svelte.js';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
@@ -11,6 +12,7 @@
 	let { form } = $props();
 	const i18n = getI18n();
 	let mounted = $state(false);
+	let invalidVariantItems = $derived(cart.items.filter((item) => !hasCartVariantSelection(item)));
 	let selectedDeliveryOption = $state('');
 	
 	onMount(() => {
@@ -129,7 +131,8 @@
 							class="rounded-2xl"
 						/>
 					{/if}
-					<form method="POST" action="?/checkout" use:enhance={() => {
+					<form method="POST" action="?/checkout" use:enhance={({ cancel }) => {
+						if (invalidVariantItems.length) { cancel(); loading = false; errorMsg = 'Pilih ukuran produk kembali sebelum memesan.'; return; }
 						return async ({ result, update }) => {
 							loading = false;
 							if (result.type === 'success' && result.data?.success) {
@@ -206,7 +209,7 @@
 						{/if}
 
 						<div class="pt-6">
-							<button type="submit" disabled={loading || cart.items.length === 0} class="w-full py-4 bg-primary hover:bg-[#724828] active:scale-[0.99] text-white font-bold text-[16px] tracking-wide rounded-xl transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed">
+							<button type="submit" disabled={loading || cart.items.length === 0 || invalidVariantItems.length > 0} class="w-full py-4 bg-primary hover:bg-[#724828] active:scale-[0.99] text-white font-bold text-[16px] tracking-wide rounded-xl transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed">
 								{#if loading}
 									<Loading label="" size="sm" class="text-white" />
 								{/if}
@@ -223,6 +226,15 @@
 			<div class="w-full lg:w-1/3">
 				<div class="bg-white rounded-3xl p-6 border border-primary/10 shadow-sm sticky top-24">
 					<h3 class="text-lg font-bold text-[#4A3B32] mb-6">{i18n.t('checkout.orderSummary')}</h3>
+					{#if invalidVariantItems.length}
+						<div role="alert" class="mb-5 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm">
+							<p>Pilih ukuran produk kembali sebelum checkout. Hapus item lama setelah menambahkan pilihan yang baru.</p>
+							{#each invalidVariantItems as item}
+								<a class="mt-2 block font-semibold underline" href={`/product/${item.product_id || item.productId}`}>Pilih ulang ukuran {item.product_name || 'produk'}</a>
+								<button type="button" class="mt-1 underline" onclick={() => cart.removeItem(item.cartItemId)}>Hapus item lama {item.product_name || 'produk'}</button>
+							{/each}
+						</div>
+					{/if}
 
 					{#if selectedDeliveryOption}
 						<div class="mb-5 rounded-2xl bg-[#FFFBF7] px-4 py-3 border border-primary/10">

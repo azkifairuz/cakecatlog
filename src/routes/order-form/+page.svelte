@@ -12,7 +12,6 @@
 		getAddonSelectionPrice,
 		getDynamicAddonGroups,
 		getSizePriceOptions,
-		getSizePrice,
 		getStartFromPrice
 	} from '$lib/pricing.js';
 	import { getI18n } from '$lib/i18n.svelte.js';
@@ -68,19 +67,15 @@
 	$effect(() => {
 		if (selectedProductId) {
 			const options = getSizePriceOptions(selectedProduct);
-			selectedSize = options[0]?.label ?? undefined;
+			selectedSize = options[0]?.id ?? undefined;
 			selectedAddonIds = {};
 			quantity = 1;
 		}
 	});
 
-	let selectedSizeOption = $derived(sizePriceOptions.find((opt) => opt.label === selectedSize) ?? null);
+	let selectedSizeOption = $derived(sizePriceOptions.find((opt) => opt.id === selectedSize) ?? null);
 	let selectedSizePrice = $derived(
-		selectedSizeOption
-			? selectedSizeOption.price
-			: selectedSize
-				? getSizePrice(selectedProduct, selectedSize)
-				: getStartFromPrice(selectedProduct)
+		selectedSizeOption?.price ?? getStartFromPrice(selectedProduct)
 	);
 
 	let selectedAddons = $derived(
@@ -277,6 +272,7 @@
 				<form
 					id="direct-order-form"
 					method="POST"
+					enctype="multipart/form-data"
 					action="?/order"
 					use:enhance={() => {
 						return async ({ result, update }) => {
@@ -296,13 +292,15 @@
 					class="space-y-6"
 				>
 					<input type="hidden" name="product_id" value={selectedProductId} />
+					<input type="hidden" name="product_variant_id" value={selectedSizeOption?.variant?.id || ''} />
+					<input type="hidden" name="cake_size" value={selectedSizeOption?.label || 'Standard'} />
 					<input type="hidden" name="locale" value={i18n.locale} />
 					<input type="hidden" name="delivery_option" value={deliveryOption} />
 					<input
 						type="hidden"
 						name="customized_options"
 						value={JSON.stringify({
-							size: selectedSize ? { name: selectedSize, price: selectedSizePrice, variant_id: selectedSizeOption?.id ?? null } : null,
+							size: selectedSize ? { name: selectedSizeOption?.label, price: selectedSizePrice, variant_id: selectedSizeOption?.variant?.id ?? null } : null,
 							addons: selectedAddons.map((a) => ({ addon_id: a.id, category: a.category, category_key: a.category_key, name: a.name, price: getAddonSelectionPrice(a) }))
 						})}
 					/>
@@ -319,13 +317,13 @@
 								<label for="cake_size" class="block text-xs font-bold uppercase tracking-wider text-[#4A3B32] mb-1.5">
 									{i18n.t('form.size')} <span class="text-red-500">*</span>
 								</label>
-								<Select.Root type="single" name="cake_size" required bind:value={selectedSize}>
+								<Select.Root type="single" name="size_selection" required bind:value={selectedSize}>
 									<Select.Trigger id="cake_size" class="h-11 w-full rounded-xl border-primary/20 bg-[#FFFBF7] px-3.5 text-sm text-[#4A3B32] hover:bg-white focus-visible:ring-primary/20">
-										<SelectValue placeholder={i18n.t('form.choose')} />
+										{#if selectedSizeOption}<SelectValue>{selectedSizeOption.label}</SelectValue>{:else}<SelectValue placeholder={i18n.t('form.choose')} />{/if}
 									</Select.Trigger>
 									<Select.Content class="rounded-xl border-primary/10 bg-white text-[#4A3B32] shadow-xl">
 										{#each sizePriceOptions as option}
-											<Select.Item value={option.label} label={option.label}>
+											<Select.Item value={option.id} label={option.label}>
 												{option.label}
 											</Select.Item>
 										{/each}
@@ -586,7 +584,7 @@
 							</div>
 							<div class="min-w-0 flex-1">
 								<h4 class="font-bold text-sm text-[#4A3B32] truncate">{selectedProduct.name}</h4>
-								<p class="text-xs text-[#4A3B32]/60">{selectedSize || 'Ukuran'}</p>
+								<p class="text-xs text-[#4A3B32]/60">{selectedSizeOption?.label || 'Ukuran'}</p>
 								<p class="text-xs font-semibold text-primary">{Math.max(Number(quantity) || 1, 1)}x</p>
 							</div>
 						</div>
