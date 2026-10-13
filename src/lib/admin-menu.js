@@ -14,7 +14,8 @@ export const fallbackMenus = [
 	['Menu', '/admin/dashboard/menus', 'Menu'],
 	['Info Toko', '/admin/dashboard/site-info', 'Info'],
 	['WhatsApp', '/admin/dashboard/whatsapp', 'MessageCircle'],
-	['Log Aktivitas', '/admin/dashboard/logs', 'History']
+	['Log Aktivitas', '/admin/dashboard/logs', 'History'],
+	['API key', '/admin/dashboard/api-keys', 'KeyRound']
 ].map(([name, url, icon], index) => ({ name, url, icon, displayOrder: index + 1 }));
 
 export function adminMenuUrl(url) {
@@ -42,6 +43,10 @@ export function visibleAdminMenus(admin) {
 	if ((isSuperAdmin || admin?.permissions?.includes('menu.manage')) && !visible.some((menu) => menu.url === '/admin/dashboard/menus')) {
 		visible.push(fallbackMenus.find((menu) => menu.url === '/admin/dashboard/menus'));
 	}
+	// Every admin can manage credentials for their own account.
+	if (admin && !visible.some((menu) => menu.url === '/admin/dashboard/api-keys')) {
+		visible.push(fallbackMenus.find((menu) => menu.url === '/admin/dashboard/api-keys'));
+	}
 	return visible.sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
 }
 
@@ -50,7 +55,7 @@ export function groupAdminNavItems(navItems) {
 	const definitions = [
 		{ id: 'catalog', label: 'Katalog', paths: ['products', 'categories', 'addons', 'banners'] },
 		{ id: 'operations', label: 'Operasional', paths: ['expenses', 'employees'] },
-		{ id: 'settings', label: 'Pengaturan', paths: ['roles', 'menus', 'site-info', 'whatsapp', 'logs'] }
+		{ id: 'settings', label: 'Pengaturan', paths: ['roles', 'menus', 'site-info', 'whatsapp', 'logs', 'api-keys'] }
 	];
 	const groupedPaths = new Set(definitions.flatMap((group) => group.paths.map((path) => `/admin/dashboard/${path}`)));
 	return {

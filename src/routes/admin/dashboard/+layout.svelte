@@ -29,13 +29,14 @@
 	import Users from '@lucide/svelte/icons/users';
 	import ShieldCheck from '@lucide/svelte/icons/shield-check';
 	import Wallet from '@lucide/svelte/icons/wallet';
+	import KeyRound from '@lucide/svelte/icons/key-round';
 
 	let { children, data } = $props();
 	const notifications = createAdminNotificationCenter();
 	setContext('admin-notifications', notifications);
 	let sidebarOpen = $state(false);
 	let mobileMoreOpen = $state(false);
-	const iconMap = { ChartBar, BarChart3: ChartBar, LayoutDashboard: ChartBar, ShoppingCart, FileText, Bell, Package, Tags, ListPlus, Image, Wallet, Users, ShieldCheck, Menu, Info, MessageCircle, History };
+	const iconMap = { ChartBar, BarChart3: ChartBar, LayoutDashboard: ChartBar, ShoppingCart, FileText, Bell, Package, Tags, ListPlus, Image, Wallet, Users, ShieldCheck, Menu, Info, MessageCircle, History, KeyRound };
 	let navItems = $derived((data.adminMenus || []).map((item) => ({ href: item.url, label: item.name, icon: iconMap[item.icon] || Menu })));
 	let primaryMobileNav = $derived(navItems.slice(0, 3));
 	let secondaryMobileNav = $derived(navItems.slice(3));
