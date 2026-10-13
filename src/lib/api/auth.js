@@ -1,53 +1,19 @@
 import { redirect } from '@sveltejs/kit';
 import { apiFetch, unwrapData } from './client.js';
 import { isAuthError } from '$lib/auth-errors.js';
+import { clearAdminToken, getAdminToken, setAdminToken, invalidateAdminSession } from '../admin-session.js';
 
-export { isAuthError };
-
-const TOKEN_STORAGE_KEY = 'admin_access_token';
+export { isAuthError, clearAdminToken, getAdminToken, setAdminToken };
 
 export function handleAdminAuthError(err, cookies) {
 	if (isAuthError(err)) {
-		if (cookies) {
-			cookies.delete('admin_access_token', { path: '/' });
-		}
+		if (cookies) cookies.delete('admin_access_token', { path: '/' });
 		if (typeof window !== 'undefined') {
-			clearAdminToken();
-			window.location.href = '/admin/login';
+			void invalidateAdminSession().catch(() => {});
 		} else {
 			throw redirect(303, '/admin/login');
 		}
 	}
-}
-
-
-export function getAdminToken() {
-	if (typeof window !== 'undefined' && window.localStorage) {
-		try {
-			return window.localStorage.getItem(TOKEN_STORAGE_KEY);
-		} catch {
-			return null;
-		}
-	}
-	return null;
-}
-
-export function setAdminToken(token) {
-	if (typeof window !== 'undefined' && window.localStorage) {
-		try {
-			if (token) {
-				window.localStorage.setItem(TOKEN_STORAGE_KEY, token);
-			} else {
-				window.localStorage.removeItem(TOKEN_STORAGE_KEY);
-			}
-		} catch {
-			// Ignore localStorage restrictions
-		}
-	}
-}
-
-export function clearAdminToken() {
-	setAdminToken(null);
 }
 
 export async function loginAdmin(email, password, customFetch = null) {
