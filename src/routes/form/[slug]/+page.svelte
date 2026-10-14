@@ -1,4 +1,6 @@
 <script>
+	import DeliveryAddressField from '$lib/components/DeliveryAddressField.svelte';
+	let deliveryAddress = $state('');
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
 	import { fade, slide } from 'svelte/transition';
@@ -511,18 +513,11 @@
 						</div>
 
 						{#if deliveryOption === 'delivery'}
-							<div transition:slide={{ duration: 150 }}>
+							<div>
 								<label for="address" class="block text-xs font-bold uppercase tracking-wider text-[#4A3B32] mb-1.5">
 									{i18n.t('form.fullAddress')} <span class="text-red-500">*</span>
 								</label>
-								<textarea
-									id="address"
-									name="address"
-									rows="3"
-									required
-									placeholder={i18n.t('form.addressPlaceholder')}
-									class="w-full rounded-xl border border-primary/20 bg-[#FFFBF7] p-4 text-sm text-[#4A3B32] placeholder-[#4A3B32]/40 focus:border-primary focus:bg-white focus:outline-none transition-colors resize-none"
-								></textarea>
+								<DeliveryAddressField id="address" name="address" bind:value={deliveryAddress} required label={i18n.t('form.fullAddress')} placeholder={i18n.locale === 'en' ? 'Type an address, e.g. Jakarta…' : 'Ketik alamat, misalnya Jakarta…'} locale={i18n.locale} />
 							</div>
 						{:else}
 							<div class="rounded-xl border border-primary/15 bg-[#FFFBF7] p-4 text-xs text-[#4A3B32]/75 space-y-1">
