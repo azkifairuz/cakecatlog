@@ -63,6 +63,7 @@
 					{loading ? 'Logging in...' : 'Login'}
 				</Button>
 			</form>
+			<a href="/admin/forgot-password" class="mt-4 block text-sm text-primary underline">Lupa password?</a>
 		</Card.Content>
 	</Card.Root>
 </div>

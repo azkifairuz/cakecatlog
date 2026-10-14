@@ -14,6 +14,7 @@
 	let { data, form } = $props();
 	
 	let isAdding = $state(false);
+	let editing = $state(null); let editingBusy = $state(false);
 	let creating = $state(false);
 	let deletingId = $state(null);
 </script>
@@ -29,6 +30,15 @@
 	</div>
 {/if}
 
+{#if editing}
+ <section class="rounded-xl border bg-background p-5"><h2 class="mb-4 font-semibold">Edit kategori</h2>
+ {#key editing.id}<form method="POST" action="?/updateCategory" class="space-y-3" use:enhance={({ cancel }) => { if(editingBusy) { cancel(); return; } editingBusy = true; return async ({ update, result }) => { try { await update({ reset: false }); if(result.type === 'success') editing = null; } finally { editingBusy = false; } }; }}>
+ <input type="hidden" name="id" value={editing.id} />
+ <Label for="edit-category-name">Nama kategori</Label><Input id="edit-category-name" name="name" value={form?.values?.id === editing.id ? form.values.name : editing.name} required maxlength={100} disabled={editingBusy} />
+ <Label for="edit-category-slug">Slug</Label><Input id="edit-category-slug" name="slug" value={form?.values?.id === editing.id ? form.values.slug : editing.slug} required maxlength={120} disabled={editingBusy} />
+ <div class="flex gap-2"><Button type="submit" disabled={editingBusy}>Simpan perubahan</Button><Button type="button" variant="outline" disabled={editingBusy} onclick={() => editing = null}>Batal</Button></div>
+ </form>{/key}</section>
+{/if}
 {#if isAdding}
 	<Card.Root class="mb-8 border-primary/20 shadow-sm animate-in slide-in-from-top-4 fade-in duration-200">
 		<Card.Content class="relative p-6">
@@ -84,6 +94,7 @@
 					aria-label={`Lihat produk kategori ${category.name}`}
 				></a>
 				<div class="pointer-events-none relative z-10 flex items-center gap-1">
+					<Button class="pointer-events-auto" variant="outline" size="sm" onclick={() => { editing = category; isAdding = false; }}>Edit</Button>
 					<ArrowRightIcon class="size-4 text-muted-foreground transition-transform duration-150 group-hover:translate-x-0.5" aria-hidden="true" />
 				<form class="pointer-events-auto" method="POST" action="?/deleteCategory" use:enhance={() => {
 					deletingId = category.id;

@@ -324,6 +324,7 @@
 	let isDrawerOpen = $state(false);
 	let loadingDetail = $state(false);
 	let uploadingReceipt = $state(false);
+	let extraActionBusy = $state(false); let extraActionMessage = $state('');
 	let sendingInvoice = $state(false);
 	let sendingEmailInvoice = $state(false);
 	let invoiceStatus = $state(null); // { success: bool, message: string }
@@ -447,6 +448,7 @@
 		sendingInvoice = false;
 		sendingEmailInvoice = false;
 		invoiceStatus = null;
+		extraActionMessage = '';
 		emailInvoiceStatus = null;
 		isDrawerOpen = true;
 
@@ -478,12 +480,14 @@
 		sendingInvoice = false;
 		sendingEmailInvoice = false;
 		invoiceStatus = null;
+		extraActionMessage = '';
 		emailInvoiceStatus = null;
 	}
 
 	async function sendInvoice(orderId) {
 		sendingInvoice = true;
 		invoiceStatus = null;
+		extraActionMessage = '';
 		try {
 			await sendAdminInvoiceWhatsApp(orderId);
 			invoiceStatus = { success: true, message: 'Invoice WhatsApp berhasil dikirim!' };
@@ -1046,7 +1050,31 @@
 
 				<hr class="border-slate-100" />
 
-				<!-- Section 5: Payment Proof Upload -->
+				{#if data.canOrderRead}
+ <section class="space-y-3"><h3 class="text-sm font-bold">Cetak Invoice</h3><div class="grid gap-2 sm:grid-cols-2">
+ <Button href={`/admin/dashboard/orders/${selectedOrder.id}/invoice/pdf`} target="_blank" rel="noopener noreferrer" variant="outline">Thermal (80 mm)</Button>
+ <Button href={`/admin/dashboard/orders/${selectedOrder.id}/invoice`} target="_blank" rel="noopener noreferrer" variant="outline">A4 / Simpan PDF</Button>
+ </div></section>
+ {/if}
+ {#if extraActionMessage}<p role="status" class="rounded-xl border p-3 text-sm">{extraActionMessage}</p>{/if}
+ {#if data.canOrderWrite && selectedOrder.proof_of_transfer}
+ <form method="POST" action="?/deleteReceipt" use:enhance={({ cancel }) => {
+  if(extraActionBusy || !confirm('Hapus bukti transfer pesanan ini?')) { cancel(); return; }
+  extraActionBusy = true; extraActionMessage = '';
+  return async ({ update, result }) => { try {
+   await update({ reset: false, invalidateAll: false });
+   if(result.type === 'success' && result.data?.success) { selectedOrder.proof_of_transfer = null; selectedOrder.proofOfTransfer = null; }
+   extraActionMessage = result.data?.message || result.data?.error || 'Aksi belum berhasil.';
+  } finally { extraActionBusy = false; } };
+ }}><input type="hidden" name="id" value={selectedOrder.id} /><input type="hidden" name="confirm" value="on" /><Button type="submit" variant="destructive" disabled={extraActionBusy}>Hapus bukti transfer</Button></form>
+ {/if}
+ {#if data.canOrderWrite}
+ <form method="POST" action="?/resendConfirmation" use:enhance={({ cancel }) => {
+  if(extraActionBusy) { cancel(); return; } extraActionBusy = true; extraActionMessage = '';
+  return async ({ update, result }) => { try { await update({ reset: false, invalidateAll: false }); extraActionMessage = result.data?.message || result.data?.error || 'Aksi belum berhasil.'; } finally { extraActionBusy = false; } };
+ }}><input type="hidden" name="id" value={selectedOrder.id} /><Button type="submit" variant="outline" disabled={extraActionBusy || !selectedOrder.email}>{extraActionBusy ? 'Memproses…' : 'Kirim ulang email konfirmasi'}</Button></form>
+ {/if}
+ <!-- Section 5: Payment Proof Upload -->
 				<div class="space-y-3">
 					<Label class="text-slate-900 font-bold text-sm">Bukti Pembayaran Transfer</Label>
 					

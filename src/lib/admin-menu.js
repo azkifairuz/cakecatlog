@@ -1,3 +1,4 @@
+import { hasAdminPermission } from './admin-access.js';
 import { canManageExpenseWhatsApp } from './expense-whatsapp.js';
 
 // Menu lokal hanya untuk bootstrap ketika database menu belum diisi.
@@ -18,6 +19,8 @@ export const fallbackMenus = [
 	['WhatsApp', '/admin/dashboard/whatsapp', 'MessageCircle'],
 	['WhatsApp Pengeluaran', '/admin/dashboard/expense-whatsapp', 'MessageCircle'],
 	['Log Aktivitas', '/admin/dashboard/logs', 'History'],
+	['Rekening Pembayaran', '/admin/dashboard/rekening-pembayaran', 'Wallet'],
+	['Akun Saya', '/admin/dashboard/account', 'Users'],
 	['API key', '/admin/dashboard/api-keys', 'KeyRound']
 ].map(([name, url, icon], index) => ({ name, url, icon, displayOrder: index + 1 }));
 
@@ -40,6 +43,7 @@ export function visibleAdminMenus(admin) {
 	const seen = new Set();
 	const visible = source.filter((menu) => {
 		if (menu?.url === '/admin/dashboard/expense-whatsapp' && !canManageExpenseWhatsApp(admin)) return false;
+		if (menu?.url === '/admin/dashboard/rekening-pembayaran' && !hasAdminPermission(admin, 'order.write')) return false;
 		if (menu?.isActive === false || !menu?.url || seen.has(menu.url)) return false;
 		seen.add(menu.url);
 		return true;
@@ -49,6 +53,10 @@ export function visibleAdminMenus(admin) {
 	}
 	if (canManageExpenseWhatsApp(admin) && !visible.some((menu) => menu.url === '/admin/dashboard/expense-whatsapp')) {
 		visible.push(fallbackMenus.find((menu) => menu.url === '/admin/dashboard/expense-whatsapp'));
+	}
+	for (const path of ['account', ...(hasAdminPermission(admin, 'order.write') ? ['rekening-pembayaran'] : [])]) {
+		const url = `/admin/dashboard/${path}`;
+		if (admin && !visible.some((menu) => menu.url === url)) visible.push(fallbackMenus.find((menu) => menu.url === url));
 	}
 	// Every admin can manage credentials for their own account.
 	if (admin && !visible.some((menu) => menu.url === '/admin/dashboard/api-keys')) {
@@ -62,7 +70,7 @@ export function groupAdminNavItems(navItems) {
 	const definitions = [
 		{ id: 'catalog', label: 'Katalog', paths: ['products', 'categories', 'addons', 'banners'] },
 		{ id: 'operations', label: 'Operasional', paths: ['expenses', 'employees'] },
-		{ id: 'settings', label: 'Pengaturan', paths: ['roles', 'menus', 'site-info', 'whatsapp', 'expense-whatsapp', 'logs', 'api-keys'] }
+		{ id: 'settings', label: 'Pengaturan', paths: ['roles', 'menus', 'site-info', 'whatsapp', 'expense-whatsapp', 'rekening-pembayaran', 'account', 'logs', 'api-keys'] }
 	];
 	const groupedPaths = new Set(definitions.flatMap((group) => group.paths.map((path) => `/admin/dashboard/${path}`)));
 	return {

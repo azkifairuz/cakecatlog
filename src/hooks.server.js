@@ -13,6 +13,7 @@ export const handle = async ({ event, resolve }) => {
 
 	const isAdminRoute = event.url.pathname.startsWith('/admin');
 	const isAdminLoginRoute = event.url.pathname === '/admin/login';
+	const isForgotPasswordRoute = event.url.pathname === '/admin/forgot-password';
 	const isAdminLogoutRoute = event.url.pathname === '/admin/logout';
 	const isAdminSessionRoute = event.url.pathname === '/admin/session';
 
@@ -33,7 +34,7 @@ export const handle = async ({ event, resolve }) => {
 		}
 
 		// Protect admin dashboard routes
-		if (!isAdminLoginRoute && !isAdminSessionRoute && !event.locals.adminToken) {
+		if (!isAdminLoginRoute && !isForgotPasswordRoute && !isAdminSessionRoute && !event.locals.adminToken) {
 			throw redirect(303, '/admin/login');
 		}
 

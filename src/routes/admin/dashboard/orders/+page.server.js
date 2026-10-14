@@ -10,6 +10,8 @@ import {
 	updateAdminOrderStatus,
 	updateAdminOrderAmount,
 	uploadAdminOrderReceipt,
+	deleteAdminOrderReceipt,
+	sendAdminOrderConfirmationEmail,
 	getAdminProduct,
 	getAdminProducts,
 	getAdminAddons
@@ -60,6 +62,8 @@ export const load = async ({ locals, url, fetch, cookies }) => {
 
 		return {
 			orders,
+			canOrderRead: locals.adminUser?.role === 'super_admin' || locals.adminUser?.permissions?.some((p) => ['*', 'order.read'].includes(p)) || false,
+			canOrderWrite: locals.adminUser?.role === 'super_admin' || locals.adminUser?.permissions?.some((p) => ['*', 'order.write'].includes(p)) || false,
 			products,
 			addons,
 			filters,
@@ -80,6 +84,18 @@ export const load = async ({ locals, url, fetch, cookies }) => {
 };
 
 export const actions = {
+ deleteReceipt: async ({ request, locals, fetch, cookies }) => {
+  const form = await request.formData(); const id = String(form.get('id') || '');
+  if (!id || form.get('confirm') !== 'on') return fail(422, { error: 'Konfirmasi penghapusan bukti transfer diperlukan.' });
+  try { await deleteAdminOrderReceipt(id, locals.adminToken, fetch); return { success: true, message: 'Bukti transfer dihapus.' }; }
+  catch (err) { handleAdminAuthError(err, cookies); return fail(err.status || 500, { error: err.message || 'Gagal menghapus bukti transfer.' }); }
+ },
+ resendConfirmation: async ({ request, locals, fetch, cookies }) => {
+  const form = await request.formData(); const id = String(form.get('id') || '');
+  if(!id) return fail(422, { error: 'Pesanan tidak valid.' });
+  try { const result = await sendAdminOrderConfirmationEmail(id, locals.adminToken, fetch); return { success: true, message: result?.message || 'Email konfirmasi telah dikirim.' }; }
+  catch (err) { handleAdminAuthError(err, cookies); return fail(err.status || 500, { error: err.message || 'Gagal mengirim konfirmasi.' }); }
+ },
 	productDetails: async ({ request, locals, fetch, cookies }) => {
 		const formData = await request.formData();
 		const productId = String(formData.get('productId') || '').trim();

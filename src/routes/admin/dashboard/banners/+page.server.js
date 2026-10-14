@@ -2,6 +2,7 @@ import { fail } from '@sveltejs/kit';
 import {
 	getAdminBanners,
 	createAdminBanner,
+	updateAdminBanner,
 	bulkUpdateAdminBanners,
 	deleteAdminBanner
 } from '$lib/api/admin.js';
@@ -33,6 +34,17 @@ export async function load({ locals, fetch, cookies }) {
 }
 
 export const actions = {
+ replaceImage: async ({ request, locals, fetch, cookies }) => {
+  const form = await request.formData(); const id = String(form.get('id') || ''); const image = form.get('image');
+  if (!id || !(image instanceof File) || !image.size) return fail(422, { error: 'Pilih gambar pengganti.' });
+  try {
+   const uploaded = await uploadBanner(image, locals.adminToken, fetch);
+   const imageUrl = uploaded?.publicUrl || uploaded?.imageUrl;
+   if(!imageUrl) return fail(502, { error: 'Upload gambar belum berhasil.' });
+   await updateAdminBanner(id, { imageUrl }, locals.adminToken, fetch);
+   return { success: true, message: 'Gambar banner diperbarui.' };
+  } catch(err) { handleAdminAuthError(err, cookies); return fail(err.status || 500, { error: err.message || 'Gagal mengganti gambar.' }); }
+ },
 	upload: async ({ request, locals, fetch, cookies }) => {
 		const formData = await request.formData();
 		const image = formData.get('image');

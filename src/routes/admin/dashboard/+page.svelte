@@ -428,6 +428,10 @@
 		<!-- TOP PRODUCTS, STATUS BREAKDOWN & REPEAT CUSTOMERS MID GRID -->
 		<div class="grid gap-4 lg:grid-cols-3">
 			<TopProductsCard products={topProducts} />
+ <section class="space-y-3 rounded-xl border bg-card p-5"><h2 class="font-semibold">Pickup & Pengiriman</h2>
+ {#if data.deliveryData?.error}<p role="alert" class="text-sm text-destructive">{data.deliveryData.error}</p>
+ {:else}<div class="grid grid-cols-2 gap-4 text-sm"><div><p class="text-muted-foreground">Pickup</p><p class="mt-1 text-xl font-semibold">{data.deliveryData?.pickupCount ?? 0}</p><p>{data.deliveryData?.pickupPercentage ?? 0}% pesanan</p></div><div><p class="text-muted-foreground">Pengiriman</p><p class="mt-1 text-xl font-semibold">{data.deliveryData?.deliveryCount ?? 0}</p><p>{data.deliveryData?.deliveryPercentage ?? 0}% pesanan</p></div></div><p class="border-t pt-3 text-sm">Total ongkir: <strong>{formatCurrency(data.deliveryData?.totalDeliveryFee ?? 0)}</strong></p>{/if}
+ </section>
 			<OrderStatusBreakdownCard
 				breakdown={statusBreakdown}
 				onStatusSelect={(status) => navigateFilters({ status })}
