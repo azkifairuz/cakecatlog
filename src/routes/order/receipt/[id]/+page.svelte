@@ -119,6 +119,8 @@
 					</div>
 				</div>
 
+				<a href={`/order/invoice/${order.id}`} class="inline-flex justify-center rounded-xl bg-primary px-5 py-3.5 text-sm font-bold text-white transition-colors hover:bg-primary/90">Lihat Invoice & Rekening Pembayaran</a>
+
 				<div class="flex flex-col gap-3 sm:flex-row">
 					{#if whatsappHref}
 						<a href={whatsappHref} target="_blank" rel="noreferrer" class="inline-flex flex-1 items-center justify-center rounded-xl bg-[#25D366] px-5 py-3.5 text-sm font-bold text-white transition-colors hover:bg-[#1fb95a]">

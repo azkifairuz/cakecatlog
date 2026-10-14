@@ -1,3 +1,5 @@
+import { canManageExpenseWhatsApp } from './expense-whatsapp.js';
+
 // Menu lokal hanya untuk bootstrap ketika database menu belum diisi.
 export const fallbackMenus = [
 	['Analytics', '/admin/dashboard', 'ChartBar'],
@@ -14,6 +16,7 @@ export const fallbackMenus = [
 	['Menu', '/admin/dashboard/menus', 'Menu'],
 	['Info Toko', '/admin/dashboard/site-info', 'Info'],
 	['WhatsApp', '/admin/dashboard/whatsapp', 'MessageCircle'],
+	['WhatsApp Pengeluaran', '/admin/dashboard/expense-whatsapp', 'MessageCircle'],
 	['Log Aktivitas', '/admin/dashboard/logs', 'History'],
 	['API key', '/admin/dashboard/api-keys', 'KeyRound']
 ].map(([name, url, icon], index) => ({ name, url, icon, displayOrder: index + 1 }));
@@ -36,12 +39,16 @@ export function visibleAdminMenus(admin) {
 		: menus.length ? normalized : fallbackMenus;
 	const seen = new Set();
 	const visible = source.filter((menu) => {
+		if (menu?.url === '/admin/dashboard/expense-whatsapp' && !canManageExpenseWhatsApp(admin)) return false;
 		if (menu?.isActive === false || !menu?.url || seen.has(menu.url)) return false;
 		seen.add(menu.url);
 		return true;
 	});
 	if ((isSuperAdmin || admin?.permissions?.includes('menu.manage')) && !visible.some((menu) => menu.url === '/admin/dashboard/menus')) {
 		visible.push(fallbackMenus.find((menu) => menu.url === '/admin/dashboard/menus'));
+	}
+	if (canManageExpenseWhatsApp(admin) && !visible.some((menu) => menu.url === '/admin/dashboard/expense-whatsapp')) {
+		visible.push(fallbackMenus.find((menu) => menu.url === '/admin/dashboard/expense-whatsapp'));
 	}
 	// Every admin can manage credentials for their own account.
 	if (admin && !visible.some((menu) => menu.url === '/admin/dashboard/api-keys')) {
@@ -55,7 +62,7 @@ export function groupAdminNavItems(navItems) {
 	const definitions = [
 		{ id: 'catalog', label: 'Katalog', paths: ['products', 'categories', 'addons', 'banners'] },
 		{ id: 'operations', label: 'Operasional', paths: ['expenses', 'employees'] },
-		{ id: 'settings', label: 'Pengaturan', paths: ['roles', 'menus', 'site-info', 'whatsapp', 'logs', 'api-keys'] }
+		{ id: 'settings', label: 'Pengaturan', paths: ['roles', 'menus', 'site-info', 'whatsapp', 'expense-whatsapp', 'logs', 'api-keys'] }
 	];
 	const groupedPaths = new Set(definitions.flatMap((group) => group.paths.map((path) => `/admin/dashboard/${path}`)));
 	return {
