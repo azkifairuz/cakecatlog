@@ -1,6 +1,9 @@
 <script>
+	import { untrack } from 'svelte';
 	let { data, form } = $props();
-	let editing = $state(null);
+	let editing = $state(untrack(() => form?.values?.id ? data.menus.find((menu) => menu.id === form.values.id) : null));
+	let values = $derived(form?.values && form.values.id === (editing?.id || '') ? form.values : editing);
+	let conflictingMenu = $derived(form?.error && form?.values ? data.menus.find((menu) => menu.url === form.values.url && menu.id !== form.values.id) : null);
 </script>
 
 <div class="space-y-6">
@@ -10,17 +13,18 @@
 	</div>
 	{#if data.error}<p class="rounded-lg border border-destructive p-3 text-sm text-destructive">{data.error}</p>{/if}
 	{#if form?.error}<p class="rounded-lg border border-destructive p-3 text-sm text-destructive">{form.error}</p>{/if}
+	{#if conflictingMenu}<div role="status" class="flex flex-wrap items-center gap-3 rounded-lg border p-3 text-sm"><span>Menu {conflictingMenu.name} sudah ada ({conflictingMenu.isActive ? 'Aktif' : 'Nonaktif'}).</span><button type="button" class="rounded-md border px-3 py-2" onclick={() => editing = conflictingMenu}>Edit menu yang sudah ada</button></div>{/if}
 	{#if form?.message}<p class="rounded-lg border p-3 text-sm">{form.message}</p>{/if}
 
 	<section class="rounded-xl border bg-background p-4">
 		<h2 class="mb-4 text-lg font-semibold">{editing ? 'Edit menu' : 'Tambah menu'}</h2>
 		<form method="POST" action="?/save" class="grid gap-3 sm:grid-cols-2">
 			<input type="hidden" name="id" value={editing?.id || ''} />
-			<label class="grid gap-1 text-sm">Nama<input class="rounded-md border bg-background p-2" name="name" required value={editing?.name || ''} /></label>
-			<label class="grid gap-1 text-sm">URL<input class="rounded-md border bg-background p-2" name="url" required pattern="/admin/.*" value={editing?.url || '/admin/dashboard/'} /></label>
-			<label class="grid gap-1 text-sm">Icon Lucide<input class="rounded-md border bg-background p-2" name="icon" value={editing?.icon || 'Menu'} /></label>
-			<label class="grid gap-1 text-sm">Urutan<input class="rounded-md border bg-background p-2" name="displayOrder" type="number" required value={editing?.displayOrder ?? 1} /></label>
-			<label class="flex items-center gap-2 text-sm"><input type="checkbox" name="isActive" checked={editing?.isActive !== false} /> Aktif</label>
+			<label class="grid gap-1 text-sm">Nama<input class="rounded-md border bg-background p-2" name="name" required value={values?.name || ''} /></label>
+			<label class="grid gap-1 text-sm">URL<input class="rounded-md border bg-background p-2" name="url" required pattern="/admin/.*" value={values?.url || '/admin/dashboard/'} /></label>
+			<label class="grid gap-1 text-sm">Icon Lucide<input class="rounded-md border bg-background p-2" name="icon" value={values?.icon || 'Menu'} /></label>
+			<label class="grid gap-1 text-sm">Urutan<input class="rounded-md border bg-background p-2" name="displayOrder" type="number" required value={values?.displayOrder ?? 1} /></label>
+			<label class="flex items-center gap-2 text-sm"><input type="checkbox" name="isActive" checked={values?.isActive !== false} /> Aktif</label>
 			<div class="flex gap-2 sm:justify-end"><button class="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground" type="submit">Simpan</button>{#if editing}<button class="rounded-md border px-4 py-2 text-sm" type="button" onclick={() => editing = null}>Batal</button>{/if}</div>
 		</form>
 	</section>

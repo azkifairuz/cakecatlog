@@ -32,14 +32,14 @@ export const actions = {
 		const form = await request.formData();
 		const id = String(form.get('id') || '');
 		const input = menuInput(form);
-		if (!input.name || !input.url.startsWith('/admin/') || !Number.isFinite(input.displayOrder)) return fail(400, { error: 'Nama, URL admin, dan urutan wajib diisi.' });
+		if (!input.name || !input.url.startsWith('/admin/') || !Number.isFinite(input.displayOrder)) return fail(400, { error: 'Nama, URL admin, dan urutan wajib diisi.', values: { id, ...input } });
 		try {
 			if (id) await updateAdminMenu(id, input, locals.adminToken, fetch);
 			else await createAdminMenu(input, locals.adminToken, fetch);
 			return { success: true, message: 'Menu berhasil disimpan.' };
 		} catch (error) {
 			handleAdminAuthError(error, cookies);
-			return fail(400, { error: error?.message || 'Gagal menyimpan menu.' });
+			return fail(error?.status || 500, { error: error?.message || 'Gagal menyimpan menu.', values: { id, ...input } });
 		}
 	},
 	remove: async ({ request, locals, fetch, cookies }) => {

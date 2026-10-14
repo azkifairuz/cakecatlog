@@ -1,4 +1,6 @@
 <script>
+	import DeliveryAddressField from '$lib/components/DeliveryAddressField.svelte';
+	let deliveryAddress = $state('');
 	import { getImageUrl } from '$lib/image-url.js';
 	import { hasCartVariantSelection } from '$lib/cart-variants.js';
 	import { cart } from '$lib/stores/cart.svelte.js';
@@ -204,7 +206,7 @@
 						{#if selectedDeliveryOption === 'delivery'}
 							<div>
 								<label for="address" class="block text-[13px] font-semibold text-[#4A3B32] mb-1.5 uppercase tracking-wide">{i18n.t('form.fullAddress')} <span class="text-red-400">{i18n.t('form.required')}</span></label>
-								<textarea id="address" name="address" required placeholder={i18n.t('form.addressPlaceholder')} rows="3" class="w-full px-4 py-3.5 bg-slate-50 border border-primary/20 focus:bg-white rounded-xl text-[15px] placeholder-slate-400 focus:outline-none focus:border-primary transition-all resize-none"></textarea>
+								<DeliveryAddressField id="address" name="address" bind:value={deliveryAddress} required label={i18n.t('form.fullAddress')} placeholder={i18n.locale === 'en' ? 'Type an address, e.g. Jakarta…' : 'Ketik alamat, misalnya Jakarta…'} locale={i18n.locale} />
 							</div>
 						{/if}
 
