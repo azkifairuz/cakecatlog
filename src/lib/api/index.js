@@ -4,3 +4,4 @@ export * from './upload.js';
 export * from './public.js';
 export * from './admin.js';
 export * from './adapters.js';
+export * from './api-keys.js';

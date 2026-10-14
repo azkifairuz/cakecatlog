@@ -72,7 +72,7 @@ test('normalizes a reversed dashboard date range', () => {
 
 	assert.equal(filters.start, '2026-08-10');
 	assert.equal(filters.end, '2026-08-20');
-	assert.equal(filters.status, 'Selesai');
+	assert.equal(filters.status, 'Completed');
 	assert.equal(filters.page, 2);
 	assert.equal(filters.pageSize, 12);
 });
@@ -130,7 +130,7 @@ test('parses date range filters for orders page (start and end)', () => {
 test('accepts both English backend statuses and Indonesian statuses', () => {
 	for (const st of ['Pending', 'Confirmed', 'Paid', 'Processing', 'Ready', 'Delivered', 'Completed', 'Cancelled', 'Diproses', 'Selesai', 'Batal/Refund']) {
 		const filters = parseOrderFilters(new URL(`https://example.com/admin/dashboard/orders?status=${st}`));
-		assert.equal(filters.status, st);
+		assert.equal(filters.status, ({ Diproses: 'Processing', Selesai: 'Completed', 'Batal/Refund': 'Cancelled' })[st] || st);
 	}
 });
 
