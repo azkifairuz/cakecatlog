@@ -18,7 +18,8 @@
 	import Trash2 from '@lucide/svelte/icons/trash-2';
 	import X from '@lucide/svelte/icons/x';
 	
-	let { data } = $props();
+	let { data, form } = $props();
+	let replacing = $state(null);
 	
 	let banners = $state([]);
 	let isUploading = $state(false);
@@ -93,7 +94,9 @@
 <AdminPage class="max-w-5xl">
 	<AdminPageHeader title="Banners" description="Unggah dan atur hero banner yang muncul di beranda." />
 
-	<!-- Stats & Validation Card -->
+	{#if form?.error}<p role="alert" class="rounded-xl border p-4 text-destructive">{form.error}</p>{/if}
+ {#if form?.message}<p role="status" class="rounded-xl border p-4">{form.message}</p>{/if}
+ <!-- Stats & Validation Card -->
 	<div class="bg-white rounded-2xl border border-slate-200 p-5 flex flex-col md:flex-row gap-4 items-center justify-between shadow-sm">
 		<div class="flex items-center gap-4">
 			<div class="h-12 w-12 rounded-full flex items-center justify-center {activeCount >= 2 && activeCount <= 5 ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}">
@@ -226,4 +229,11 @@
 				</div>
 			</div>
 		</div>
+<section class="space-y-3 rounded-xl border bg-background p-5"><h2 class="font-semibold">Ganti gambar banner</h2>
+ {#each banners as banner (banner.id)}
+ <form method="POST" action="?/replaceImage" enctype="multipart/form-data" class="flex flex-wrap items-center gap-3 border-t pt-3" use:enhance={({ cancel }) => { if(replacing) { cancel(); return; } replacing = banner.id; return async ({ update }) => { try { await update(); } finally { replacing = null; } }; }}>
+ <input type="hidden" name="id" value={banner.id} /><img src={getImageUrl(banner.imageUrl || banner.image_url)} alt="Banner yang akan diganti" class="h-12 w-24 rounded object-cover" />
+ <Label for={`replace-${banner.id}`}>Gambar pengganti</Label><input id={`replace-${banner.id}`} name="image" type="file" accept="image/*" required disabled={!!replacing} class="max-w-full text-sm" />
+ <Button type="submit" variant="outline" disabled={!!replacing}>{replacing === banner.id ? 'Mengganti…' : 'Ganti gambar'}</Button>
+ </form>{/each}</section>
 </AdminPage>

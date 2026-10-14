@@ -11,6 +11,7 @@ import {
 	getAdminDashboard,
 	getAdminRevenueSeries,
 	getAdminRepeatOrders,
+	getAdminDeliveryBreakdown,
 	updateAdminOrder,
 	updateAdminOrderStatus,
 	updateAdminOrderAmount,
@@ -27,7 +28,7 @@ export const load = async ({ locals, url, fetch, cookies }) => {
 	const dateFilterType = startDate && endDate ? filters.dateType : undefined;
 
 	try {
-		const [dashboardData, revenueResult, repeatOrdersResult] = await Promise.all([
+		const [dashboardData, revenueResult, repeatOrdersResult, deliveryData] = await Promise.all([
 			getAdminDashboard(
 				{
 					startDate,
@@ -63,6 +64,10 @@ export const load = async ({ locals, url, fetch, cookies }) => {
 			).catch((err) => {
 				console.warn('Failed to load repeat orders:', err);
 				return null;
+			}),
+			getAdminDeliveryBreakdown({ startDate, endDate, dateFilterType }, locals.adminToken, fetch).catch((err) => {
+				handleAdminAuthError(err, cookies);
+				return { error: 'Analisis pengiriman belum dapat dimuat.' };
 			})
 		]);
 
@@ -102,6 +107,7 @@ export const load = async ({ locals, url, fetch, cookies }) => {
 			topProducts,
 			statusBreakdown,
 			repeatCustomersData,
+			deliveryData,
 			revenueSeries,
 			groupBy,
 			filters,
