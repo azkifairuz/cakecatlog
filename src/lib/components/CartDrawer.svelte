@@ -103,7 +103,7 @@
 							</div>
 
 							<div class="font-bold text-[#4A3B32] mt-3">
-								{formatCurrency((item.estimated_unit_price || item.price_at_order || 0) * (item.quantity || 1))}
+								{formatCurrency((item.estimated_unit_price ?? item.price_at_order ?? 0) * (item.quantity || 1))}
 							</div>
 						</div>
 					</div>

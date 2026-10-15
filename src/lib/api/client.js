@@ -120,7 +120,7 @@ export async function apiFetch(path, options = {}, customFetch = null) {
 		throw new ApiError(errorMessage, {
 			status: response.status,
 			code: json.error?.code || json.code || `HTTP_${response.status}`,
-			details: json.error?.details || json.details || null,
+			details: json.error?.details || json.details || (Number.isInteger(json.itemIndex) ? { itemIndex: json.itemIndex, productId: json.productId } : null),
 			fields: json.error?.fields || json.fields || null
 		});
 	}

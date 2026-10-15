@@ -109,3 +109,7 @@ export async function getOrderReceipt(id, customFetch = null) {
 	const response = await apiFetch(`/orders/${id}/receipt`, { method: 'GET' }, customFetch);
 	return unwrapData(response);
 }
+
+export async function getCartQuote(payload, customFetch = null) {
+	return unwrapData(await apiFetch('/orders/quote', { method: 'POST', body: payload }, customFetch));
+}

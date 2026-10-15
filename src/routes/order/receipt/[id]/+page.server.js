@@ -1,8 +1,9 @@
+import { takePriceNotice } from '$lib/price-notice.js';
 import { error } from '@sveltejs/kit';
 import { getOrderReceipt } from '$lib/api/public.js';
 import { normalizeSiteInfo } from '$lib/site-info.js';
 
-export const load = async ({ params, fetch }) => {
+export const load = async ({ params, fetch, cookies }) => {
 	try {
 		const result = await getOrderReceipt(params.id, fetch);
 		const rawOrder = result?.order || result?.data?.order || result;
@@ -37,7 +38,7 @@ export const load = async ({ params, fetch }) => {
 			delivery_time: rawOrder.deliveryTime ?? rawOrder.delivery_time,
 			created_at: rawOrder.createdAt ?? rawOrder.created_at,
 			amount: Number(rawOrder.amount || rawOrder.estimatedSubtotal || 0),
-			estimated_subtotal: Number(rawOrder.estimatedSubtotal || rawOrder.amount || 0),
+			estimated_subtotal: Number(rawOrder.estimatedSubtotal ?? rawOrder.amount ?? 0),
 			order_items,
 			items: order_items,
 			products: {
@@ -47,6 +48,7 @@ export const load = async ({ params, fetch }) => {
 
 		return {
 			order,
+			pricingWarning: takePriceNotice(cookies, params.id, order.estimated_subtotal),
 			siteInfo: normalizeSiteInfo(rawSiteInfo)
 		};
 	} catch (err) {

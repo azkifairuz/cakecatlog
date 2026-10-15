@@ -1,3 +1,4 @@
+import { applyCartQuote } from '../cart-pricing.js';
 import { browser } from '$app/environment';
 
 class CartStore {
@@ -6,10 +7,12 @@ class CartStore {
 
 	constructor() {
 		if (browser) {
-			const stored = localStorage.getItem('cake_cart');
+			let stored;
+			try { stored = localStorage.getItem('cake_cart'); } catch { stored = null; }
 			if (stored) {
 				try {
-					this.items = JSON.parse(stored);
+					const parsed = JSON.parse(stored);
+					this.items = Array.isArray(parsed) ? parsed : [];
 				} catch (e) {
 					console.error('Failed to parse cart', e);
 				}
@@ -19,7 +22,7 @@ class CartStore {
 
 	save() {
 		if (browser) {
-			localStorage.setItem('cake_cart', JSON.stringify(this.items));
+			try { localStorage.setItem('cake_cart', JSON.stringify(this.items)); } catch { /* Keep the in-memory cart usable. */ }
 		}
 	}
 
@@ -36,6 +39,13 @@ class CartStore {
 		this.save();
 	}
 
+	applyQuote(snapshot, priced) {
+		const updated = applyCartQuote(this.items, snapshot, priced);
+		if (!updated) return false;
+		if (JSON.stringify(updated) !== JSON.stringify(this.items)) { this.items = updated; this.save(); }
+		return true;
+	}
+
 	clear() {
 		this.items = [];
 		this.save();
@@ -47,7 +57,7 @@ class CartStore {
 
 	get totalPrice() {
 		return this.items.reduce((sum, item) => {
-			const unitPrice = item.estimated_unit_price || item.price_at_order || 0;
+			const unitPrice = item.estimated_unit_price ?? item.price_at_order ?? 0;
 			return sum + (unitPrice * (item.quantity || 1));
 		}, 0);
 	}

@@ -32,6 +32,8 @@ test('backend numeric prices preserve decimal formatting', () => { assert.equal(
 const { readFile } = await import('node:fs/promises');
 const dataUrl = (source) => `data:text/javascript;base64,${Buffer.from(source).toString('base64')}`;
 const dependencies = {
+	'$lib/cart-pricing.js': new URL('../src/lib/cart-pricing.js', import.meta.url).href,
+	'$lib/price-notice.js': new URL('../src/lib/price-notice.js', import.meta.url).href,
 	'$lib/cart-variants.js': new URL('../src/lib/cart-variants.js', import.meta.url).href,
 	'$lib/i18n.svelte.js': dataUrl('export const normalizeLocale = () => "id"; export const translate = (_, key) => key;'),
 	'$lib/phone-number.js': new URL('../src/lib/phone-number.js', import.meta.url).href,

@@ -316,6 +316,7 @@
 					<input type="hidden" name="product_variant_id" value={selectedSizeOption?.variant?.id || ''} />
 					<input type="hidden" name="cake_size" value={selectedSizeOption?.label || 'Standard'} />
 					<input type="hidden" name="locale" value={i18n.locale} />
+					<input type="hidden" name="expected_total" value={estimatedSubtotal} />
 					<input type="hidden" name="delivery_option" value={deliveryOption} />
 					<input
 						type="hidden"
