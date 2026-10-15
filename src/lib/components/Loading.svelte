@@ -29,7 +29,7 @@
 		<div class="flex max-w-xs flex-col items-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 text-center shadow-lg">
 			<div
 				class={cn(
-					'animate-spin rounded-full border-slate-200 border-t-primary',
+					'animate-spin motion-reduce:animate-none rounded-full border-slate-200 border-t-primary',
 					spinnerSize[size] ?? spinnerSize.md
 				)}
 			></div>
@@ -45,7 +45,7 @@
 	<span class={cn('inline-flex items-center gap-2', className)} role="status" aria-live="polite">
 		<span
 			class={cn(
-				'animate-spin rounded-full border-current/25 border-t-current',
+				'animate-spin motion-reduce:animate-none rounded-full border-current/25 border-t-current',
 				spinnerSize[size] ?? spinnerSize.md
 			)}
 			aria-hidden="true"

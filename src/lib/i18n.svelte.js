@@ -95,6 +95,7 @@ export const translations = {
 				'Kue lezat ini belum memiliki deskripsi yang mendetail, namun kami jamin rasanya tidak akan mengecewakan.',
 			handlingInfo: 'Info Penanganan Khusus',
 			addToCart: 'Masukkan ke Keranjang',
+			addingToCart: 'Menambahkan…',
 			outOfStock: 'Stok Sedang Habis',
 			addToCartError: 'Terjadi kesalahan saat menambahkan ke keranjang.'
 		},
@@ -326,6 +327,7 @@ export const translations = {
 				'This delicious cake does not have a detailed description yet, but we promise the taste will not disappoint.',
 			handlingInfo: 'Special Handling Info',
 			addToCart: 'Add to Cart',
+			addingToCart: 'Adding…',
 			outOfStock: 'Currently Out of Stock',
 			addToCartError: 'Something went wrong while adding this item to the cart.'
 		},

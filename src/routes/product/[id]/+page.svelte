@@ -110,16 +110,18 @@
 
 	async function handleAddToCart(event) {
 		event.preventDefault();
-		loading = true;
+		if (loading || !product.is_available) return;
 		errorMsg = '';
 
 		const form = event.target;
 		const formData = new FormData(form);
 		if (!selectedSizeOption) {
 			errorMsg = 'Pilih ukuran produk kembali sebelum memesan.';
-			loading = false;
 			return;
 		}
+
+		loading = true;
+		const loadingStartedAt = performance.now();
 
 		try {
 			let reference_image_url = null;
@@ -182,6 +184,12 @@
 				reference_image_url,
 				cartItemId: crypto.randomUUID()
 			};
+
+			// Keep feedback visible even when no reference image needs uploading.
+			const remainingLoadingTime = 400 - (performance.now() - loadingStartedAt);
+			if (remainingLoadingTime > 0) {
+				await new Promise((resolve) => setTimeout(resolve, remainingLoadingTime));
+			}
 
 			cart.addItem(cartItem);
 			cart.isOpen = true;
@@ -626,10 +634,11 @@
 						<button
 							type="submit"
 							disabled={!product.is_available || loading}
+							aria-busy={loading}
 							class="flex h-14 w-full items-center justify-center gap-2.5 rounded-2xl bg-primary text-base font-bold text-white shadow-lg shadow-primary/25 transition-[background-color,transform,box-shadow,opacity] duration-160 ease-out hover:bg-[#724828] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
 						>
 							{#if loading}
-								<Loading label="" size="sm" class="text-white" />
+								<Loading label={i18n.t('product.addingToCart')} size="sm" class="text-white" />
 							{:else}
 								<ShoppingBag class="size-5" />
 								<span>
