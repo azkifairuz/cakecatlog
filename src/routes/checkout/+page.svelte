@@ -4,7 +4,10 @@
 	import { getImageUrl } from '$lib/image-url.js';
 	import { hasCartVariantSelection } from '$lib/cart-variants.js';
 	import { cart } from '$lib/stores/cart.svelte.js';
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
+	import { getCartQuote } from '$lib/api/public.js';
+	import { cartOrderItem, cartSelectionKey } from '$lib/cart-pricing.js';
+	import PriceWarning from '$lib/components/PriceWarning.svelte';
 	import { goto } from '$app/navigation';
 	import { enhance } from '$app/forms';
 	import { getI18n } from '$lib/i18n.svelte.js';
@@ -26,6 +29,46 @@
 
 	let loading = $state(false);
 	let errorMsg = $state('');
+	let pricingWarning = $state(null);
+	let quoteMessage = $state('');
+	let quoteBlocking = $state(false);
+	let quoteProductId = $state(null);
+	let pricingBusy = $state(false);
+	let quoteKey = $derived(cartSelectionKey(cart.items));
+	let quoteRequest = 0;
+	let destroyed = false;
+
+	$effect(() => {
+		const key = quoteKey;
+		if (!mounted || key === '[]') return;
+		untrack(() => { refreshCartPrices(); });
+	});
+
+	onMount(() => () => { destroyed = true; quoteRequest++; });
+
+	async function refreshCartPrices() {
+		if (loading || invalidVariantItems.length || !cart.items.length) return;
+		const requestId = ++quoteRequest;
+		const snapshot = JSON.parse(JSON.stringify(cart.items));
+		pricingBusy = true;
+		quoteMessage = '';
+		quoteBlocking = false;
+		try {
+			const quote = await getCartQuote({ items: snapshot.map(cartOrderItem), expectedTotal: cart.totalPrice });
+			if (destroyed || requestId !== quoteRequest || loading || !cart.applyQuote(snapshot, quote.items)) return;
+			pricingWarning = quote.pricingWarning || (pricingWarning?.newTotal === cart.totalPrice ? pricingWarning : null);
+		} catch (error) {
+			if (destroyed || requestId !== quoteRequest || loading || cartSelectionKey(snapshot) !== cartSelectionKey(cart.items)) return;
+			quoteBlocking = [404, 422].includes(error.status);
+			quoteProductId = snapshot[error.details?.itemIndex]?.product_id || snapshot[error.details?.itemIndex]?.productId || null;
+			quoteMessage = quoteBlocking ? error.message : (i18n.locale === 'en'
+				? 'We could not check the latest price. You can retry or continue; your order will use the latest price.'
+				: 'Harga terbaru belum dapat diperiksa. Anda bisa mencoba lagi atau melanjutkan; pesanan akan memakai harga terbaru.');
+		} finally {
+			if (!destroyed && requestId === quoteRequest) pricingBusy = false;
+		}
+	}
+
 	
 	const d = new Date();
 	const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -134,7 +177,7 @@
 						/>
 					{/if}
 					<form method="POST" action="?/checkout" use:enhance={({ cancel }) => {
-						if (invalidVariantItems.length) { cancel(); loading = false; errorMsg = 'Pilih ukuran produk kembali sebelum memesan.'; return; }
+						if (quoteBlocking || invalidVariantItems.length) { cancel(); loading = false; errorMsg = 'Pilih ukuran produk kembali sebelum memesan.'; return; }
 						return async ({ result, update }) => {
 							loading = false;
 							if (result.type === 'success' && result.data?.success) {
@@ -211,7 +254,7 @@
 						{/if}
 
 						<div class="pt-6">
-							<button type="submit" disabled={loading || cart.items.length === 0 || invalidVariantItems.length > 0} class="w-full py-4 bg-primary hover:bg-[#724828] active:scale-[0.99] text-white font-bold text-[16px] tracking-wide rounded-xl transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed">
+							<button type="submit" disabled={loading || quoteBlocking || cart.items.length === 0 || invalidVariantItems.length > 0} class="w-full py-4 bg-primary hover:bg-[#724828] active:scale-[0.99] text-white font-bold text-[16px] tracking-wide rounded-xl transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed">
 								{#if loading}
 									<Loading label="" size="sm" class="text-white" />
 								{/if}
@@ -228,6 +271,16 @@
 			<div class="w-full lg:w-1/3">
 				<div class="bg-white rounded-3xl p-6 border border-primary/10 shadow-sm sticky top-24">
 					<h3 class="text-lg font-bold text-[#4A3B32] mb-6">{i18n.t('checkout.orderSummary')}</h3>
+					<div class="mb-4 space-y-3">
+						<PriceWarning warning={pricingWarning} locale={i18n.locale} />
+						{#if quoteMessage}
+							<div role="status" class="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+								<p>{quoteMessage}</p>
+								<button type="button" disabled={pricingBusy || loading} class="mt-2 font-semibold underline" onclick={refreshCartPrices}>{i18n.locale === 'en' ? 'Check again' : 'Periksa lagi'}</button>
+								{#if quoteBlocking && quoteProductId}<a class="mt-2 block underline" href={`/product/${quoteProductId}`}>{i18n.locale === 'en' ? 'Choose this product again' : 'Pilih ulang produk ini'}</a>{/if}
+							</div>
+						{/if}
+					</div>
 					{#if invalidVariantItems.length}
 						<div role="alert" class="mb-5 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm">
 							<p>Pilih ukuran produk kembali sebelum checkout. Hapus item lama setelah menambahkan pilihan yang baru.</p>
@@ -256,13 +309,13 @@
 									</div>
 									<div class="flex-1 min-w-0">
 										<h4 class="font-bold text-sm text-[#4A3B32] truncate">{item.product_name}</h4>
-										<p class="text-xs text-[#4A3B32]/70 mt-0.5">{item.quantity}x @ {formatCurrency(item.estimated_unit_price || item.price_at_order)}</p>
+										<p class="text-xs text-[#4A3B32]/70 mt-0.5">{item.quantity}x @ {formatCurrency(item.estimated_unit_price ?? item.price_at_order)}</p>
 									{#if item.customized_options?.addons?.length}
 										<p class="mt-0.5 text-[11px] text-[#4A3B32]/50">
 											{item.customized_options.addons.map((addon) => `${addon.category}: ${addon.name}`).join(' • ')}
 										</p>
 									{/if}
-										<div class="text-xs font-semibold text-primary mt-1">{formatCurrency((item.estimated_unit_price || item.price_at_order) * item.quantity)}</div>
+										<div class="text-xs font-semibold text-primary mt-1">{formatCurrency((item.estimated_unit_price ?? item.price_at_order) * item.quantity)}</div>
 									</div>
 								</div>
 							{/each}

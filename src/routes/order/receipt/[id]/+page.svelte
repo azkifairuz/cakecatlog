@@ -1,4 +1,5 @@
 <script>
+	import PriceWarning from '$lib/components/PriceWarning.svelte';
 	import { getWhatsAppHref } from '$lib/site-info.js';
 
 	let { data } = $props();
@@ -16,7 +17,7 @@
 				size: item.customized_options?.size?.name || item.cake_size || '-',
 				flavor: item.customized_options?.flavor?.name || item.cake_flavor || '-',
 				addons: Array.isArray(item.customized_options?.addons) ? item.customized_options.addons : [],
-				subtotal: item.estimated_subtotal || (item.estimated_unit_price || item.price_at_order || 0) * (item.quantity || 1)
+				subtotal: item.estimated_subtotal ?? (item.estimated_unit_price ?? item.price_at_order ?? 0) * (item.quantity || 1)
 			}));
 		}
 
@@ -27,7 +28,7 @@
 				size: currentOrder.customized_options?.size?.name || currentOrder.cake_size || '-',
 				flavor: currentOrder.customized_options?.flavor?.name || currentOrder.cake_flavor || '-',
 				addons: Array.isArray(currentOrder.customized_options?.addons) ? currentOrder.customized_options.addons : [],
-				subtotal: currentOrder.estimated_subtotal || currentOrder.amount || 0
+				subtotal: currentOrder.estimated_subtotal ?? currentOrder.amount ?? 0
 			}
 		];
 	}
@@ -73,6 +74,7 @@
 			</div>
 
 			<div class="grid gap-6 p-6 sm:p-8">
+				<PriceWarning warning={data.pricingWarning} locale={data.pricingWarning?.locale || 'id'} completed />
 				<div class="grid gap-3 sm:grid-cols-3">
 					<div class="rounded-2xl border border-primary/10 bg-[#FFFBF7] p-4">
 						<p class="text-[11px] font-bold uppercase tracking-wider text-[#4A3B32]/50">No. Order</p>

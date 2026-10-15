@@ -1,11 +1,13 @@
-import { cartVariantId, hasCartVariantSelection } from '$lib/cart-variants.js';
+import { cartOrderItem } from '$lib/cart-pricing.js';
+import { setPriceNotice } from '$lib/price-notice.js';
+import { hasCartVariantSelection } from '$lib/cart-variants.js';
 import { normalizeLocale, translate } from '$lib/i18n.svelte.js';
 import { normalizePhoneNumber, PhoneNumberError } from '$lib/phone-number.js';
 import { submitCheckoutOrder } from '$lib/api/public.js';
 import { fail } from '@sveltejs/kit';
 
 export const actions = {
-	checkout: async ({ request, fetch }) => {
+	checkout: async ({ request, fetch, cookies }) => {
 		const formData = await request.formData();
 		const locale = normalizeLocale(formData.get('locale'));
 
@@ -68,35 +70,7 @@ export const actions = {
 			return fail(422, { success: false, error: 'Pilih ukuran produk kembali. Keranjang lama belum menyimpan pilihan ukuran yang valid.' });
 		}
 
-		const items = cartItems.map((item) => {
-			const addonIds = Array.isArray(item.customized_options?.addons)
-				? item.customized_options.addons
-						.map((a) => (typeof a === 'string' ? a : a.addon_id || a.id))
-						.filter(Boolean)
-				: [];
-
-			return {
-				productId: item.product_id || item.productId,
-				productVariantId: cartVariantId(item),
-				quantity: Number(item.quantity) || 1,
-				cakeSize: item.cake_size || item.customized_options?.size?.name || 'Standard',
-				cakeFlavor: item.cake_flavor || item.customized_options?.flavor?.name || 'Standard',
-				cakeColor: item.cake_color || item.customized_options?.color?.name || null,
-				crownOption: item.crown_option || item.customized_options?.crown?.name || null,
-				addEdibleGlitter: item.add_edible_glitter || item.customized_options?.glitter?.name || null,
-				hasCakeTopper: Boolean(
-					item.has_cake_topper || item.customized_options?.cake_topper?.selected
-				),
-				cakeTopperFee: item.cake_topper_fee || item.customized_options?.cake_topper?.price || 0,
-				customizedOptions: {
-					...(item.customized_options || {}),
-					cake_text: item.cake_text,
-					gift_card_text: item.gift_card_text,
-					reference_image_url: item.reference_image_url || item.referenceImageUrl
-				},
-				selectedAddonIds: addonIds
-			};
-		});
+		const items = cartItems.map(cartOrderItem);
 
 		const payload = {
 			customerName: customer_name,
@@ -118,13 +92,11 @@ export const actions = {
 				return { success: false, error: 'Pesanan berhasil dibuat, tetapi ID pesanan tidak ditemukan.' };
 			}
 
-			return { success: true, orderId };
+			setPriceNotice(cookies, orderId, orderResult.pricingWarning, locale);
+			return { success: true, orderId, pricingWarning: orderResult.pricingWarning };
 		} catch (err) {
 			console.error('Checkout error:', err);
-			const message =
-				err?.code === 'PRICE_CHANGED'
-					? 'Harga produk telah diperbarui. Silakan refresh cart untuk melihat harga terbaru.'
-					: err?.message || 'Gagal memproses pesanan. Silakan coba lagi.';
+			const message = err?.message || 'Gagal memproses pesanan. Silakan coba lagi.';
 
 			return { success: false, error: message };
 		}

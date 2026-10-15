@@ -92,6 +92,11 @@
 		null
 	);
 
+	let estimatedUnitPrice = $derived(selectedSizePrice + selectedAddons.reduce((sum, addon) => sum + getAddonSelectionPrice(addon), 0));
+	let estimatedSubtotal = $derived(estimatedUnitPrice * Math.max(Number(quantity) || 1, 1));
+
+	function formatCurrency(value) { return new Intl.NumberFormat(i18n.locale === 'en' ? 'en-US' : 'id-ID', { style: 'currency', currency: 'IDR' }).format(value); }
+
 	// Order submission state
 	let deliveryOption = $state('delivery');
 	let fileName = $state('');
@@ -297,6 +302,7 @@
 					<input type="hidden" name="product_variant_id" value={selectedSizeOption?.variant?.id || ''} />
 					<input type="hidden" name="cake_size" value={selectedSizeOption?.label || 'Standard'} />
 					<input type="hidden" name="locale" value={i18n.locale} />
+					<input type="hidden" name="expected_total" value={estimatedSubtotal} />
 					<input type="hidden" name="delivery_option" value={deliveryOption} />
 					<input
 						type="hidden"
@@ -593,6 +599,10 @@
 							</div>
 						{/if}
 
+						<div class="flex items-center justify-between border-t border-primary/10 pt-4">
+							<span class="text-sm">{i18n.t('pricing.estimatedTotal')}</span>
+							<strong class="text-primary">{formatCurrency(estimatedSubtotal)}</strong>
+						</div>
 						<button
 							form="direct-order-form"
 							type="submit"

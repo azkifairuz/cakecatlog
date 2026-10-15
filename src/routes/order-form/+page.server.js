@@ -1,3 +1,4 @@
+import { setPriceNotice } from '$lib/price-notice.js';
 import { error as httpError } from '@sveltejs/kit';
 import { normalizeLocale, translate } from '$lib/i18n.svelte.js';
 import { normalizePhoneNumber, PhoneNumberError } from '$lib/phone-number.js';
@@ -29,7 +30,7 @@ export const load = async ({ url, fetch }) => {
 };
 
 export const actions = {
-	order: async ({ request, fetch }) => {
+	order: async ({ request, fetch, cookies }) => {
 		const formData = await request.formData();
 		const locale = normalizeLocale(formData.get('locale'));
 
@@ -137,7 +138,8 @@ export const actions = {
 			cakeTopperFee: clientOptions?.cake_topper?.price || 0,
 			customizedOptions: clientOptions,
 			selectedAddonIds,
-			quantity
+			quantity,
+			expectedTotal: formData.has('expected_total') ? Number(formData.get('expected_total')) : undefined
 		};
 
 		try {
@@ -148,7 +150,8 @@ export const actions = {
 				return { success: false, error: 'Pesanan berhasil dibuat, tetapi ID pesanan tidak ditemukan.' };
 			}
 
-			return { success: true, orderId };
+			setPriceNotice(cookies, orderId, orderResult.pricingWarning, locale);
+			return { success: true, orderId, pricingWarning: orderResult.pricingWarning };
 		} catch (err) {
 			console.error('Order creation error:', err);
 			return { success: false, error: err?.message || 'Gagal menyimpan pesanan. Silakan coba lagi.' };
