@@ -26,8 +26,8 @@ export function getImageUrl(url, options = {}) {
 			return parsed.toString();
 		}
 
-		setSearchParams(parsed, params);
-		return parsed.toString();
+		// Object storage URLs (including signed URLs) must stay unchanged.
+		return url;
 	} catch {
 		return url;
 	}
