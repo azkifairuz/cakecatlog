@@ -27,10 +27,10 @@ test('restricted admins retain granted active menus plus account API key and rem
 		{ name: 'Duplicate', url: '/admin/dashboard/logs', displayOrder: 3 },
 		{ name: 'Orders', url: '/admin/orders', displayOrder: 1 }
 	] });
-	assert.deepEqual(menus.map((menu) => menu.url), ['/admin/dashboard/orders', '/admin/dashboard/logs', '/admin/dashboard/api-keys']);
+	assert.deepEqual(menus.map((menu) => menu.url), ['/admin/dashboard/orders', '/admin/dashboard/logs', '/admin/dashboard/account', '/admin/dashboard/api-keys']);
 	const grouped = groupAdminNavItems(menus.map((menu) => ({ href: menu.url })));
 	assert.deepEqual(grouped.groups.map((group) => group.id), ['settings']);
-	assert.equal(grouped.groups[0].items.length, 2);
+	assert.equal(grouped.groups[0].items.length, 3);
 });
 
 test('grouping preserves every available menu exactly once including custom menus', () => {
