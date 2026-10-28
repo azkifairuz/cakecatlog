@@ -15,6 +15,7 @@
 	import DateRangePicker from '$lib/components/DateRangePicker.svelte';
 	import { Label } from '$lib/components/ui/label';
 	import { Input } from '$lib/components/ui/input';
+	import * as Field from '$lib/components/ui/field';
 	import { fly, fade } from 'svelte/transition';
 	import AdminPage from '$lib/components/admin/AdminPage.svelte';
 	import AdminPageHeader from '$lib/components/admin/AdminPageHeader.svelte';
@@ -42,6 +43,8 @@
 	let isCreatingOrder = $state(false);
 
 	let newCustomerName = $state('');
+	let newOrderDate = $state('');
+	const todayInJakarta = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 	let newPhoneNumber = $state('');
 	let newEmail = $state('');
 	let newDeliveryOption = $state('delivery'); // 'delivery' | 'pickup'
@@ -223,6 +226,7 @@
 	});
 
 	function openCreateOrderDrawer() {
+		newOrderDate = '';
 		newCustomerName = '';
 		newPhoneNumber = '';
 		newEmail = '';
@@ -1266,6 +1270,23 @@
 					}}
 					class="space-y-6"
 				>
+					<Field.FieldGroup>
+						<Field.Field>
+							<Field.FieldLabel for="admin_order_date">Tanggal Order (Opsional)</Field.FieldLabel>
+							<Input
+								id="admin_order_date"
+								name="orderDate"
+								type="date"
+								max={todayInJakarta()}
+								bind:value={newOrderDate}
+								aria-describedby="admin_order_date_help"
+							/>
+							<Field.FieldDescription id="admin_order_date_help">
+								Khusus admin: pilih tanggal pemesanan asli untuk mencatat order lama. Kosongkan untuk waktu saat ini. Tanggal ini terpisah dari tanggal kirim/pickup dan menggunakan zona waktu WIB.
+							</Field.FieldDescription>
+						</Field.Field>
+					</Field.FieldGroup>
+
 					<!-- 1. DATA PEMESAN -->
 					<div class="rounded-2xl border border-border/80 bg-muted/20 p-4 space-y-3">
 						<h4 class="text-xs font-bold uppercase tracking-wider text-muted-foreground">1. Data Pemesan</h4>

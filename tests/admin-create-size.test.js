@@ -64,3 +64,37 @@ test('create action forwards the selected variant ID and preserves the manual pr
 	assert.equal(globalThis.sizeCreateCall.payload.product_variant_id, variantId);
 	assert.equal(globalThis.sizeCreateCall.payload.cakePrice, 650000);
 });
+
+const validManualOrder = {
+	customerName: 'Test', phoneNumber: '081511111111', deliveryOption: 'pickup',
+	deliveryDate: '2024-03-01', deliveryTime: '12:00', productId: id
+};
+
+test('admin create forwards a historical order date separately from delivery date', async () => {
+	const result = await actions.createOrder(event({ ...validManualOrder, orderDate: '2024-02-29' }));
+	assert.equal(result.success, true);
+	assert.equal(globalThis.sizeCreateCall.payload.orderDate, '2024-02-29');
+	assert.equal(globalThis.sizeCreateCall.payload.deliveryDate, '2024-03-01');
+});
+
+test('admin create leaves omitted order date to the backend clock', async () => {
+	await actions.createOrder(event(validManualOrder));
+	assert.equal(globalThis.sizeCreateCall.payload.orderDate, undefined);
+});
+
+test('admin create rejects impossible dates, timestamps, and future dates before calling API', async () => {
+	for (const orderDate of ['2025-02-29', '2024-04-31', '0000-01-01', '2024-02-29T00:00:00Z', '9999-12-31']) {
+		globalThis.sizeCreateCall = null;
+		const result = await actions.createOrder(event({ ...validManualOrder, orderDate }));
+		assert.equal(result.status, 400, orderDate);
+		assert.match(result.data.error, /Tanggal order/);
+		assert.equal(globalThis.sizeCreateCall, null);
+	}
+});
+
+test('date validation uses the Jakarta calendar day around UTC midnight', async () => {
+	const { validateAdminOrderDate } = await import('../src/lib/server/admin-orders.js');
+	const now = new Date('2026-10-28T18:00:00Z');
+	assert.equal(validateAdminOrderDate('2026-10-29', now), '2026-10-29');
+	assert.throws(() => validateAdminOrderDate('2026-10-30', now), /tidak boleh melebihi/);
+});

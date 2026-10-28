@@ -1,6 +1,6 @@
 import { uploadDeliveryProofAction } from '$lib/server/delivery-proof-action.js';
 import { error as httpError, fail } from '@sveltejs/kit';
-import { parseOrderFilters } from '$lib/server/admin-orders.js';
+import { parseOrderFilters, validateAdminOrderDate } from '$lib/server/admin-orders.js';
 import { adaptOrder, adaptOrders, adaptProduct, adaptProducts, adaptAddons } from '$lib/api/adapters.js';
 import {
 	getAdminOrders,
@@ -117,6 +117,12 @@ export const actions = {
 	uploadDeliveryProof: uploadDeliveryProofAction,
 	createOrder: async ({ request, locals, fetch, cookies }) => {
 		const formData = await request.formData();
+		let orderDate;
+		try {
+			orderDate = validateAdminOrderDate(formData.get('orderDate'));
+		} catch (err) {
+			return fail(400, { success: false, error: err.message });
+		}
 		const customerName = String(formData.get('customerName') || '').trim();
 		const phoneNumber = String(formData.get('phoneNumber') || '').trim();
 		const email = String(formData.get('email') || '').trim() || null;
@@ -148,6 +154,7 @@ export const actions = {
 		}
 
 		const payload = {
+			orderDate,
 			customerName,
 			customer_name: customerName,
 			phoneNumber,

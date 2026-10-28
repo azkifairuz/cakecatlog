@@ -26,6 +26,19 @@ export function getJakartaDate(date = new Date()) {
 	}).format(date);
 }
 
+export function validateAdminOrderDate(value, now = new Date()) {
+	const candidate = String(value ?? '').trim();
+	if (!candidate) return undefined;
+	const parsed = new Date(`${candidate}T00:00:00Z`);
+	if (!DATE_PATTERN.test(candidate) || candidate.startsWith('0000') || Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== candidate) {
+		throw new Error('Tanggal order tidak valid. Gunakan format YYYY-MM-DD.');
+	}
+	if (candidate > getJakartaDate(now)) {
+		throw new Error('Tanggal order tidak boleh melebihi hari ini (WIB).');
+	}
+	return candidate;
+}
+
 function normalizeDate(value, fallback) {
 	const candidate = String(value ?? '').trim();
 	if (!DATE_PATTERN.test(candidate)) return fallback;
