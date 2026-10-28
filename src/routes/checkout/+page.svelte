@@ -1,4 +1,5 @@
 <script>
+	import { getDeliveryMaxTime, deliveryTimeHint } from '$lib/site-info.js';
 	import DeliveryAddressField from '$lib/components/DeliveryAddressField.svelte';
 	let deliveryAddress = $state('');
 	import { getImageUrl } from '$lib/image-url.js';
@@ -14,8 +15,9 @@
 	import Loading from '$lib/components/Loading.svelte';
 	import PhoneNumberField from '$lib/components/PhoneNumberField.svelte';
 	
-	let { form } = $props();
+	let { data, form } = $props();
 	const i18n = getI18n();
+	let deliveryMaxTime = $derived(getDeliveryMaxTime(data.siteInfo));
 	let mounted = $state(false);
 	let invalidVariantItems = $derived(cart.items.filter((item) => !hasCartVariantSelection(item)));
 	let selectedDeliveryOption = $state('');
@@ -242,7 +244,8 @@
 							</div>
 							<div>
 								<label for="delivery_time" class="block text-[13px] font-semibold text-[#4A3B32] mb-1.5 uppercase tracking-wide">{selectedDeliveryOption === 'delivery' ? i18n.t('form.deliveryTime') : i18n.t('form.pickupTime')} {#if selectedDeliveryOption === 'delivery'}<span class="text-red-400">{i18n.t('form.required')}</span>{/if}</label>
-								<input type="time" id="delivery_time" name="delivery_time" required={selectedDeliveryOption === 'delivery'} class="w-full px-4 py-3.5 bg-slate-50 border border-primary/20 focus:bg-white rounded-xl text-[15px] text-[#4A3B32] focus:outline-none focus:border-primary transition-all cursor-pointer" />
+								<input type="time" id="delivery_time" name="delivery_time" max={selectedDeliveryOption === 'delivery' ? deliveryMaxTime : undefined} required={selectedDeliveryOption === 'delivery'} class="w-full px-4 py-3.5 bg-slate-50 border border-primary/20 focus:bg-white rounded-xl text-[15px] text-[#4A3B32] focus:outline-none focus:border-primary transition-all cursor-pointer" />
+								{#if selectedDeliveryOption === 'delivery'}<p class="mt-1 text-xs text-[#4A3B32]/65">{deliveryTimeHint(deliveryMaxTime, i18n.locale)}</p>{/if}
 							</div>
 						</div>
 

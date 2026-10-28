@@ -37,7 +37,7 @@ const dependencies = {
 	'$lib/cart-variants.js': new URL('../src/lib/cart-variants.js', import.meta.url).href,
 	'$lib/i18n.svelte.js': dataUrl('export const normalizeLocale = () => "id"; export const translate = (_, key) => key;'),
 	'$lib/phone-number.js': new URL('../src/lib/phone-number.js', import.meta.url).href,
-	'$lib/api/public.js': dataUrl('export async function submitCheckoutOrder(payload) { globalThis.variantTestPayload = payload; return { id: "order-test" }; }'),
+	'$lib/api/public.js': dataUrl('export const getSiteInfo = async () => ({ deliveryMaxTime: "18:00" }); export async function submitCheckoutOrder(payload) { globalThis.variantTestPayload = payload; return { id: "order-test" }; }'),
 	'@sveltejs/kit': dataUrl('export const fail = (status, data) => ({ status, data });')
 };
 const actionSource = await readFile(new URL('../src/routes/checkout/+page.server.js', import.meta.url), 'utf8');

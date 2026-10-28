@@ -1,4 +1,6 @@
 <script>
+	import { getSiteInfo } from '$lib/api/public.js';
+	import { getDeliveryMaxTime } from '$lib/site-info.js';
 	import OrderStatusSelect from '$lib/components/admin/OrderStatusSelect.svelte';
 	import DeliveryProofDialog from '$lib/components/admin/DeliveryProofDialog.svelte';
 	import DeliveryProofGallery from '$lib/components/admin/DeliveryProofGallery.svelte';
@@ -211,6 +213,14 @@
 	let calculatedFinalAmount = $derived(
 		Number(effectiveCakePrice || 0) + (newDeliveryOption === 'delivery' ? Number(newDeliveryFee || 0) : 0)
 	);
+
+	let deliveryMaxTime = $state('18:00');
+	$effect(() => {
+		if (!isCreateOrderDrawerOpen) return;
+		let cancelled = false;
+		getSiteInfo().then(info => { if (!cancelled) deliveryMaxTime = getDeliveryMaxTime(info); }).catch(() => {});
+		return () => { cancelled = true; };
+	});
 
 	function openCreateOrderDrawer() {
 		newCustomerName = '';
@@ -1681,11 +1691,13 @@
 								<Input
 									id="order_time"
 									name="deliveryTime"
-									type="text"
+									type="time"
+									max={newDeliveryOption === 'delivery' ? deliveryMaxTime : undefined}
 									bind:value={newDeliveryTime}
 									placeholder="Contoh: 14:00"
 									class="h-10 rounded-xl"
 								/>
+								{#if newDeliveryOption === 'delivery'}<p class="text-xs text-muted-foreground">Maksimal {deliveryMaxTime} WIB.</p>{/if}
 							</div>
 						</div>
 					</div>

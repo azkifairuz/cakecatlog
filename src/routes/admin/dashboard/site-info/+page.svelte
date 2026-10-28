@@ -20,7 +20,7 @@
 </script>
 
 <AdminPage class="max-w-5xl">
-	<AdminPageHeader eyebrow="Footer User" title="Info Toko" description="Atur informasi pickup, alamat, dan WhatsApp yang muncul di footer halaman user." />
+	<AdminPageHeader eyebrow="Footer User" title="Info Toko" description="Atur batas jam pengiriman, informasi pickup, alamat, dan WhatsApp toko." />
 
 	{#if data.setupError}
 		<div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
@@ -82,6 +82,12 @@
 					<h2 class="font-bold text-[#4A3B32]">Pickup</h2>
 					<p class="text-xs text-[#4A3B32]/60">Jam dan hari pengambilan</p>
 				</div>
+			</div>
+
+			<div class="grid gap-2">
+				<Label for="delivery_max_time">Jam Pengiriman Maksimal (WIB)</Label>
+				<Input type="time" id="delivery_max_time" name="delivery_max_time" required value={currentInfo.delivery_max_time} class="h-11 bg-slate-50" />
+				<p class="text-xs text-[#4A3B32]/60">Berlaku untuk pesanan delivery baru dan perubahan jadwal pengiriman. Jadwal pesanan lama tidak berubah otomatis.</p>
 			</div>
 
 			<div class="grid gap-2">

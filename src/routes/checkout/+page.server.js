@@ -3,8 +3,13 @@ import { setPriceNotice } from '$lib/price-notice.js';
 import { hasCartVariantSelection } from '$lib/cart-variants.js';
 import { normalizeLocale, translate } from '$lib/i18n.svelte.js';
 import { normalizePhoneNumber, PhoneNumberError } from '$lib/phone-number.js';
-import { submitCheckoutOrder } from '$lib/api/public.js';
+import { getSiteInfo, submitCheckoutOrder } from '$lib/api/public.js';
 import { fail } from '@sveltejs/kit';
+
+export const load = async ({ fetch }) => {
+	try { return { siteInfo: await getSiteInfo(fetch) }; }
+	catch { return { siteInfo: null }; }
+};
 
 export const actions = {
 	checkout: async ({ request, fetch, cookies }) => {

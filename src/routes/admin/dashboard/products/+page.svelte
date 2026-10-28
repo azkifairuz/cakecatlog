@@ -430,7 +430,9 @@
 				return async ({ update, result }) => {
 					try {
 						if (result.type === 'success' && result.data?.success) {
+							const successMessage = editingProduct ? 'Produk berhasil diperbarui.' : 'Produk berhasil ditambahkan.';
 							await update();
+							toast.success(successMessage);
 							resetProductErrors();
 							isFormOpen = false;
 							editingProduct = null;

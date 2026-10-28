@@ -8,16 +8,21 @@
 	import { toast } from 'svelte-sonner';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Button } from '$lib/components/ui/button';
+	import CameraIcon from '@lucide/svelte/icons/camera';
+	import ImageUpIcon from '@lucide/svelte/icons/image-up';
 	import { DELIVERY_PROOF_FIELDS, validateProofFile, orderStatusLabel, saveDeliveryProof } from '$lib/order-delivery-proof.js';
 
 	let { open = $bindable(false), order, targetStatus = null, onUpdated } = $props();
 	let submitting = $state(false);
 	let errorMessage = $state('');
 	let previews = $state({});
+	let selectedFiles = $state({});
 	let proofUploaded = $state(false);
+	const ACCEPTED_TYPES = 'image/jpeg,image/jpg,image/png,image/webp,image/gif';
 	function clearPreviews() {
 		for (const url of Object.values(previews)) URL.revokeObjectURL(url);
 		previews = {};
+		selectedFiles = {};
 	}
 	$effect(() => {
 		if (!open) {
@@ -26,17 +31,19 @@
 	});
 	onDestroy(clearPreviews);
 	function choosePhoto(event, field) {
-		const file = event.currentTarget.files?.[0];
-		if (previews[field.name]) URL.revokeObjectURL(previews[field.name]);
-		previews = { ...previews, [field.name]: null };
+		const input = event.currentTarget;
+		const file = input.files?.[0];
+		// Reset so the same photo can be picked or retaken again.
+		input.value = '';
 		if (!file) return;
 		const error = validateProofFile(file);
 		if (error) {
 			errorMessage = `${field.label}: ${error}`;
-			event.currentTarget.value = '';
 			return;
 		}
+		if (previews[field.name]) URL.revokeObjectURL(previews[field.name]);
 		errorMessage = '';
+		selectedFiles = { ...selectedFiles, [field.name]: file };
 		previews = { ...previews, [field.name]: URL.createObjectURL(file) };
 	}
 </script>
@@ -51,12 +58,12 @@
 				Pesanan #{order?.order_number || order?.orderNumber}. Lengkapi tiga foto{targetStatus ? ` sebelum mengubah status ke ${orderStatusLabel(targetStatus)}` : ''}. Maksimal 5 MB per foto.
 			</Dialog.Description>
 		</Dialog.Header>
-		<form method="POST" action="?/uploadDeliveryProof" enctype="multipart/form-data" class="flex min-h-0 flex-col gap-4" use:enhance={async ({ formData, cancel }) => {
+		<form method="POST" action="?/uploadDeliveryProof" enctype="multipart/form-data" class="flex min-h-0 flex-col gap-4" use:enhance={async ({ cancel }) => {
 			cancel();
 			if (submitting) { cancel(); return; }
 			if (!proofUploaded) {
 				for (const field of DELIVERY_PROOF_FIELDS) {
-					const error = validateProofFile(formData.get(field.name));
+					const error = validateProofFile(selectedFiles[field.name]);
 					if (error) { errorMessage = `${field.label}: ${error}`; cancel(); return; }
 				}
 			}
@@ -72,7 +79,7 @@
 					token = session.data?.token;
 					if (!token) throw new Error('Sesi admin tidak tersedia. Silakan masuk kembali.');
 				}
-				const files = Object.fromEntries(DELIVERY_PROOF_FIELDS.map(({ name }) => [name, formData.get(name)]));
+				const files = Object.fromEntries(DELIVERY_PROOF_FIELDS.map(({ name }) => [name, selectedFiles[name]]));
 				const result = await saveDeliveryProof({
 					id: order.id, status: targetStatus, files, retryStatus: proofUploaded, token,
 					upload: uploadAdminOrderDeliveryProof, update: updateAdminOrderStatus
@@ -101,10 +108,22 @@
 			{:else}
 				{#each DELIVERY_PROOF_FIELDS as field}
 					<div class="space-y-2">
-						<label for={`proof-${field.name}`} class="block text-sm font-semibold">{field.label} <span aria-hidden="true">*</span></label>
-						<input id={`proof-${field.name}`} type="file" name={field.name} required disabled={submitting}
-							accept="image/jpeg,image/jpg,image/png,image/webp,image/gif" class="block w-full rounded-lg border border-input p-2 text-sm"
-							onchange={(event) => choosePhoto(event, field)} />
+						<p class="block text-sm font-semibold">{field.label} <span aria-hidden="true">*</span></p>
+						<div class="flex flex-wrap items-center gap-2">
+							<label class:pointer-events-none={submitting} class:opacity-50={submitting}
+								class="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+								<CameraIcon class="size-4" /> Ambil foto
+								<input type="file" accept={ACCEPTED_TYPES} capture="environment" class="sr-only" disabled={submitting}
+									onchange={(event) => choosePhoto(event, field)} />
+							</label>
+							<label class:pointer-events-none={submitting} class:opacity-50={submitting}
+								class="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-input px-3 py-2 text-sm font-medium hover:bg-muted">
+								<ImageUpIcon class="size-4" /> Pilih file
+								<input type="file" name={field.name} accept={ACCEPTED_TYPES} class="sr-only" disabled={submitting}
+									onchange={(event) => choosePhoto(event, field)} />
+							</label>
+							<span class="min-w-0 truncate text-xs text-muted-foreground">{selectedFiles[field.name]?.name || 'Belum ada foto'}</span>
+						</div>
 						{#if previews[field.name]}
 							<img src={previews[field.name]} alt={`Preview ${field.label.toLowerCase()}`} class="max-h-36 w-full rounded-lg object-contain bg-muted" />
 						{/if}

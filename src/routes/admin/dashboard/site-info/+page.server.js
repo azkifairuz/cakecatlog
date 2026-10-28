@@ -32,7 +32,8 @@ export const actions = {
 			pickupStoreHours: clean(formData.get('pickup_store_hours')),
 			pickupManagerHours: clean(formData.get('pickup_manager_hours')),
 			address: clean(formData.get('address')),
-			whatsappNumber: clean(formData.get('whatsapp_number'))
+			whatsappNumber: clean(formData.get('whatsapp_number')),
+			...(formData.has('delivery_max_time') ? { deliveryMaxTime: clean(formData.get('delivery_max_time')) } : {})
 		};
 
 		const legacyPayload = {
@@ -41,7 +42,8 @@ export const actions = {
 			pickup_store_hours: payload.pickupStoreHours,
 			pickup_manager_hours: payload.pickupManagerHours,
 			address: payload.address,
-			whatsapp_number: payload.whatsappNumber
+			whatsapp_number: payload.whatsappNumber,
+			delivery_max_time: payload.deliveryMaxTime ?? '18:00'
 		};
 
 		if (!payload.pickupDays || !payload.address || !payload.whatsappNumber) {
@@ -49,6 +51,10 @@ export const actions = {
 				error: 'Pickup days, alamat, dan nomor WhatsApp wajib diisi.',
 				values: legacyPayload
 			});
+		}
+
+		if (payload.deliveryMaxTime !== undefined && !/^([01]\d|2[0-3]):[0-5]\d$/.test(payload.deliveryMaxTime)) {
+			return fail(400, { error: 'Jam pengiriman maksimal harus berformat HH:mm (00:00–23:59).', values: legacyPayload });
 		}
 
 		try {

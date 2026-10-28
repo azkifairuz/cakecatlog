@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 const dataUrl = source => `data:text/javascript;base64,${Buffer.from(source).toString('base64')}`;
-const api = dataUrl(`export async function submitCheckoutOrder(payload) { globalThis.__priceCalls.push(payload); return globalThis.__priceOrder; }
+const api = dataUrl(`export const getSiteInfo = async () => globalThis.checkoutDeliverySettings || ({ deliveryMaxTime: "18:00" }); export async function submitCheckoutOrder(payload) { globalThis.__priceCalls.push(payload); return globalThis.__priceOrder; }
 export const submitSingleProductOrder=submitCheckoutOrder;
 export const getOrderFormData=()=>({}); export const getCustomOrderFormData=()=>({});`);
 const dependencies = {
@@ -50,4 +50,10 @@ test('an already created order remains successful if notice storage fails',async
  const e=event();e.cookies.set=()=>{throw Error('blocked cookie');};
  assert.equal((await checkout.actions.checkout(e)).success,true);
  assert.equal(globalThis.__priceCalls.length,1);
+});
+
+test('checkout loads latest delivery cutoff independently of a stale parent layout',async()=>{
+ globalThis.checkoutDeliverySettings={deliveryMaxTime:'20:30'};
+ try { assert.equal((await checkout.load({parent:async()=>({siteInfo:{deliveryMaxTime:'18:00'}}),fetch:()=>{}})).siteInfo.deliveryMaxTime,'20:30'); }
+ finally { delete globalThis.checkoutDeliverySettings; }
 });

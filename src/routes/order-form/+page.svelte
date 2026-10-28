@@ -1,4 +1,5 @@
 <script>
+	import { getDeliveryMaxTime, deliveryTimeHint } from '$lib/site-info.js';
 	import DeliveryAddressField from '$lib/components/DeliveryAddressField.svelte';
 	let deliveryAddress = $state('');
 	import { enhance } from '$app/forms';
@@ -30,6 +31,7 @@
 
 	let { data } = $props();
 	const i18n = getI18n();
+	let deliveryMaxTime = $derived(getDeliveryMaxTime(data.siteInfo));
 
 	let products = $derived(data.products ?? []);
 	let globalAddons = $derived(data.globalAddons ?? []);
@@ -493,9 +495,11 @@
 									type="time"
 									id="delivery_time"
 									name="delivery_time"
+									max={deliveryOption === 'delivery' ? deliveryMaxTime : undefined}
 									required={deliveryOption === 'delivery'}
 									class="h-11 w-full rounded-xl border border-primary/20 bg-[#FFFBF7] px-4 text-sm text-[#4A3B32] focus:border-primary focus:bg-white focus:outline-none transition-colors"
 								/>
+								{#if deliveryOption === 'delivery'}<p class="mt-1 text-xs text-[#4A3B32]/65">{deliveryTimeHint(deliveryMaxTime, i18n.locale)}</p>{/if}
 							</div>
 						</div>
 

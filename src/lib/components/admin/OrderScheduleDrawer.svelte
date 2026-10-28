@@ -1,4 +1,6 @@
 <script>
+	import { getSiteInfo } from '$lib/api/public.js';
+	import { getDeliveryMaxTime } from '$lib/site-info.js';
 	import { enhance } from '$app/forms';
 	import { fade, fly } from 'svelte/transition';
 	import { Button } from '$lib/components/ui/button';
@@ -20,6 +22,13 @@
 	let deliveryOption = $state('delivery');
 	let scheduleDate = $state('');
 	let scheduleTime = $state('');
+	let deliveryMaxTime = $state('18:00');
+	$effect(() => {
+		if (!open) return;
+		let cancelled = false;
+		getSiteInfo().then(info => { if (!cancelled) deliveryMaxTime = getDeliveryMaxTime(info); }).catch(() => {});
+		return () => { cancelled = true; };
+	});
 
 	// Compute today, tomorrow, dayAfterTomorrow in Jakarta timezone (UTC+7)
 	function getRelativeDateStr(daysOffset) {
@@ -300,17 +309,19 @@
 							<input
 								type="time"
 								id="schedule_time_input"
+								max={deliveryOption === 'delivery' ? deliveryMaxTime : undefined}
 								bind:value={scheduleTime}
 								required
 								class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-bold text-slate-800 focus:border-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 transition-all cursor-pointer"
 							/>
 						</div>
 
+						{#if deliveryOption === 'delivery'}<p class="text-xs text-slate-500">Jam pengiriman maksimal pukul {deliveryMaxTime} WIB.</p>{/if}
 						<!-- Quick Time Preset Chips -->
 						<div class="space-y-1.5 pt-1">
 							<span class="text-[11px] font-semibold text-slate-400 block">Pilihan Cepat:</span>
 							<div class="grid grid-cols-4 sm:grid-cols-6 gap-1.5">
-								{#each timePresets as preset}
+								{#each (deliveryOption === 'delivery' ? [...new Set([...timePresets.filter(time => time <= deliveryMaxTime), deliveryMaxTime])].sort() : timePresets) as preset}
 									<button
 										type="button"
 										onclick={() => (scheduleTime = preset)}
