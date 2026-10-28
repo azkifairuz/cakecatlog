@@ -55,6 +55,13 @@ export function getProductFieldErrors({ name, basePrice, variants = [] }) {
 }
 
 export function getProductPersistenceErrorMessage(error, stage) {
+	const status = Number(error?.status);
+	if ([400, 404, 409, 422].includes(status) && error?.message &&
+		!/(request tidak valid|internal server error|failed query|postgres|constraint)/i.test(error.message)) {
+		return error.message;
+	}
+	if (status === 422) return 'Data produk atau ukuran tidak valid. Periksa nama, harga, dan pilihan kategori.';
+	if (status === 503) return 'Server belum dapat dihubungi. Data di formulir tetap tersedia; silakan coba simpan lagi.';
 	if (stage === 'variants' && error?.code === '23505') {
 		return 'Nama size tidak boleh sama dalam satu produk.';
 	}

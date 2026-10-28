@@ -21,6 +21,7 @@
 	import AdminSearchField from '$lib/components/admin/AdminSearchField.svelte';
 	import ProductAddonEditor from '$lib/components/admin/ProductAddonEditor.svelte';
 	import { getAdminProduct } from '$lib/api/admin.js';
+	import { serializeProductVariantInputs } from '$lib/product-variants.js';
 	import { adaptProduct } from '$lib/api/adapters.js';
 
 	let { data, form } = $props();
@@ -37,6 +38,7 @@
 	let categoryCreateError = $state('');
 	let categoryCreateSuccess = $state('');
 	let productFieldErrors = $state({});
+	let productSaveError = $state('');
 	let productCategoryFilter = $state([]);
 
 	$effect(() => {
@@ -60,6 +62,7 @@
 	let customizeAddons = $state(false);
 
 	function resetProductErrors() {
+		productSaveError = '';
 		productFieldErrors = {};
 	}
 
@@ -273,13 +276,7 @@
 	}
 
 	function serializeProductVariants() {
-		return productVariants.map((variant, index) => ({
-				id: variant.id || null,
-				name: variant.name?.trim() ?? '',
-				price: variant.price,
-				is_active: variant.is_active !== false,
-				display_order: Number(variant.display_order ?? index)
-			}));
+		return serializeProductVariantInputs(productVariants);
 	}
 
 	async function openDetail(product) {
@@ -411,6 +408,7 @@
 			{/if}
 			<form method="POST" action={editingProduct ? '?/updateProduct' : '?/createProduct'} enctype="multipart/form-data" use:enhance={({ formData }) => {
 				isSubmitting = true;
+				productSaveError = '';
 				// Prevent default file input from sending if any
 				formData.delete('images_upload');
 				formData.set('category_id', selectedCategoryId);
@@ -431,8 +429,8 @@
 
 				return async ({ update, result }) => {
 					try {
-						await update();
 						if (result.type === 'success' && result.data?.success) {
+							await update();
 							resetProductErrors();
 							isFormOpen = false;
 							editingProduct = null;
@@ -444,6 +442,8 @@
 							selectedCategoryId = '';
 							categoryQuery = '';
 						} else if (result.type === 'failure') {
+							await update({ reset: false, invalidateAll: false });
+							productSaveError = result.data?.error ?? 'Produk gagal disimpan. Silakan coba lagi.';
 							const fieldErrors = result.data?.fieldErrors ?? {};
 							productFieldErrors = fieldErrors;
 
@@ -453,13 +453,26 @@
 							} else {
 								toast.error(result.data?.error ?? 'Produk gagal disimpan. Silakan coba lagi.');
 							}
+						} else if (result.type === 'error') {
+							productSaveError = 'Permintaan simpan produk gagal diproses. Formulir tetap tersedia; silakan coba lagi.';
+							toast.error(productSaveError);
+						} else if (result.type === 'redirect') {
+							await update();
 						}
+					} catch {
+						productSaveError = result.type === 'success' && result.data?.success
+							? 'Produk sudah disimpan, tetapi halaman belum berhasil diperbarui. Silakan muat ulang halaman.'
+							: 'Hasil penyimpanan belum dapat ditampilkan. Formulir tetap tersedia; silakan coba lagi.';
+						toast.error(productSaveError);
 					} finally {
 						isSubmitting = false;
 					}
 				};
 			}} class="grid gap-5 md:grid-cols-2">
 				
+				{#if productSaveError}
+					<div role="alert" class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 md:col-span-2">{productSaveError}</div>
+				{/if}
 				<Field.Field data-invalid={productFieldErrors.name ? true : undefined} class="gap-2">
 					<Field.Label for="name">Product Name *</Field.Label>
 					<Input

@@ -49,19 +49,13 @@ You can preview the production build with `npm run preview`.
 
 ## Delivery address autocomplete
 
-Checkout, order langsung, dan form pembelian custom memakai Google Places Autocomplete
-(New) untuk saran alamat Indonesia. Ketik minimal 3 karakter, pilih saran, lalu tambahkan
-nomor rumah/RT/RW/patokan pada field yang sama. Alamat manual tetap diterima.
+Checkout, order langsung, dan form pembelian custom mengambil saran alamat dari backend
+(`GET /locations/search`) yang berisi dataset wilayah Kemendagri (provinsi s/d
+desa/kelurahan + kode pos). Ketik minimal 3 karakter, pilih saran, lalu tambahkan nama
+jalan/nomor rumah/RT/RW/patokan pada field yang sama. Alamat manual tetap diterima.
 
-Isi `PUBLIC_GOOGLE_MAPS_API_KEY` pada environment frontend lalu deploy ulang. Aktifkan
-Maps JavaScript API dan Places API (New), serta billing, pada project Google Cloud.
-Key ini dipakai browser: batasi HTTP referrers ke `https://dessertbyfir.com/*`, domain
-preview yang memang dipakai, dan `http://localhost:5173/*` untuk development. Batasi
-API key ke Maps JavaScript API dan Places API (New). Jangan menggunakan key server
-tanpa pembatasan. Tidak diperlukan env Maps di backend atau migration database.
-
-Tanpa key atau saat Maps gagal, input alamat manual tetap berfungsi. Library dimuat
-saat alamat dicari dan digunakan bersama; tidak ada request pencarian saat pickup.
+Tidak perlu API key. Pastikan backend sudah menjalankan `bun run locations:import`
+(otomatis lewat `deploy.sh`). Tidak ada request pencarian saat pickup.
 Alamat tetap dikirim ke backend sebagai string `address`, tanpa place ID atau koordinat.
 
 Referensi: https://developers.google.com/maps/documentation/javascript/place-autocomplete-data

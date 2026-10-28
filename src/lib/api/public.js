@@ -113,3 +113,10 @@ export async function getOrderReceipt(id, customFetch = null) {
 export async function getCartQuote(payload, customFetch = null) {
 	return unwrapData(await apiFetch('/orders/quote', { method: 'POST', body: payload }, customFetch));
 }
+
+export async function searchLocations(q, { limit, signal } = {}, customFetch = null) {
+	const query = new URLSearchParams({ q: String(q || '').trim() });
+	if (limit) query.set('limit', String(limit));
+	const response = await apiFetch(`/locations/search?${query}`, { method: 'GET', signal }, customFetch);
+	return unwrapData(response);
+}

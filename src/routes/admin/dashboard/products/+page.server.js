@@ -1,5 +1,6 @@
 import { parsePrice } from '$lib/pricing.js';
-import { getProductFieldErrors } from '$lib/product-validation.js';
+import { serializeProductVariantInputs } from '$lib/product-variants.js';
+import { getProductFieldErrors, getProductPersistenceErrorMessage } from '$lib/product-validation.js';
 import { fail } from '@sveltejs/kit';
 import {
 	getAdminProducts,
@@ -12,9 +13,7 @@ import {
 	setAdminProductAvailability,
 	uploadAdminProductImages,
 	setAdminPrimaryProductImage,
-	deleteAdminProductImage,
-	syncAdminProductVariants,
-	syncAdminProductAddons
+	deleteAdminProductImage
 } from '$lib/api/admin.js';
 import { uploadProductImage } from '$lib/api/upload.js';
 import { adaptProducts, adaptAddons } from '$lib/api/adapters.js';
@@ -128,15 +127,7 @@ function parseProductVariants(value) {
 		const parsed = JSON.parse(value || '[]');
 		if (!Array.isArray(parsed)) return [];
 
-		return parsed.map((item, index) => ({
-			id: item?.id ? String(item.id) : null,
-			name: String(item?.name || '').trim(),
-			price: item?.price ?? '',
-			isActive: item?.is_active !== false && item?.isActive !== false,
-			displayOrder: Number.isFinite(Number(item?.display_order ?? item?.displayOrder))
-				? Number(item.display_order ?? item.displayOrder)
-				: index
-		}));
+		return serializeProductVariantInputs(parsed);
 	} catch {
 		return [];
 	}
@@ -307,13 +298,13 @@ export const actions = {
 			newAddons
 		};
 
+		let persistenceStage = 'product';
 		try {
 			// 1. Update product base info
 			await updateAdminProduct(id, productPayload, locals.adminToken, fetch);
 
-			// 2. Sync variants & addons
-			await syncAdminProductVariants(id, productVariants, locals.adminToken, fetch);
-			await syncAdminProductAddons(id, activeAddonIds, newAddons, locals.adminToken, fetch);
+			// Product, variants and addons were saved atomically by updateAdminProduct.
+			persistenceStage = 'images';
 
 			// 3. Delete requested images
 			if (deletedImageIdsStr) {
@@ -324,6 +315,7 @@ export const actions = {
 					} catch (delErr) {
 						handleAdminAuthError(delErr, cookies);
 						console.error('Delete image error:', delErr);
+						throw delErr;
 					}
 				}
 			}
@@ -347,6 +339,7 @@ export const actions = {
 				} catch (upErr) {
 					handleAdminAuthError(upErr, cookies);
 					console.error('Upload image error:', upErr);
+					throw upErr;
 				}
 			}
 
@@ -362,10 +355,13 @@ export const actions = {
 			return { success: true };
 		} catch (err) {
 			handleAdminAuthError(err, cookies);
-			console.error('Update product error:', err);
-			return fail(500, {
+			console.error('Update product error:', { stage: persistenceStage, status: err?.status, code: err?.code });
+			const message = getProductPersistenceErrorMessage(err, persistenceStage);
+			const status = [400, 403, 404, 409, 422, 503].includes(Number(err?.status)) ? Number(err.status) : 500;
+			return fail(status, {
 				success: false,
-				error: err?.message || 'Gagal memperbarui produk.'
+				stage: persistenceStage,
+				error: persistenceStage === 'images' ? 'Detail dan harga produk sudah disimpan, tetapi proses gambar belum selesai. ' + message : message
 			});
 		}
 	},

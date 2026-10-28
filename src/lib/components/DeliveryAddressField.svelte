@@ -1,7 +1,6 @@
 <script>
 	import { onMount } from 'svelte';
-	import { env } from '$env/dynamic/public';
-	import { loadGooglePlaces } from '$lib/google-places.js';
+	import { searchLocations } from '$lib/api/public.js';
 	import { createAddressAutocomplete } from '$lib/address-autocomplete.js';
 
 	let { id = 'address', name = 'address', value = $bindable(''), required = true, disabled = false, placeholder = 'Ketik alamat, misalnya Jakarta…', label = 'Alamat pengiriman', locale = 'id' } = $props();
@@ -10,13 +9,13 @@
 	let controller;
 	let focused = $state(false);
 	const messages = {
-		id: { help: 'Pilih saran atau ketik alamat lengkap. Tambahkan nomor rumah, RT/RW, dan patokan bila perlu.', MANUAL: 'Ketik alamat lengkap secara manual.', UNAVAILABLE: 'Saran alamat belum tersedia. Anda tetap bisa mengetik alamat manual.', EMPTY: 'Lokasi belum ditemukan. Lanjutkan dengan alamat lengkap secara manual.', loading: 'Mencari alamat…' },
-		en: { help: 'Choose a suggestion or enter the full address. Add the house number and delivery instructions as needed.', MANUAL: 'Enter the full address manually.', UNAVAILABLE: 'Address suggestions are unavailable. You can still enter your address manually.', EMPTY: 'No locations found. Continue entering the full address manually.', loading: 'Searching for addresses…' },
+		id: { help: 'Ketik kelurahan/kecamatan lalu pilih saran, kemudian lengkapi nama jalan, nomor rumah, RT/RW, dan patokan.', UNAVAILABLE: 'Saran alamat belum tersedia. Anda tetap bisa mengetik alamat manual.', EMPTY: 'Lokasi belum ditemukan. Lanjutkan dengan alamat lengkap secara manual.', loading: 'Mencari alamat…' },
+		en: { help: 'Type your village/district and pick a suggestion, then add the street, house number, and delivery instructions.', UNAVAILABLE: 'Address suggestions are unavailable. You can still enter your address manually.', EMPTY: 'No locations found. Continue entering the full address manually.', loading: 'Searching for addresses…' },
 	};
 	let text = $derived(messages[locale] || messages.id);
 	onMount(() => {
 		controller = createAddressAutocomplete({
-			getPlaces: () => loadGooglePlaces(env.PUBLIC_GOOGLE_MAPS_API_KEY),
+			search: (query, options) => searchLocations(query, options),
 			onState: (next) => { state = next; highlighted = -1; },
 			onAddress: (address) => { value = address; },
 		});
@@ -29,7 +28,7 @@
 			event.preventDefault();
 			highlighted = event.key === 'ArrowDown' ? (highlighted + 1) % state.items.length : (highlighted < 0 ? state.items.length - 1 : (highlighted - 1 + state.items.length) % state.items.length);
 		} else if (event.key === 'Enter' && highlighted >= 0) {
-			event.preventDefault(); void controller.select(state.items[highlighted]);
+			event.preventDefault(); controller.select(state.items[highlighted]);
 		} else if (event.key === 'Tab') controller?.dismiss();
 	}
 </script>
@@ -41,11 +40,10 @@
 			<ul id={`${id}-suggestions`} role="listbox" aria-label={label} class="max-h-64 overflow-y-auto">
 				{#each state.items as item, index (item.id)}
 					<li id={`${id}-option-${index}`} role="option" aria-selected={highlighted === index} class="border-b border-primary/10 last:border-0">
-						<button type="button" tabindex="-1" onpointerdown={(event) => event.preventDefault()} onclick={() => controller.select(item)} class={`w-full px-4 py-3 text-left text-sm text-[#4A3B32] hover:bg-primary/5 ${highlighted === index ? 'bg-primary/10' : ''}`}>{item.text}</button>
+						<button type="button" tabindex="-1" onpointerdown={(event) => event.preventDefault()} onclick={() => controller.select(item)} class={`w-full px-4 py-3 text-left text-sm text-[#4A3B32] hover:bg-primary/5 ${highlighted === index ? 'bg-primary/10' : ''}`}>{item.text}{#if item.postalCode}<span class="ml-1 text-xs text-[#4A3B32]/55">{item.postalCode}</span>{/if}</button>
 					</li>
 				{/each}
 			</ul>
-			<div class="flex justify-end px-3 py-2"><span translate="no" class="whitespace-nowrap font-sans text-[13px] font-normal not-italic tracking-normal text-[#5E5E5E]">Google Maps</span></div>
 		</div>
 	{/if}
 	<p id={`${id}-help`} class="mt-2 text-xs leading-5 text-[#4A3B32]/65">{text.help}</p>
