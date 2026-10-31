@@ -1,0 +1,14 @@
+node_modules
+.svelte-kit
+build
+.vercel
+.git
+.env
+.env.*
+!.env.example
+.DS_Store
+.vscode
+.agents
+supabase
+tests
+*.md
