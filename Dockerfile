@@ -1,5 +1,5 @@
 # ---------- Build stage ----------
-FROM node:22-alpine AS build
+FROM node:24-alpine AS build
 WORKDIR /app
 
 COPY package.json package-lock.json .npmrc ./
@@ -14,7 +14,7 @@ ENV PUBLIC_API_BASE_URL=${PUBLIC_API_BASE_URL}
 RUN npm run build && npm prune --omit=dev
 
 # ---------- Runtime stage ----------
-FROM node:22-alpine AS runtime
+FROM node:24-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 
