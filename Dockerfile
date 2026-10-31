@@ -3,7 +3,8 @@ FROM node:24-alpine AS build
 WORKDIR /app
 
 COPY package.json package-lock.json .npmrc ./
-RUN npm ci
+# npm install (bukan npm ci): lockfile dari macOS tidak mencatat optional deps khusus Linux (@emnapi/*)
+RUN npm install --no-audit --no-fund
 
 COPY . .
 
